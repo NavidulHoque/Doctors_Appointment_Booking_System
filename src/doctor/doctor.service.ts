@@ -58,9 +58,19 @@ export class DoctorService {
 
         const query: any = specialization ? { specialization: { contains: specialization, mode: 'insensitive' as const } } : {} // will filter case-insensitive
 
+        if (experience?.length === 1) {
+            const [min] = experience;
+            query['experience'] = { gte: min }; 
+        }
+
         if (experience?.length === 2) {
             const [min, max] = experience;
             query['experience'] = { gte: min, lte: max };
+        }
+
+        if (fees?.length === 1) {
+            const [max] = fees;
+            query['fees'] = { lte: max };
         }
 
         if (fees?.length === 2) {

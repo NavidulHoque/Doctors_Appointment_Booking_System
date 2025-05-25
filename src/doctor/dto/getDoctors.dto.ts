@@ -17,12 +17,12 @@ export class GetDoctorsDto {
     specialization?: string;
 
     @IsOptional()
-    @Transform(({ value }) => typeof value === 'string' ? [] : value.map(Number))
-    experience?: number[] | [];
+    @Transform(({ value }) => typeof value === 'string' ? [value].map(Number) : value.map(Number))
+    experience?: number[];
 
     @IsOptional()
-    @Transform(({ value }) => typeof value === 'string' ? [] : value.map(Number))
-    fees?: number[] | [];
+    @Transform(({ value }) => typeof value === 'string' ? [value].map(Number) : value.map(Number))
+    fees?: number[];
 
     @IsOptional()
     @Transform(({ value }) => typeof value === 'string' ? [value] : value)

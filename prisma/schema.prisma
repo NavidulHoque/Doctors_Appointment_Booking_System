@@ -35,8 +35,8 @@ model User {
   doctorReviews             Review[]         @relation("doctorReviews")
   notifications             Notifications[] 
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 }
 
 enum Role {
