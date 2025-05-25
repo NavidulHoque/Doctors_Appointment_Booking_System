@@ -3,9 +3,10 @@ import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
+import { NotificationService } from 'src/notification/notification.service';
+import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class AppointmentService {
@@ -13,7 +14,9 @@ export class AppointmentService {
     constructor(
         private prisma: PrismaService,
         private handleErrorsService: HandleErrorsService,
-        private notificationService: NotificationService
+        private notificationService: NotificationService,
+        private config: ConfigService,
+        @InjectQueue('appointment-queue') private appointmentQueue: Queue
     ) { }
 
     async createAppointment(dto: CreateAppointmentDto) {
@@ -52,7 +55,14 @@ export class AppointmentService {
 
             if (existingAppointment) this.handleErrorsService.throwBadRequestError("Appointment already booked")
 
-            const appointment = await this.prisma.appointment.create({ data: { patientId, doctorId, date } })
+            const appointment = await this.prisma.appointment.create({ 
+                data: { patientId, doctorId, date },
+                select: appointmentSelect 
+            })
+
+            const { patient: {fullName: patientName }, doctor: { fullName: doctorName } } = appointment as any
+
+            await this.notificationService.sendNotifications(this.config.get('ADMIN_ID') as string, `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`)
 
             return {
                 data: appointment,
@@ -353,8 +363,6 @@ export class AppointmentService {
 
                 const oneHourBefore = new Date(date.getTime() as number - 60 * 60 * 1000)
 
-                // Add jobs to queue
-
                 // send notifications to patient
                 await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`)
 
@@ -364,6 +372,20 @@ export class AppointmentService {
                 await this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`)
 
                 await this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime());
+
+                // call this update appointment api when the date arrives
+                await this.appointmentQueue.add(
+                    "start-appointment",
+                    {
+                        status: 'RUNNING',
+                        id
+                    },
+                    {
+                        delay: date.getTime() - now.getTime(),
+                        attempts: 3,
+                        removeOnComplete: true 
+                    }
+                )
             }
 
             else if (status === 'CANCELLED') {
@@ -379,21 +401,12 @@ export class AppointmentService {
                     data.isPaid = true
                     data.paymentMethod = 'CASH'
                 }
-
-                //send notifications to patient
-                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is completed for ${date.toLocaleString()}.`)
-
-                //send notifications to doctor
-                await this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} is completed for ${date.toLocaleString()}.`)
             }
 
             // patient paid the appointment online
             if (isPaid && paymentMethod) {
                 data.isPaid = isPaid
                 data.paymentMethod = paymentMethod
-
-                // send notifications to patient
-                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is paid using stripe.`)
             }
 
             const updatedAppointment = await this.prisma.appointment.update({
