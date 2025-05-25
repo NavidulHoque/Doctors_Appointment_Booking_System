@@ -9,9 +9,28 @@ import { CommonModule } from './common/common.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReviewModule } from './review/review.module';
 import { MessageModule } from './message/message.module';
+import { BullModule } from '@nestjs/bull';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), AuthModule, UserModule, AppointmentModule, DoctorModule, CommonModule, PrismaModule, ReviewModule, MessageModule],
+  imports: [
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost', // or 'redis' if running in Docker
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      },
+    }),
+    ConfigModule.forRoot(), 
+    AuthModule, 
+    UserModule, 
+    AppointmentModule, 
+    DoctorModule, 
+    CommonModule, 
+    PrismaModule, 
+    ReviewModule, 
+    MessageModule,
+    NotificationModule
+  ],
   controllers: [AppController]
 })
 export class AppModule { }

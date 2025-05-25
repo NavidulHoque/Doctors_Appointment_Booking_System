@@ -3,13 +3,17 @@ import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class AppointmentService {
 
     constructor(
         private prisma: PrismaService,
-        private handleErrorsService: HandleErrorsService
+        private handleErrorsService: HandleErrorsService,
+        private notificationService: NotificationService
     ) { }
 
     async createAppointment(dto: CreateAppointmentDto) {
@@ -45,7 +49,6 @@ export class AppointmentService {
                     ]
                 }
             });
-
 
             if (existingAppointment) this.handleErrorsService.throwBadRequestError("Appointment already booked")
 
@@ -332,22 +335,65 @@ export class AppointmentService {
 
         const data: any = status ? { status } : {}
 
-        if (status === 'CANCELLED') data.cancellationReason = cancellationReason
-
-        if (isPaid) data.isPaid = isPaid
-
-        if (paymentMethod) data.paymentMethod = paymentMethod
-
         try {
-            const appointment = await this.prisma.appointment.findUnique({ where: { id } })
+            const appointment = await this.prisma.appointment.findUnique({
+                where: { id },
+                select: appointmentSelect
+            })
 
             if (!appointment) {
                 this.handleErrorsService.throwNotFoundError("Appointment not found")
             }
 
-            if (!appointment?.isPaid && status === 'COMPLETED') {
-                data.isPaid = true
-                data.paymentMethod = 'CASH'
+            const now = new Date();
+
+            const { patient: { id: patientId, fullName: patientName }, doctor: { id: doctorId, fullName: doctorName }, date } = appointment as any
+
+            if (status === "CONFIRMED") {
+
+                const oneHourBefore = new Date(date.getTime() as number - 60 * 60 * 1000)
+
+                // Add jobs to queue
+
+                // send notifications to patient
+                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`)
+
+                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime());
+
+                // send notifications to doctor
+                await this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`)
+
+                await this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime());
+            }
+
+            else if (status === 'CANCELLED') {
+                data.cancellationReason = cancellationReason
+
+                // send notifications to patient
+                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is cancelled for ${date.toLocaleString()}. Reason: ${cancellationReason}`)
+            }
+
+            else if (status === 'COMPLETED') {
+
+                if (!appointment?.isPaid) {
+                    data.isPaid = true
+                    data.paymentMethod = 'CASH'
+                }
+
+                //send notifications to patient
+                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is completed for ${date.toLocaleString()}.`)
+
+                //send notifications to doctor
+                await this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} is completed for ${date.toLocaleString()}.`)
+            }
+
+            // patient paid the appointment online
+            if (isPaid && paymentMethod) {
+                data.isPaid = isPaid
+                data.paymentMethod = paymentMethod
+
+                // send notifications to patient
+                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is paid using stripe.`)
             }
 
             const updatedAppointment = await this.prisma.appointment.update({
