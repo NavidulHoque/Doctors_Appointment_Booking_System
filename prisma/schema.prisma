@@ -33,7 +33,7 @@ model User {
   doctorAppointments        Appointment[]    @relation("doctorAppointments")
   patientReviews            Review[]         @relation("patientReviews")
   doctorReviews             Review[]         @relation("doctorReviews")
-  notifications             Notifications[] 
+  notifications             Notification[] 
 
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
@@ -115,7 +115,7 @@ model Message {
   createdAt       DateTime   @default(now())
 }
 
-model Notifications {
+model Notification {
   id          String   @id @default(uuid())
   content     String
   user        User     @relation(fields: [userId], references: [id])
