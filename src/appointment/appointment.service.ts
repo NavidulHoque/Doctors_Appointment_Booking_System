@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
@@ -10,6 +10,7 @@ import { Queue } from 'bull';
 
 @Injectable()
 export class AppointmentService {
+    private readonly logger = new Logger();
 
     constructor(
         private prisma: PrismaService,
@@ -55,14 +56,19 @@ export class AppointmentService {
 
             if (existingAppointment) this.handleErrorsService.throwBadRequestError("Appointment already booked")
 
-            const appointment = await this.prisma.appointment.create({ 
+            const appointment = await this.prisma.appointment.create({
                 data: { patientId, doctorId, date },
-                select: appointmentSelect 
+                select: appointmentSelect
             })
 
-            const { patient: {fullName: patientName }, doctor: { fullName: doctorName } } = appointment as any
+            const { patient: { fullName: patientName }, doctor: { fullName: doctorName } } = appointment as any
 
-            await this.notificationService.sendNotifications(this.config.get('ADMIN_ID') as string, `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`)
+            // send notifications to admin
+            this.notificationService.sendNotifications(this.config.get('ADMIN_ID') as string, `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`)
+                .catch((err) => {
+                    //it will throw an error if the job fails to be added in the queue
+                    this.logger.warn(`Failed to send notification: ${err.message}`)
+                })
 
             return {
                 data: appointment,
@@ -338,12 +344,17 @@ export class AppointmentService {
         }
     }
 
-
     async updateAppointment(dto: UpdateAppointmentDto, id: string) {
 
         const { status, isPaid, paymentMethod, cancellationReason } = dto
 
         const data: any = status ? { status } : {}
+
+        // patient paid the appointment online
+        if (isPaid && paymentMethod) {
+            data.isPaid = isPaid
+            data.paymentMethod = paymentMethod
+        }
 
         try {
             const appointment = await this.prisma.appointment.findUnique({
@@ -363,50 +374,47 @@ export class AppointmentService {
 
                 const oneHourBefore = new Date(date.getTime() as number - 60 * 60 * 1000)
 
-                // send notifications to patient
-                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`)
+                // Send confirmation first (await to guarantee order)
+                await Promise.all([
 
-                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime());
+                    this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`),
 
-                // send notifications to doctor
-                await this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`)
+                    this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`)
+                ]);
 
-                await this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime());
+                // Queue the delayed "1 hour before" notifications and appointment start in parallel
+                await Promise.all([
 
-                // call this update appointment api when the date arrives
-                await this.appointmentQueue.add(
-                    "start-appointment",
-                    {
-                        status: 'RUNNING',
-                        id
-                    },
-                    {
-                        delay: date.getTime() - now.getTime(),
-                        attempts: 3,
-                        removeOnComplete: true 
-                    }
-                )
+                    this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime()),
+
+                    this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime()),
+
+                    this.appointmentQueue.add(
+                        "start-appointment",
+                        { status: 'RUNNING', id },
+                        {
+                            delay: date.getTime() - now.getTime(),
+                            attempts: 3,
+                            removeOnComplete: true
+                        }
+                    )
+                ]);
             }
 
             else if (status === 'CANCELLED') {
                 data.cancellationReason = cancellationReason
 
-                // send notifications to patient
-                await this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is cancelled for ${date.toLocaleString()}. Reason: ${cancellationReason}`)
+                // send notification to patient
+                this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is cancelled for ${date.toLocaleString()}. Reason: ${cancellationReason}`)
+                    .catch((err) => {
+                        this.logger.warn(`Failed to send notification: ${err.message}`)
+                    })
             }
 
-            else if (status === 'COMPLETED') {
+            else if (status === 'COMPLETED' && !appointment?.isPaid) {
 
-                if (!appointment?.isPaid) {
-                    data.isPaid = true
-                    data.paymentMethod = 'CASH'
-                }
-            }
-
-            // patient paid the appointment online
-            if (isPaid && paymentMethod) {
-                data.isPaid = isPaid
-                data.paymentMethod = paymentMethod
+                data.isPaid = true
+                data.paymentMethod = 'CASH'
             }
 
             const updatedAppointment = await this.prisma.appointment.update({

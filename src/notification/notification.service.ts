@@ -1,22 +1,74 @@
 import { InjectQueue } from "@nestjs/bull";
 import { Injectable } from "@nestjs/common";
 import { Queue } from "bull";
+import { HandleErrorsService } from "src/common/handleErrors.service";
 import { PrismaService } from "src/prisma/prisma.service";
+import { NotificationGateway } from "./notification.gateway";
 
 @Injectable()
 export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue("notification-queue") private notificationQueue: Queue
+    private readonly handleErrorsService: HandleErrorsService,
+    private readonly notificationGateway: NotificationGateway,
+    @InjectQueue("notification-queue") private readonly notificationQueue: Queue
   ) { }
 
   async createNotification(userId: string, content: string) {
-    await this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         userId,
         content,
+      },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true
       }
     });
+
+    // send notification via WebSocket
+    this.notificationGateway.sendNotification(userId, notification);
+  }
+
+
+  async getAllNotifications(userId: string, page: number = 1, limit: number = 10) {
+
+    try {
+      const [notifications, totalItems] = await this.prisma.$transaction([
+
+        this.prisma.notification.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            content: true,
+            createdAt: true
+          },
+          skip: (page - 1) * limit,
+          take: limit
+        }),
+
+        this.prisma.notification.count({
+          where: { userId }
+        })
+      ]);
+
+      return {
+        data: notifications,
+        pagination: {
+          totalItems,
+          totalPages: Math.ceil(totalItems / limit),
+          currentPage: page,
+          itemsPerPage: limit
+        },
+        message: "Notifications retrieved successfully",
+      }
+    }
+
+    catch (error) {
+      this.handleErrorsService.handleError(error);
+    }
   }
 
   async sendNotifications(userId: string, content: string, delay: number = 0) {
