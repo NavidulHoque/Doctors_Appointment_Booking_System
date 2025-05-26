@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from 'src/auth/guard';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
@@ -51,7 +51,7 @@ export class DoctorController {
         return this.doctorService.getTotalRevenue(user)
     }
 
-    @Put("/update-doctor/:id")
+    @Patch("/update-doctor/:id")
     updateDoctor(
         @Body() body: UpdateDoctorDto,
         @Param('id') id: string,
