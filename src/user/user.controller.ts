@@ -3,7 +3,6 @@ import { AuthGuard } from 'src/auth/guard';
 import { User } from './decorator';
 import { UserService } from './user.service';
 import { UserDto } from './dto';
-import { AuthUser } from 'src/auth/interface';
 import { CheckRoleService } from 'src/common/checkRole.service';
 
 @UseGuards(AuthGuard)

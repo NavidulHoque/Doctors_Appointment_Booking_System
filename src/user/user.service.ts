@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserDto } from './dto';
-import { AuthUser } from 'src/auth/interface';
 
 @Injectable()
 export class UserService {
