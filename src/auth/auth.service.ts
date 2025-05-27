@@ -6,7 +6,6 @@ import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FetchUserService } from 'src/common/fetchUser.service';
 import { LoginDto, RegistrationDto } from './dto';
-import { AuthUser } from './interface';
 import { ComparePasswordService } from 'src/common/comparePassword.service';
 
 @Injectable({})
@@ -98,7 +97,7 @@ export class AuthService {
 
     if (user?.role.toLowerCase() !== role) this.handleErrorsService.throwForbiddenError(`${role} login only`);
 
-    const { password: hashedPassword, id } = user as AuthUser;
+    const { password: hashedPassword, id } = user as any;
 
     const isMatched = await this.comparePasswordService.comparePassword(plainPassword, hashedPassword)
 
