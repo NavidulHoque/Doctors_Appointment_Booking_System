@@ -25,7 +25,7 @@ model User {
   password                  String
   doctor                    Doctor?
   otp                       String?          @unique
-  otpExpires                String?
+  otpExpires                DateTime?
   refreshToken              String?          @unique
   sentMessages              Message[]        @relation("SentMessages")     
   receivedMessages          Message[]        @relation("ReceivedMessages")
@@ -34,7 +34,7 @@ model User {
   patientReviews            Review[]         @relation("patientReviews")
   doctorReviews             Review[]         @relation("doctorReviews")
   notifications             Notification[]
-  onlinePayments             Payment[]
+  onlinePayments            Payment[]
 
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt

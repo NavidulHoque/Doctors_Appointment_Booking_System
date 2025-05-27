@@ -56,7 +56,7 @@ export class AuthService {
     }
 
     catch (error) {
-      throw error; //throws server error
+      this.handleErrorsService.handleError(error)
     }
   }
 
@@ -71,7 +71,7 @@ export class AuthService {
     }
 
     catch (error) {
-      throw error; //throws server error
+      this.handleErrorsService.handleError(error)
     }
   }
 
@@ -86,7 +86,7 @@ export class AuthService {
     }
 
     catch (error) {
-      throw error; //throws server error
+      this.handleErrorsService.handleError(error)
     }
   }
 
@@ -148,126 +148,154 @@ export class AuthService {
     return refreshToken
   }
 
-  // async refreshAccessToken(refreshToken: string) {
-  //   try {
-  //     const user = await this.prisma.user.findFirst({
-  //       where: { refreshToken }
-  //     })
+  async forgetPassword(email: string) {
 
-  //     if (!user) {
-  //       this.handleErrorsService.throwBadRequestError('User not found')
-  //     }
+    try {
 
-  //     const accessToken = await this.generateAccessToken({ id: user?.id })
+      const user = await this.fetchUserService.fetchUser(email)
 
-  //     return {
-  //       message: 'Refresh token successfully',
-  //       data: accessToken
-  //     }
-  //   }
+      if (!user) this.handleErrorsService.throwBadRequestError('Invalid Email');
 
-  //   catch (error) {
-  //     throw error; //throws server error
-  //   }
-  // }
+      const otp = Math.floor(100000 + Math.random() * 900000);
+      const otpExpires = new Date(Date.now() + Number(this.config.get<number>('OTP_EXPIRES')) * 60 * 1000);
 
-  // async logout(id: string) {
+      await this.prisma.user.update({
+        where: { id: user?.id },
+        data: {
+          otp: otp.toString(),
+          otpExpires
+        }
+      })
 
-  //   try {
-  //     const user = await this.prisma.user.update({
-  //       where: { id },
-  //       data: { refreshToken: null }
-  //     })
+      //send otp to email
 
-  //     return {
-  //       message: 'Logged out successfully',
-  //       data: user
-  //     }
-  //   }
+      return {
+        message: 'Otp sent successfully',
+        data: otp
+      }
+    }
 
-  //   catch (error) {
-  //     throw error; //throws server error
-  //   }
-  // }
+    catch (error) {
+      this.handleErrorsService.handleError(error)
+    }
+  }
 
-  // async forgetPassword(email: string) {
+  async verifyOtp(email: string, otp: string) {
+    try {
+      const user = await this.fetchUserService.fetchUser(email)
 
-  //   try {
-  //     if (!email) {
-  //       this.handleErrorsService.throwBadRequestError('Email is required')
-  //     }
+      if (!user) {
+        this.handleErrorsService.throwBadRequestError('User not found');
+      }
 
-  //     const user = await this.fetchUserService.fetchUser(email)
+      if (!user.otp || !user.otpExpires) {
+        this.handleErrorsService.throwBadRequestError('Otp not found');
+      }
 
-  //     if (!user) this.handleErrorsService.throwBadRequestError('Invalid Email');
+      if (user?.otp !== otp || new Date() > user.otpExpires) {
+        this.handleErrorsService.throwBadRequestError('Invalid or expired otp')
+      }
 
-  //     const otp = Math.floor(100000 + Math.random() * 900000);
-  //     const otpExpires = new Date(Date.now() + emailExpires);
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          otp: null,
+          otpExpires: null
+        }
+      })
 
-  //     const { otp } = await this.prisma.user.update({
-  //       where: { id: user.id },
-  //       data: {
-  //         otp: Math.floor(1000 + Math.random() * 9000)
-  //       }
-  //     })
+      return {
+        message: 'Otp verified successfully',
+      }
+    }
 
-  //     //send otp to email
+    catch (error) {
+      this.handleErrorsService.handleError(error)
+    }
+  }
 
-  //     return {
-  //       message: 'Otp sent successfully',
-  //       data: otp
-  //     }
-  //   }
+  async resetPassword(email: string, newPassword: string) {
+    try {
+      const user = await this.fetchUserService.fetchUser(email)
 
-  //   catch (error) {
-  //     throw error; //throws server error
-  //   }
-  // }
+      if (!user) {
+        this.handleErrorsService.throwBadRequestError('User not found');
+      }
 
-  // async verifyOtp(otp: number, email: string) {
-  //   try {
-  //     const user = await this.fetchUserService.fetchUser(email)
+      if (user.otp || user.otpExpires) {
+        this.handleErrorsService.throwBadRequestError('Otp not verified');
+      }
 
-  //     if (!user) {
-  //       this.handleErrorsService.throwBadRequestError('User not found');
-  //     }
+      const hashedPassword = await argon.hash(newPassword);
 
-  //     if (user.otp !== otp) {
-  //       this.handleErrorsService.throwBadRequestError('Otp invalid')
-  //     }
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword }
+      })
 
-  //     return {
-  //       message: 'Otp verified successfully',
-  //     }
-  //   }
+      return {
+        message: 'Password reset successfully',
+      }
+    }
 
-  //   catch (error) {
-  //     throw error; //throws server error
-  //   }
-  // }
+    catch (error) {
+      this.handleErrorsService.handleError(error)
+    }
+  }
 
-  // async resetPassword(email: string, newPassword: string) {
-  //   try {
-  //     const user = await this.fetchUserService.fetchUser(email)
+  async refreshAccessToken(refreshToken: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { refreshToken }
+      })
 
-  //     if (!user) {
-  //       this.handleErrorsService.throwBadRequestError('User not found');
-  //     }
+      if (!user) {
+        this.handleErrorsService.throwBadRequestError('Refresh token invalid');
+      }
 
-  //     const hashedPassword = await argon.hash(newPassword);
+      const decodedToken = this.jwtService.verify(refreshToken, {
+        secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
+      });
 
-  //     await this.prisma.user.update({
-  //       where: { id: user.id },
-  //       data: { password: hashedPassword }
-  //     })
+      if (!decodedToken || decodedToken.id !== user?.id) {
+        this.handleErrorsService.throwBadRequestError('Refresh token invalid');
+      }
 
-  //     return {
-  //       message: 'Password reset successfully',
-  //     }
-  //   }
+      const accessToken = await this.generateAccessToken({ id: user?.id })
+      const newRefreshToken = await this.generateRefreshToken({ id: user?.id })
 
-  //   catch (error) {
-  //     throw error; //throws server error
-  //   }
-  // }
+      await this.prisma.user.update({
+        where: { id: user?.id },
+        data: { refreshToken: newRefreshToken }
+      })
+
+      return {
+        message: 'Token refreshed successfully',
+        data: accessToken
+      }
+    }
+
+    catch (error) {
+      this.handleErrorsService.handleError(error);
+    }
+  }
+
+  async logout(id: string) {
+
+    try {
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: { refreshToken: null }
+      })
+
+      return {
+        message: 'Logged out successfully',
+        data: user
+      }
+    }
+
+    catch (error) {
+      this.handleErrorsService.handleError(error);
+    }
+  }
 }
