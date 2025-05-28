@@ -18,9 +18,7 @@ export class PaymentService {
         where: { id: appointmentId },
       });
 
-      if (!appointment) {
-        throw new NotFoundException('Appointment not found');
-      }
+      if (!appointment) this.handleErrorsService.throwNotFoundError('Appointment not found');
 
       const session = await this.stripeService.createCheckoutSession(amount, appointmentId);
 
@@ -29,8 +27,7 @@ export class PaymentService {
           userId,
           appointmentId,
           amount,
-          transactionId: session.id,
-          status: 'PENDING'
+          transactionId: session.id
         },
       });
 
