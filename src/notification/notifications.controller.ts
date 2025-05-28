@@ -13,14 +13,13 @@ export class NotificationController {
         private readonly checkRoleService: CheckRoleService
     ) { }
 
-    @Get("/get-all-notifications/:userId")
-    async getNotifications(
+    @Get("/get-all-notifications")
+    getNotifications(
         @User() user: UserDto,
-        @Param('userId') userId: string,
         @Query('page', ParseIntPipe) page: number,
         @Query('limit', ParseIntPipe) limit: number
     ) {
         this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
-        return this.notificationService.getAllNotifications(userId, page, limit)
+        return this.notificationService.getAllNotifications(user.id, page, limit)
     }
 }

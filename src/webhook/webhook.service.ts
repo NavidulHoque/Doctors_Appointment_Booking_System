@@ -30,10 +30,6 @@ export class WebhookService {
                     await this.handleSuccessfulCheckout(event.data.object as Stripe.Checkout.Session);
                     break;
 
-                case 'checkout.session.async_payment_failed':
-                    await this.handleFailedCheckout(event.data.object as Stripe.Checkout.Session);
-                    break;
-
                 case 'checkout.session.expired':
                     await this.handleExpiredSession(event.data.object as Stripe.Checkout.Session);
                     break;
@@ -50,7 +46,7 @@ export class WebhookService {
 
 
     private async handleSuccessfulCheckout(session: Stripe.Checkout.Session) {
-        await this.prisma.payment.updateMany({
+        await this.prisma.payment.update({
             where: { transactionId: session.id },
             data: {
                 transactionId: session.payment_intent as string,
@@ -69,39 +65,24 @@ export class WebhookService {
         });
     }
 
-    private async handleFailedCheckout(session: Stripe.Checkout.Session) {
-
-        const payment = await this.prisma.payment.update({
-            where: { transactionId: session.id },
-            data: { status: 'FAILED' },
-        });
-
-        const appointment = await this.prisma.appointment.findUnique({
-            where: { id: payment.appointmentId },
-            select: {
-                doctor: true
-            }
-        });
-
-        this.notificationService.sendNotifications(payment.userId, `Payment failed for appointment with ${appointment?.doctor.fullName}`);
-    }
-
     private async handleExpiredSession(session: Stripe.Checkout.Session) {
-        const payment = await this.prisma.payment.delete({
-            where: { transactionId: session.id }
-        });
 
-        const appointment = await this.prisma.appointment.findUnique({
-            where: { id: payment.appointmentId },
+        const payment = await this.prisma.payment.delete({
+            where: { transactionId: session.id },
             select: {
-                doctor: {
+                userId: true,
+                appointment: {
                     select: {
-                        fullName: true
+                        doctor: {
+                            select: {
+                                fullName: true
+                            }
+                        }
                     }
                 }
             }
         });
 
-        this.notificationService.sendNotifications(payment.userId, `Payment session expired for appointment with ${appointment?.doctor.fullName}`);
+        this.notificationService.sendNotifications(payment.userId, `Payment session expired for appointment with ${payment.appointment.doctor.fullName}`);
     }
 }

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CloudinaryService } from './cloudinary.service';
+import { UploadApiResponse } from 'cloudinary';
+import * as path from 'path';
 
 @Injectable()
 export class UploadsService {

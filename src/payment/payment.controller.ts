@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Query, ParseIntPipe, Param } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { AuthGuard } from 'src/auth/guard';
 import { UserDto } from 'src/user/dto';
@@ -14,11 +14,22 @@ export class PaymentController {
   ) {}
 
   @Post('create-session')
-  async createSession(
-    @Body() body: { appointmentId: string; userId: string; amount: number },
+  createSession(
+    @Body() body: { appointmentId: string; amount: number },
     @User() user: UserDto
   ) {
     this.checkRoleService.checkIsPatient(user.role);
-    return this.paymentService.createPaymentSession(body.appointmentId, body.userId, body.amount);
+    return this.paymentService.createPaymentSession(body.appointmentId, user.id, body.amount);
+  }
+
+  @Get('payment-history')
+  getAllPaymentHistory(
+    @User() user: UserDto,
+    @Query('status') status: string,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+  ) {
+    this.checkRoleService.checkIsPatient(user.role)
+    return this.paymentService.getAllPaymentHistory(status, page, limit, user.id)
   }
 }

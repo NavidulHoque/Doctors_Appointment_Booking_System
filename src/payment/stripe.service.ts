@@ -37,8 +37,4 @@ export class StripeService {
 
         return session;
     }
-
-    async retrieveSession(sessionId: string) {
-        return this.stripe.checkout.sessions.retrieve(sessionId);
-    }
 }

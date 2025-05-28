@@ -425,6 +425,7 @@ export class DoctorService {
             if (!doctor) this.handleErrorsService.throwNotFoundError("Doctor not found")
 
             return {
+                data: doctor,
                 message: "Doctor deleted successfully"
             }
         }
