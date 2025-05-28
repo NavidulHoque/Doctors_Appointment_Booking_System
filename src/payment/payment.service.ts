@@ -1,5 +1,4 @@
-// src/payment/appointment-payment.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { StripeService } from 'src/stripe/stripe.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
@@ -43,35 +42,5 @@ export class PaymentService {
     catch (error) {
       this.handleErrorsService.handleError(error);
     }
-  }
-
-  async confirmPayment(sessionId: string) {
-    const session = await this.stripeService.retrieveSession(sessionId);
-    const paymentIntentId = session.payment_intent as string;
-
-    const status = session.payment_status === 'paid' ? 'COMPLETED' : 'FAILED';
-
-    const payment = await this.prisma.payment.updateMany({
-      where: { transactionId: sessionId },
-      data: {
-        transactionId: paymentIntentId,
-        status
-      },
-    });
-
-    // Also mark appointment as paid if successful
-    if (status === 'COMPLETED') {
-      await this.prisma.appointment.updateMany({
-        where: {
-          id: session?.metadata?.appointmentId,
-        },
-        data: {
-          isPaid: true,
-          paymentMethod: 'ONLINE',
-        },
-      });
-    }
-
-    return { status };
   }
 }

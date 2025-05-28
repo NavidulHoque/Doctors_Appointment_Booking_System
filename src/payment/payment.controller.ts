@@ -1,5 +1,4 @@
-// src/payment/appointment-payment.controller.ts
-import { Controller, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { AuthGuard } from 'src/auth/guard';
 import { UserDto } from 'src/user/dto';
@@ -21,10 +20,5 @@ export class PaymentController {
   ) {
     this.checkRoleService.checkIsPatient(user.role);
     return this.paymentService.createPaymentSession(body.appointmentId, body.userId, body.amount);
-  }
-
-  @Post('confirm/:sessionId')
-  async confirm(@Param('sessionId') sessionId: string) {
-    return this.paymentService.confirmPayment(sessionId);
   }
 }

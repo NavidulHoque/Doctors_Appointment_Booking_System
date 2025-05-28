@@ -10,7 +10,7 @@ async function bootstrap() {
     whitelist: true
   }))
 
-  // Needed to parse Stripe signature properly
+  // Stripe webhook raw body support
   app.use('/webhook/stripe', express.raw({ type: 'application/json' }));
 
   await app.listen(Number(process.env.PORT ?? 3000));
