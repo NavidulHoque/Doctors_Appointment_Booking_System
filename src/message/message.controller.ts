@@ -21,7 +21,7 @@ export class MessageController {
         @User() user: UserDto
     ) {
         this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
-        return this.messageService.createMessage(dto);
+        return this.messageService.createMessage(dto, user.id);
     }
 
     

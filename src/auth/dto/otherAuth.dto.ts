@@ -1,7 +1,10 @@
 import { IsOptional, IsString } from "class-validator";
-import { BaseEmailDto } from "./baseEmail.dto";
 
-export class OtherAuthDto extends BaseEmailDto {
+export class OtherAuthDto {
+
+    @IsOptional()
+    @IsString()
+    email: string;
 
     @IsOptional()
     @IsString()
@@ -10,4 +13,8 @@ export class OtherAuthDto extends BaseEmailDto {
     @IsOptional()
     @IsString()
     newPassword: string;
+
+    @IsOptional()
+    @IsString()
+    refreshToken: string;
 }
