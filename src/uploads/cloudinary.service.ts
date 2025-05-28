@@ -22,11 +22,15 @@ export class CloudinaryService {
                 resource_type: 'image',
             });
 
-            fs.unlinkSync(filePath);
             return result;
-        } catch (error: any) {
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } 
+        
+        catch (error: any) {
             throw new Error(`Image upload failed: ${error.message}`);
+        }
+
+        finally {
+            await fs.promises.unlink(filePath);
         }
     }
 
@@ -43,11 +47,15 @@ export class CloudinaryService {
                 eager_async: true,
             });
 
-            fs.unlinkSync(filePath);
             return result;
-        } catch (error: any) {
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } 
+        
+        catch (error: any) {
             throw new Error(`Video upload failed: ${error.message}`);
+        }
+
+        finally {
+            await fs.promises.unlink(filePath);
         }
     }
 
@@ -56,7 +64,9 @@ export class CloudinaryService {
             return await cloudinary.uploader.destroy(public_id, {
                 resource_type: 'auto',
             });
-        } catch (error: any) {
+        } 
+        
+        catch (error: any) {
             throw new Error(`Cloudinary delete failed: ${error.message}`);
         }
     }
