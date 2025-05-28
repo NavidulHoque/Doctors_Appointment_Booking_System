@@ -10,19 +10,20 @@ import { Response } from 'express';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from './multer.config';
 import { CloudinaryService } from './cloudinary.service';
-import path from 'path';
-import { UploadApiResponse } from 'cloudinary';
+import { UploadsService } from './uploads.service';
 
 @Controller('upload')
 export class UploadsController {
-  constructor(private readonly cloudinaryService: CloudinaryService) { }
+  constructor(
+    private readonly cloudinaryService: CloudinaryService,
+    private readonly uploadsService: UploadsService
+  ) { }
 
   @Post()
   @UseInterceptors(FileFieldsInterceptor([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }], multerOptions))
   async handleUpload(
     @UploadedFiles() files: Express.Multer.File[],
-    @Res() res: Response,
-  ): Promise<Response> {
+  ) {
 
     const uploads = await this.uploadsService.handleUploads(files);
 

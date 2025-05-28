@@ -5,6 +5,11 @@ export const appointmentSelect = {
             id: true,
             fullName: true,
             email: true,
+            doctor: {
+                select: {
+                    fees: true
+                }
+            }
         }
     },
     patient: {

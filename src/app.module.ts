@@ -11,6 +11,8 @@ import { ReviewModule } from './review/review.module';
 import { MessageModule } from './message/message.module';
 import { BullModule } from '@nestjs/bull';
 import { NotificationModule } from './notification/notification.module';
+import { PaymentModule } from './payment/payment.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
   imports: [
@@ -29,7 +31,9 @@ import { NotificationModule } from './notification/notification.module';
     PrismaModule, 
     ReviewModule, 
     MessageModule,
-    NotificationModule
+    NotificationModule,
+    PaymentModule,
+    WebhookModule
   ],
   controllers: [AppController]
 })

@@ -15,9 +15,9 @@ export class WebhookController {
   @Post('stripe')
   async handleStripeWebhook(
     @Body() body: any,
-    @Headers('stripe-signature') sig: string,
+    @Headers('stripe-signature') signature: string,
   ) {
-    await this.webhookService.handleStripeEvent(body, sig);
+    await this.webhookService.handleStripeEvent(body, signature);
     return { received: true };
   }
 }
