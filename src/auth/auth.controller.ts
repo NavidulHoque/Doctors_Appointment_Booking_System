@@ -11,8 +11,8 @@ import { OtherAuthDto } from './dto/otherAuth.dto';
 export class AuthController {
 
     constructor(
-        private authService: AuthService,
-        private checkRoleService: CheckRoleService
+        private readonly authService: AuthService,
+        private readonly checkRoleService: CheckRoleService
     ) { }
 
     @Post("/register")
@@ -50,15 +50,14 @@ export class AuthController {
         return this.authService.resetPassword(dto.email, dto.newPassword)
     }
 
-    @UseGuards(AuthGuard)
     @Post("/refreshAccessToken")
-    async refreshAccessToken(
-        @User() user: UserDto
+    refreshAccessToken(
+        @Body() dto: OtherAuthDto
     ){
-        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
-        return this.authService.refreshAccessToken(user.refreshToken as string)
+        return this.authService.refreshAccessToken(dto.refreshToken)
     }
 
+    @UseGuards(AuthGuard)
     @Post("/logout")
     async logout(
         @User() user: UserDto

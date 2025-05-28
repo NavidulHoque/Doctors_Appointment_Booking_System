@@ -12,12 +12,12 @@ import { ComparePasswordService } from 'src/common/comparePassword.service';
 export class AuthService {
 
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
-    private config: ConfigService,
-    private handleErrorsService: HandleErrorsService,
-    private fetchUserService: FetchUserService,
-    private comparePasswordService: ComparePasswordService
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
+    private readonly handleErrorsService: HandleErrorsService,
+    private readonly fetchUserService: FetchUserService,
+    private readonly comparePasswordService: ComparePasswordService
   ) { }
 
   async register(dto: RegistrationDto) {
@@ -150,13 +150,12 @@ export class AuthService {
   async forgetPassword(email: string) {
 
     try {
-
       const user = await this.fetchUserService.fetchUser(email)
 
       if (!user) this.handleErrorsService.throwBadRequestError('Invalid Email');
 
       const otp = Math.floor(100000 + Math.random() * 900000);
-      const otpExpires = new Date(Date.now() + Number(this.config.get<number>('OTP_EXPIRES')) * 60 * 1000);
+      const otpExpires = new Date(Date.now() + Number(this.config.get<number>('OTP_EXPIRES')) * 60 * 1000)
 
       await this.prisma.user.update({
         where: { id: user?.id },
@@ -184,7 +183,7 @@ export class AuthService {
       const user = await this.fetchUserService.fetchUser(email)
 
       if (!user) {
-        this.handleErrorsService.throwBadRequestError('User not found');
+        this.handleErrorsService.throwBadRequestError('Invalid email');
       }
 
       if (!user.otp || !user.otpExpires) {

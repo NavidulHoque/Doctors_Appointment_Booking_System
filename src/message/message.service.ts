@@ -12,9 +12,15 @@ export class MessageService {
         private handleErrorsService: HandleErrorsService
     ) { }
 
-    async createMessage(dto: MessageDto) {
+    async createMessage(dto: MessageDto, senderId: string) {
+
         try {
-            const message = await this.prisma.message.create({ data: dto });
+            const message = await this.prisma.message.create({
+                data: {
+                    ...dto,
+                    senderId
+                }
+            });
 
             return {
                 data: message,
@@ -30,14 +36,14 @@ export class MessageService {
 
     async getMessages(user: UserDto, receiverId: string) {
 
-        const { id } = user
+        const { id: senderId } = user
 
         try {
             const messages = await this.prisma.message.findMany({
                 where: {
                     OR: [
-                        { senderId: id, receiverId },
-                        { senderId: receiverId, receiverId: id }
+                        { senderId, receiverId },
+                        { senderId: receiverId, receiverId: senderId }
                     ]
                 },
                 orderBy: { createdAt: 'desc' }
@@ -63,7 +69,7 @@ export class MessageService {
 
             if (!message) this.handleErrorsService.throwNotFoundError("Message not found")
 
-            if (message?.senderId !== userId || message?.receiverId !== userId) {
+            if (message?.senderId !== userId) {
                 this.handleErrorsService.throwForbiddenError("You are not authorized to delete this message")
             }
 
