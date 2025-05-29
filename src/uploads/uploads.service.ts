@@ -1,28 +1,42 @@
 import { Injectable } from '@nestjs/common';
 import { CloudinaryService } from './cloudinary.service';
-import { UploadApiResponse } from 'cloudinary';
 import * as path from 'path';
+import { HandleErrorsService } from 'src/common/handleErrors.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class UploadsService {
-  constructor(private readonly cloudinary: CloudinaryService) {}
+  constructor(
+    private readonly cloudinary: CloudinaryService,
+    private readonly handleErrorsService: HandleErrorsService,
+    private readonly prisma: PrismaService
+  ) { }
 
-  async handleUploads(files: Express.Multer.File[]) {
-    const uploads: UploadApiResponse[] = [];
-
-    for (const file of files) {
+  async uploadAvatarImage(file: Express.Multer.File, userId: string) {
+    try {
       const ext = path.extname(file.originalname).toLowerCase();
       const isImage = /jpeg|jpg|png|gif/.test(ext);
+
+      if (!isImage) this.handleErrorsService.throwBadRequestError('Only image files are allowed');
+
       const publicId = path.parse(file.filename).name;
-      const folder = `${file.fieldname}s`;
+      const folder = `images`;
 
-      const upload = isImage
-        ? await this.cloudinary.uploadImage(file.path, publicId, folder)
-        : await this.cloudinary.uploadVideo(file.path, publicId, folder);
+      const upload = await this.cloudinary.uploadImage(file.path, publicId, folder);
 
-      uploads.push(upload);
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { avatarImage: upload.secure_url },
+      });
+
+      return {
+        message: 'Avatar image upload successful',
+        data: upload.secure_url
+      };
     }
 
-    return uploads;
+    catch (error) {
+      this.handleErrorsService.handleError(error);
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
-import fs from 'fs';
+import * as fs from 'fs';
 import { Injectable } from '@nestjs/common';
 
 cloudinary.config({
@@ -15,6 +15,7 @@ export class CloudinaryService {
         public_id: string,
         folder: string,
     ): Promise<UploadApiResponse> {
+
         try {
             const result: UploadApiResponse = await cloudinary.uploader.upload(filePath, {
                 public_id,
@@ -59,9 +60,9 @@ export class CloudinaryService {
         }
     }
 
-    async delete(public_id: string): Promise<any> {
+    async delete(public_id: string): Promise<void> {
         try {
-            return await cloudinary.uploader.destroy(public_id, {
+            await cloudinary.uploader.destroy(public_id, {
                 resource_type: 'auto',
             });
         } 
