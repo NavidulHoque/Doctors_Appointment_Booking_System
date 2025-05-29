@@ -13,6 +13,8 @@ import { BullModule } from '@nestjs/bull';
 import { NotificationModule } from './notification/notification.module';
 import { PaymentModule } from './payment/payment.module';
 import { WebhookModule } from './webhook/webhook.module';
+import { InactiveUserCronService } from './cron/inactiveUserCron.service';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -22,7 +24,8 @@ import { WebhookModule } from './webhook/webhook.module';
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
-    ConfigModule.forRoot(), 
+    ConfigModule.forRoot(),
+    ScheduleModule.forRoot(), // for cron jobs to run
     AuthModule, 
     UserModule, 
     AppointmentModule, 
@@ -35,6 +38,7 @@ import { WebhookModule } from './webhook/webhook.module';
     PaymentModule,
     WebhookModule
   ],
-  controllers: [AppController]
+  controllers: [AppController],
+  providers: [InactiveUserCronService]
 })
 export class AppModule { }

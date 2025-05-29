@@ -110,7 +110,11 @@ export class AuthService {
 
     const updatedUser = await this.prisma.user.update({
       where: { id },
-      data: { refreshToken },
+      data: { 
+        refreshToken,
+        isOnline: true,
+        lastActiveAt: new Date()
+      },
       select: {
         id: true,
         fullName: true,
@@ -281,14 +285,29 @@ export class AuthService {
   async logout(id: string) {
 
     try {
-      const user = await this.prisma.user.update({
+      const user = await this.prisma.user.findUnique({
+        where: { id }
+      })
+
+      if (!user) {
+        this.handleErrorsService.throwNotFoundError('User not found');
+      }
+
+      else if (!user?.isOnline) {
+        this.handleErrorsService.throwForbiddenError('You cannot logout an offline user');
+      }
+      
+      await this.prisma.user.update({
         where: { id },
-        data: { refreshToken: null }
+        data: { 
+          refreshToken: null,
+          isOnline: false,
+          lastActiveAt: new Date()
+        }
       })
 
       return {
-        message: 'Logged out successfully',
-        data: user
+        message: 'Logged out successfully'
       }
     }
 

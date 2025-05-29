@@ -19,6 +19,35 @@ export class UserService {
         }
     }
 
+    async updateUserActivity(id: string) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id }
+            })
+
+            if (!user) {
+                this.handleErrorsService.throwNotFoundError("User not found")
+            }
+
+            else if (!user?.isOnline) {
+                this.handleErrorsService.throwForbiddenError("You cannot update an offline user's last active date")
+            }
+
+            await this.prisma.user.update({
+                where: { id },
+                data: { lastActiveAt: new Date() }
+            })
+
+            return {
+                message: 'User activity updated successfully'
+            }
+        }
+
+        catch (error) {
+            this.handleErrorsService.handleError(error)
+        }
+    }
+
     async updateUser(dto: UserDto, id: string) {
         const { fullName, email, phone, gender, birthDate, address, password } = dto
 

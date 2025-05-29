@@ -23,6 +23,8 @@ model User {
   birthDate                 DateTime?
   address                   String?
   password                  String
+  isOnline                  Boolean          @default(false)
+  lastActiveAt              DateTime?        
   doctor                    Doctor?
   otp                       String?          @unique
   otpExpires                DateTime?
