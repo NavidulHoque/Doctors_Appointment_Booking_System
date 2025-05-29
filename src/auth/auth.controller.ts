@@ -37,24 +37,24 @@ export class AuthController {
 
     @Post("/forgetPassword")
     forgetPassword(@Body() dto: OtherAuthDto) {
-        return this.authService.forgetPassword(dto.email)
+        return this.authService.forgetPassword(dto.email!)
     }
 
     @Post("/verifyOtp")
     verifyOtp(@Body() dto: OtherAuthDto) {
-        return this.authService.verifyOtp(dto.email, dto.otp)
+        return this.authService.verifyOtp(dto.email!, dto.otp!)
     }
 
     @Post("/resetPassword")
     resetPassword(@Body() dto: OtherAuthDto) {
-        return this.authService.resetPassword(dto.email, dto.newPassword)
+        return this.authService.resetPassword(dto.email!, dto.newPassword!)
     }
 
     @Post("/refreshAccessToken")
     refreshAccessToken(
         @Body() dto: OtherAuthDto
     ){
-        return this.authService.refreshAccessToken(dto.refreshToken)
+        return this.authService.refreshAccessToken(dto.refreshToken!)
     }
 
     @UseGuards(AuthGuard)

@@ -13,11 +13,11 @@ export class AppointmentService {
     private readonly logger = new Logger();
 
     constructor(
-        private prisma: PrismaService,
-        private handleErrorsService: HandleErrorsService,
-        private notificationService: NotificationService,
-        private config: ConfigService,
-        @InjectQueue('appointment-queue') private appointmentQueue: Queue
+        private readonly prisma: PrismaService,
+        private readonly handleErrorsService: HandleErrorsService,
+        private readonly notificationService: NotificationService,
+        private readonly config: ConfigService,
+        @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
     ) { }
 
     async createAppointment(dto: CreateAppointmentDto) {

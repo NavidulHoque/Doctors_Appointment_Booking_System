@@ -5,6 +5,7 @@ export const appointmentSelect = {
             id: true,
             fullName: true,
             email: true,
+            avatarImage: true,
             doctor: {
                 select: {
                     fees: true
@@ -17,6 +18,7 @@ export const appointmentSelect = {
             id: true,
             fullName: true,
             email: true,
+            avatarImage: true
         },
     },
     date: true,
