@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 
 @Injectable()
 export class HandleErrorsService {
@@ -15,7 +15,7 @@ export class HandleErrorsService {
             this.throwBadRequestError(message)
         }
 
-        throw error; //throws server error
+        throw new InternalServerErrorException(error.message);
     }
 
     throwNotFoundError(message: string) {

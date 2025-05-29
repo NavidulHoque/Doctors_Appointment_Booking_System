@@ -1,39 +1,33 @@
-// src/uploads/uploads.controller.ts
 import {
   Controller,
   Post,
-  Res,
-  UploadedFiles,
+  UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Response } from 'express';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from './multer.config';
-import { CloudinaryService } from './cloudinary.service';
 import { UploadsService } from './uploads.service';
+import { CheckRoleService } from 'src/common/checkRole.service';
+import { User } from 'src/user/decorator';
+import { UserDto } from 'src/user/dto';
+import { AuthGuard } from 'src/auth/guard';
 
+@UseGuards(AuthGuard)
 @Controller('upload')
 export class UploadsController {
   constructor(
-    private readonly cloudinaryService: CloudinaryService,
-    private readonly uploadsService: UploadsService
+    private readonly uploadsService: UploadsService,
+    private readonly checkRoleService: CheckRoleService
   ) { }
 
-  @Post()
-  @UseInterceptors(FileFieldsInterceptor([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }], multerOptions))
-  async handleUpload(
-    @UploadedFiles() files: Express.Multer.File[],
+  @Post("avatarImage")
+  @UseInterceptors(FileInterceptor('image', multerOptions))
+  uploadAvatarImage(
+    @UploadedFile() file: Express.Multer.File,
+    @User() user: UserDto
   ) {
-
-    const uploads = await this.uploadsService.handleUploads(files);
-
-    return {
-      message: 'Upload successful',
-      uploads: uploads.map((u, i) => ({
-        url: u.secure_url,
-        resource_type: u.resource_type,
-        field: files[i].fieldname,
-      })),
-    };
+    this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
+    return this.uploadsService.uploadAvatarImage(file, user.id);
   }
 }

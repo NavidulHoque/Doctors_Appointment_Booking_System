@@ -15,6 +15,7 @@ import { PaymentModule } from './payment/payment.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { InactiveUserCronService } from './cron/inactiveUserCron.service';
 import { ScheduleModule } from '@nestjs/schedule';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     MessageModule,
     NotificationModule,
     PaymentModule,
-    WebhookModule
+    WebhookModule,
+    UploadsModule
   ],
   controllers: [AppController],
   providers: [InactiveUserCronService]

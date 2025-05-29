@@ -23,6 +23,7 @@ model User {
   birthDate                 DateTime?
   address                   String?
   password                  String
+  avatarImage               String           @default("")
   isOnline                  Boolean          @default(false)
   lastActiveAt              DateTime?        
   doctor                    Doctor?
