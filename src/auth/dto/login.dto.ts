@@ -2,9 +2,12 @@ import {
     IsNotEmpty,
     IsString
 } from 'class-validator';
-import { BaseEmailDto } from './baseEmail.dto';
 
-export class LoginDto extends BaseEmailDto {
+export class LoginDto {
+
+    @IsString()
+    @IsNotEmpty({ message: "Email is required" })
+    email: string;
 
     @IsString()
     @IsNotEmpty({ message: 'Password is required' })

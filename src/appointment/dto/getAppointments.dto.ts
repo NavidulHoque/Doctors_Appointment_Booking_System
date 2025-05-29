@@ -1,8 +1,8 @@
-import { IsEnum, IsOptional, IsInt, Min, Max, IsString } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsString } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { Method, Status } from '@prisma/client';
+import { BaseAppointmentDto } from './baseAppointment.dto';
 
-export class GetAppointmentsDto {
+export class GetAppointmentsDto extends BaseAppointmentDto {
 
   @IsOptional()
   @Type(() => Number)
@@ -29,23 +29,11 @@ export class GetAppointmentsDto {
   patientId?: string;
 
   @IsOptional()
-  @IsString()
-  @Transform(({ value }) => value.toUpperCase())
-  @IsEnum(Status, { message: 'Status must be pending, confirmed, completed, running or cancelled' })
-  status?: Status;
-
-  @IsOptional()
   @Transform(({ value }) => {
     if (value === 'true') return true;
     if (value === 'false') return false;
   })
   isPaid?: boolean;
-
-  @IsOptional()
-  @IsString()
-  @Transform(({ value }) => value?.toUpperCase())
-  @IsEnum(Method, { message: 'Payment method must be cash or online' })
-  paymentMethod?: string;
 
   @IsOptional()
   @Transform(({ value }) => value === 'true')

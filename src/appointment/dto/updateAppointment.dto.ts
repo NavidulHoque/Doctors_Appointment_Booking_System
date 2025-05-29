@@ -1,23 +1,11 @@
-import { Method, Status } from "@prisma/client";
-import { Transform } from "class-transformer";
-import { IsBoolean, IsEnum, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsOptional, IsString } from "class-validator";
+import { BaseAppointmentDto } from "./baseAppointment.dto";
 
-export class UpdateAppointmentDto {
-    @IsOptional()
-    @IsString()
-    @IsEnum(Status, { message: 'Status must be pending, completed, running or cancelled' })
-    @Transform(({ value }) => value.toUpperCase())
-    status?: Status;
+export class UpdateAppointmentDto extends BaseAppointmentDto {
 
     @IsOptional()
     @IsBoolean()
     isPaid?: boolean;
-
-    @IsOptional()
-    @IsString()
-    @IsEnum(Method, { message: 'Payment method must be cash or online' })
-    @Transform(({ value }) => value.toUpperCase())
-    paymentMethod?: Method;
 
     @IsOptional()
     @IsString()

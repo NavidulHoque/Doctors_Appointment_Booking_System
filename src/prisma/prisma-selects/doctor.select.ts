@@ -4,6 +4,7 @@ export const doctorSelect = {
     select: {
       fullName: true,
       email: true,
+      avatarImage: true
     },
   },
   specialization: true,

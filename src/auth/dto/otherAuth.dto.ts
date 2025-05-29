@@ -4,17 +4,17 @@ export class OtherAuthDto {
 
     @IsOptional()
     @IsString()
-    email: string;
+    email?: string;
 
     @IsOptional()
     @IsString()
-    otp: string;
+    otp?: string;
 
     @IsOptional()
     @IsString()
-    newPassword: string;
+    newPassword?: string;
 
     @IsOptional()
     @IsString()
-    refreshToken: string;
+    refreshToken?: string;
 }

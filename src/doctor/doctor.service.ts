@@ -160,8 +160,10 @@ export class DoctorService {
                         id: true,
                         patient: {
                             select: {
+                                id: true,
                                 fullName: true,
-                                email: true
+                                email: true,
+                                avatarImage: true
                             }
                         },
                         comment: true,
