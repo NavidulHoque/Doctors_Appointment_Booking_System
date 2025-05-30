@@ -3,13 +3,15 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { MessageDto } from './dto';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { UserDto } from 'src/user/dto';
+import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
 @Injectable()
 export class MessageService {
 
     constructor(
-        private prisma: PrismaService,
-        private handleErrorsService: HandleErrorsService
+        private readonly prisma: PrismaService,
+        private readonly handleErrorsService: HandleErrorsService,
+        private readonly findEntityByIdService: FindEntityByIdService
     ) { }
 
     async createMessage(dto: MessageDto, senderId: string) {
@@ -65,9 +67,7 @@ export class MessageService {
         const { id: userId } = user
 
         try {
-            const message = await this.prisma.message.findUnique({ where: { id } });
-
-            if (!message) this.handleErrorsService.throwNotFoundError("Message not found")
+            const message = await this.findEntityByIdService.findEntityById("message", id, { senderId: true })
 
             if (message?.senderId !== userId) {
                 this.handleErrorsService.throwForbiddenError("You are not authorized to delete this message")

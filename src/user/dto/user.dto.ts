@@ -8,18 +8,7 @@ import {
     IsString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export enum Role {
-    Patient = 'PATIENT',
-    Doctor = 'DOCTOR',
-    Admin = 'ADMIN',
-}
-
-export enum Gender {
-    Male = 'MALE',
-    Female = 'FEMALE',
-    Other = 'OTHER',
-}
+import { Gender, Role } from '@prisma/client';
 
 export class UserDto {
 

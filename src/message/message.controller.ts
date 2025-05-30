@@ -12,11 +12,11 @@ export class MessageController {
 
     constructor(
         private readonly messageService: MessageService,
-        private checkRoleService: CheckRoleService
+        private readonly checkRoleService: CheckRoleService
     ) { }
 
     @Post("/create-message")
-    async createMessage(
+    createMessage(
         @Body() dto: MessageDto, 
         @User() user: UserDto
     ) {
@@ -26,7 +26,7 @@ export class MessageController {
 
     
     @Get("/get-messages/:receiverId")
-    async getMessages(
+    getMessages(
         @User() user: UserDto,
         @Param('receiverId') receiverId: string
     ) {
@@ -35,7 +35,7 @@ export class MessageController {
     }
     
     @Delete("/delete-message/:id")
-    async deleteMessage(
+    deleteMessage(
         @Param('id') id: string,
         @User() user: UserDto
     ) {
