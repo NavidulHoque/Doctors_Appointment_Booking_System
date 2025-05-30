@@ -12,10 +12,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(
-        private jwtService: JwtService,
-        private config: ConfigService,
-        private handleErrorService: HandleErrorsService,
-        private prisma: PrismaService
+        private readonly jwtService: JwtService,
+        private readonly config: ConfigService,
+        private readonly handleErrorService: HandleErrorsService,
+        private readonly prisma: PrismaService,
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -30,12 +30,11 @@ export class AuthGuard implements CanActivate {
         try {
             const payload = await this.jwtService.verifyAsync(token as string, { secret })
 
-            
             const user = await this.prisma.user.findUnique({ 
                 where: { id: payload.id }
             })
 
-            if (!user) this.handleErrorService.throwUnauthorizedError("User not found")
+            if (!user) this.handleErrorService.throwNotFoundError("User not found")
 
             request['user'] = user;
         }

@@ -5,9 +5,9 @@ export class UpdateAppointmentDto extends BaseAppointmentDto {
 
     @IsOptional()
     @IsBoolean()
-    isPaid?: boolean;
+    readonly isPaid?: boolean;
 
     @IsOptional()
     @IsString()
-    cancellationReason?: string;
+    readonly cancellationReason?: string;
 }

@@ -12,7 +12,7 @@ export class StripeService {
         });
     }
 
-    async createCheckoutSession(amount: number, appointmentId: string) {
+    async createCheckoutSession(amount: number, appointmentId: string, doctorStripeAccountId: string) {
         const session = await this.stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'payment',
@@ -32,6 +32,11 @@ export class StripeService {
             cancel_url: `${this.configService.get('FRONTEND_URL')}/cancel?session_id={CHECKOUT_SESSION_ID}`,
             metadata: {
                 appointmentId,
+            },
+            payment_intent_data: {
+                transfer_data: {
+                    destination: doctorStripeAccountId, // Send money directly to doctor’s account
+                },
             },
         });
 

@@ -66,6 +66,7 @@ model Doctor {
   revenue               Int            @default(0)
   availableTimes        String[]
   isActive              Boolean        @default(false)
+  stripeAccountId       String?
 
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt

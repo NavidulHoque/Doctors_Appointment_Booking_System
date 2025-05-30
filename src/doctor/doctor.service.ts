@@ -7,16 +7,26 @@ import { UserDto } from 'src/user/dto';
 import * as argon from "argon2";
 import { FetchUserService } from 'src/common/fetchUser.service';
 import { ComparePasswordService } from 'src/common/comparePassword.service';
+import Stripe from 'stripe';
+import { ConfigService } from '@nestjs/config';
+import { FindEntityService } from 'src/common/FindEntityById.service';
 
 @Injectable()
 export class DoctorService {
+    private stripe: Stripe;
 
     constructor(
-        private prisma: PrismaService,
-        private handleErrorsService: HandleErrorsService,
-        private fetchUserService: FetchUserService,
-        private comparePasswordService: ComparePasswordService
-    ) { }
+        private readonly prisma: PrismaService,
+        private readonly handleErrorsService: HandleErrorsService,
+        private readonly fetchUserService: FetchUserService,
+        private readonly comparePasswordService: ComparePasswordService,
+        private readonly configService: ConfigService,
+        private readonly findEntityService: FindEntityService
+    ) {
+        this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY') as string, {
+            apiVersion: '2025-04-30.basil',
+        });
+    }
 
     async createDoctor(dto: CreateDoctorDto) {
 
@@ -25,7 +35,9 @@ export class DoctorService {
         try {
             const existingDoctor = await this.prisma.user.findFirst({ where: { email } })
 
-            if (existingDoctor) this.handleErrorsService.throwBadRequestError("Doctor already exists")
+            if (existingDoctor) {
+                this.handleErrorsService.throwBadRequestError("Doctor already exists")
+            }
 
             const hashedPassword = await argon.hash(password);
 
@@ -60,7 +72,7 @@ export class DoctorService {
 
         if (experience?.length === 1) {
             const [min] = experience;
-            query['experience'] = { gte: min }; 
+            query['experience'] = { gte: min };
         }
 
         if (experience?.length === 2) {
@@ -330,6 +342,8 @@ export class DoctorService {
 
         try {
 
+            await this.findEntityService.findEntity("doctor", id)
+
             if (currentPassword && newPassword) {
 
                 const user = await this.prisma.user.findUnique({ where: { id } })
@@ -383,7 +397,7 @@ export class DoctorService {
                 })
             }
 
-            const doctor = await this.prisma.doctor.update({
+            const updatedDoctor = await this.prisma.doctor.update({
                 where: { userId: id },
                 data: doctorData,
                 select: {
@@ -398,8 +412,6 @@ export class DoctorService {
                 }
             })
 
-            if (!doctor) this.handleErrorsService.throwNotFoundError("Doctor not found")
-
             return {
                 data: {
                     fullName,
@@ -408,10 +420,54 @@ export class DoctorService {
                     gender,
                     birthDate,
                     address,
-                    ...doctor
+                    ...updatedDoctor
                 },
                 message: "Doctor updated successfully"
             }
+        }
+
+        catch (error) {
+            this.handleErrorsService.handleError(error)
+        }
+    }
+
+    async createDoctorStripeAccount(userId: string) {
+        try {
+            const doctor = await this.prisma.doctor.findUnique({
+                where: { userId },
+                include: {
+                    user: {
+                        select: {
+                            email: true
+                        }
+                    }
+                }
+            });
+
+            if (doctor?.stripeAccountId) {
+                this.handleErrorsService.throwForbiddenError("Stripe account already exists")
+            }
+
+            const account = await this.stripe.accounts.create({
+                type: 'express',
+                email: doctor?.user?.email,
+            });
+
+            await this.prisma.doctor.update({
+                where: { userId },
+                data: { stripeAccountId: account.id }
+            });
+
+            const link = await this.stripe.accountLinks.create({
+                account: account.id,
+                refresh_url: `${this.configService.get('FRONTEND_URL')}/stripe/onboarding/refresh`,
+                return_url: `${this.configService.get('FRONTEND_URL')}/dashboard`,
+                type: 'account_onboarding',
+            });
+
+            return {
+                url: link.url 
+            };
         }
 
         catch (error) {
