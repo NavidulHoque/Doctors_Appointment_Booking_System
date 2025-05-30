@@ -1,7 +1,8 @@
-import { IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min, Max, IsNotEmpty } from 'class-validator';
 
 export class ReviewDto {
   @IsString()
+  @IsNotEmpty()
   doctorId: string;
 
   @IsOptional()

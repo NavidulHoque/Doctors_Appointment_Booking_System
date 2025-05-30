@@ -4,11 +4,11 @@ import { CheckRoleService } from './checkRole.service';
 import { FetchUserService } from './fetchUser.service';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { ComparePasswordService } from './comparePassword.service';
-import { FindEntityService } from './FindEntityById.service';
+import { FindEntityByIdService } from './FindEntityById.service';
 
 @Module({
   imports: [PrismaModule],
-  providers: [HandleErrorsService, CheckRoleService, FetchUserService, ComparePasswordService, FindEntityService],
-  exports: [HandleErrorsService, CheckRoleService, FetchUserService, ComparePasswordService, FindEntityService],
+  providers: [HandleErrorsService, CheckRoleService, FetchUserService, ComparePasswordService, FindEntityByIdService],
+  exports: [HandleErrorsService, CheckRoleService, FetchUserService, ComparePasswordService, FindEntityByIdService],
 })
 export class CommonModule { }

@@ -9,7 +9,7 @@ import { FetchUserService } from 'src/common/fetchUser.service';
 import { ComparePasswordService } from 'src/common/comparePassword.service';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
-import { FindEntityService } from 'src/common/FindEntityById.service';
+import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
 @Injectable()
 export class DoctorService {
@@ -21,7 +21,7 @@ export class DoctorService {
         private readonly fetchUserService: FetchUserService,
         private readonly comparePasswordService: ComparePasswordService,
         private readonly configService: ConfigService,
-        private readonly findEntityService: FindEntityService
+        private readonly findEntityByIdService: FindEntityByIdService
     ) {
         this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY') as string, {
             apiVersion: '2025-04-30.basil',
@@ -156,12 +156,7 @@ export class DoctorService {
         const skip = (page - 1) * limit
 
         try {
-            const fetchedDoctor = await this.prisma.doctor.findUnique({
-                where: { userId: id },
-                select: doctorSelect
-            })
-
-            if (!fetchedDoctor) this.handleErrorsService.throwNotFoundError("Doctor not found");
+            const doctor = await this.findEntityByIdService.findEntityById("doctor", id, doctorSelect)
 
             const [reviews, totalReviews, averageRating, relatedDoctors, bookedAppointmentDates] = await this.prisma.$transaction([
 
@@ -195,7 +190,7 @@ export class DoctorService {
 
                 this.prisma.doctor.findMany({
                     where: {
-                        specialization: fetchedDoctor?.specialization,
+                        specialization: doctor?.specialization,
                         isActive: true,
                         userId: {
                             not: id,
@@ -215,7 +210,6 @@ export class DoctorService {
                     select: {
                         date: true
                     },
-
                 })
             ])
 
@@ -225,7 +219,7 @@ export class DoctorService {
             return {
                 data: {
                     doctor: {
-                        ...fetchedDoctor,
+                        ...doctor,
                         averageRating: averageRating._avg.rating,
                         totalReviews,
                         reviews
@@ -342,7 +336,7 @@ export class DoctorService {
 
         try {
 
-            await this.findEntityService.findEntity("doctor", id)
+            await this.findEntityByIdService.findEntityById("doctor", id, null)
 
             if (currentPassword && newPassword) {
 
@@ -466,7 +460,7 @@ export class DoctorService {
             });
 
             return {
-                url: link.url 
+                url: link.url
             };
         }
 
@@ -478,12 +472,11 @@ export class DoctorService {
     async deleteDoctor(id: string) {
 
         try {
-            const doctor = await this.prisma.doctor.delete({ where: { userId: id } })
+            await this.findEntityByIdService.findEntityById("doctor", id, null)
 
-            if (!doctor) this.handleErrorsService.throwNotFoundError("Doctor not found")
+            await this.prisma.doctor.delete({ where: { userId: id } })
 
             return {
-                data: doctor,
                 message: "Doctor deleted successfully"
             }
         }

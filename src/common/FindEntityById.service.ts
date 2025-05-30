@@ -20,7 +20,7 @@ export class FindEntityByIdService {
         private readonly handleErrorsService: HandleErrorsService
     ) { }
 
-    async findEntityById(modelName: string, id: string, select: any | undefined) {
+    async findEntityById(modelName: string, id: string, select: any | null) {
         const primaryKey = this.primaryKeys[modelName]
 
         if (!select) {
@@ -35,7 +35,7 @@ export class FindEntityByIdService {
         }
 
         else if (select) {
-            
+
             const entity = await this.prisma[modelName].findUnique({ 
                 where: { [primaryKey]: id },
                 select 

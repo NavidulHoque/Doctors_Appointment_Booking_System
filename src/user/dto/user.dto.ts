@@ -6,28 +6,19 @@ import {
     MinLength,
     Matches,
     IsString,
+    IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export enum Role {
-    Patient = 'PATIENT',
-    Doctor = 'DOCTOR',
-    Admin = 'ADMIN',
-}
-
-export enum Gender {
-    Male = 'MALE',
-    Female = 'FEMALE',
-    Other = 'OTHER',
-}
+import { Gender, Role } from '@prisma/client';
 
 export class UserDto {
 
-    @IsString()
     @IsOptional()
-    id: string;
+    @IsString()
+    id?: string;
 
     @IsString()
+    @IsNotEmpty({ message: 'Full Name is required' })
     @MinLength(5, { message: 'Full name must be at least 5 characters long' })
     @Matches(/^[a-zA-Z. ]+$/, {
         message: 'Full name can only contain letters, spaces, and dots',
@@ -35,6 +26,7 @@ export class UserDto {
     fullName: string;
 
     @IsString()
+    @IsNotEmpty({ message: 'Email is required' })
     @IsEmail({}, { message: 'Invalid email format' })
     email: string;
 
