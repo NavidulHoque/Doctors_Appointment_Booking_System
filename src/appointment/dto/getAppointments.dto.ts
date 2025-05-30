@@ -8,42 +8,42 @@ export class GetAppointmentsDto extends BaseAppointmentDto {
   @Type(() => Number)
   @IsInt()
   @Min(1, { message: 'Page must be at least 1' })
-  page?: number;
+  readonly page?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Max(10, { message: 'Limit must be at most 10' })
-  limit?: number;
+  readonly limit?: number;
 
   @IsOptional()
   @IsString()
-  search?: string;
+  readonly search?: string;
 
   @IsOptional()
   @IsString()
-  doctorId?: string;
+  readonly doctorId?: string;
 
   @IsOptional()
   @IsString()
-  patientId?: string;
+  readonly patientId?: string;
 
   @IsOptional()
   @Transform(({ value }) => {
     if (value === 'true') return true;
     if (value === 'false') return false;
   })
-  isPaid?: boolean;
+  readonly isPaid?: boolean;
 
   @IsOptional()
   @Transform(({ value }) => value === 'true')
-  isToday?: boolean
+  readonly isToday?: boolean
 
   @IsOptional()
   @Transform(({ value }) => value === 'true')
-  isPast?: boolean
+  readonly isPast?: boolean
 
   @IsOptional()
   @Transform(({ value }) => value === 'true')
-  isFuture?: boolean
+  readonly isFuture?: boolean
 }

@@ -7,6 +7,7 @@ import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
 @Injectable()
 export class AppointmentService {
@@ -17,6 +18,7 @@ export class AppointmentService {
         private readonly handleErrorsService: HandleErrorsService,
         private readonly notificationService: NotificationService,
         private readonly config: ConfigService,
+        private readonly findEntityByService: FindEntityByIdService,
         @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
     ) { }
 
@@ -269,14 +271,7 @@ export class AppointmentService {
 
         try {
 
-            const appointment = await this.prisma.appointment.findUnique({
-                where: { id },
-                select: appointmentSelect
-            })
-
-            if (!appointment) {
-                this.handleErrorsService.throwNotFoundError("Appointment not found")
-            }
+            const appointment = await this.findEntityByService.findEntityById('appointment', id, appointmentSelect)
 
             return {
                 data: appointment,
@@ -357,14 +352,7 @@ export class AppointmentService {
         }
 
         try {
-            const appointment = await this.prisma.appointment.findUnique({
-                where: { id },
-                select: appointmentSelect
-            })
-
-            if (!appointment) {
-                this.handleErrorsService.throwNotFoundError("Appointment not found")
-            }
+            const appointment = await this.findEntityByService.findEntityById('appointment', id, appointmentSelect)
 
             const now = new Date();
 

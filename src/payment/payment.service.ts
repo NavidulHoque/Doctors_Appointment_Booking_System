@@ -13,7 +13,29 @@ export class PaymentService {
 
   async createPaymentSession(appointmentId: string, userId: string, amount: number) {
     try {
-      const session = await this.stripeService.createCheckoutSession(amount, appointmentId);
+
+      const appointment = await this.prisma.appointment.findUnique({
+        where: { id: appointmentId },
+        include: {
+          doctor: {
+            include: {
+              doctor: {
+                select: {
+                  stripeAccountId: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const doctorStripeAccountId = appointment?.doctor?.doctor?.stripeAccountId;
+
+      if (!doctorStripeAccountId) {
+        this.handleErrorsService.throwForbiddenError("Doctor has no stripe account, you cannot pay for this appointment online");
+      }
+
+      const session = await this.stripeService.createCheckoutSession(amount, appointmentId, doctorStripeAccountId!);
 
       await this.prisma.payment.create({
         data: {

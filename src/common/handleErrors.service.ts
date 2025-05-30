@@ -4,6 +4,14 @@ import { BadRequestException, ForbiddenException, Injectable, InternalServerErro
 export class HandleErrorsService {
 
     handleError(error: any) {
+        if (error instanceof BadRequestException ||
+            error instanceof NotFoundException ||
+            error instanceof UnauthorizedException ||
+            error instanceof ForbiddenException) {
+
+            throw error; // nest js will throw the correct error
+        }
+
         if (error.name === "ValidationError") {
 
             const message: string[] = [];

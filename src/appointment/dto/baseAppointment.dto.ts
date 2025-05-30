@@ -7,11 +7,11 @@ export class BaseAppointmentDto {
     @IsString()
     @Transform(({ value }) => value.toUpperCase())
     @IsEnum(Status, { message: 'Status must be pending, confirmed, completed, running or cancelled' })
-    status?: Status;
+    readonly status?: Status;
 
     @IsOptional()
     @IsString()
-    @Transform(({ value }) => value?.toUpperCase())
+    @Transform(({ value }) => value.toUpperCase())
     @IsEnum(Method, { message: 'Payment method must be cash or online' })
-    paymentMethod?: Method;
+    readonly paymentMethod?: Method;
 }

@@ -60,6 +60,14 @@ export class DoctorController {
         this.checkRoleService.checkIsAdminOrDoctor(user.role)
         return this.doctorService.updateDoctor(body, id)
     }
+
+    @Patch("/update-create-doctor-stripe-account")
+    createDoctorStripeAccount(
+        @User() user: UserDto
+    ) {
+        this.checkRoleService.checkIsDoctor(user.role)
+        return this.doctorService.createDoctorStripeAccount(user.id)
+    }
    
     @Delete("/delete-doctor/:id")
     deleteDoctor(
