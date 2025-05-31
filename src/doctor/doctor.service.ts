@@ -425,18 +425,17 @@ export class DoctorService {
         }
     }
 
-    async createDoctorStripeAccount(userId: string) {
+    async createStripeAccount(userId: string) {
+
         try {
-            const doctor = await this.prisma.doctor.findUnique({
-                where: { userId },
-                include: {
+            const doctor = await this.findEntityByIdService.findEntityById("doctor", userId,
+                {
                     user: {
-                        select: {
-                            email: true
-                        }
-                    }
-                }
-            });
+                        select: { email: true }
+                    },
+                    stripeAccountId: true
+                })
+
 
             if (doctor?.stripeAccountId) {
                 this.handleErrorsService.throwForbiddenError("Stripe account already exists")
@@ -455,12 +454,46 @@ export class DoctorService {
             const link = await this.stripe.accountLinks.create({
                 account: account.id,
                 refresh_url: `${this.configService.get('FRONTEND_URL')}/stripe/onboarding/refresh`,
-                return_url: `${this.configService.get('FRONTEND_URL')}/dashboard`,
+                return_url: `${this.configService.get('FRONTEND_URL')}/stripe/onboarding/return?accountId=${account.id}`,
                 type: 'account_onboarding',
             });
 
             return {
-                url: link.url
+                url: link.url,
+                message: "Stripe account created successfully"
+            };
+        }
+
+        catch (error) {
+            this.handleErrorsService.handleError(error)
+        }
+    }
+
+    async activateStripeAccount(userId: string, stripeAccountId: string) {
+
+        try {
+            const account = await this.stripe.accounts.retrieve(stripeAccountId);
+
+            const {
+                charges_enabled,
+                payouts_enabled,
+                details_submitted
+            } = account
+
+            if (charges_enabled && payouts_enabled && details_submitted) {
+
+                await this.prisma.doctor.update({
+                    where: { userId },
+                    data: { isStripeAccountActive: true }
+                })
+            }
+
+            else {
+                this.handleErrorsService.throwForbiddenError("Stripe account not activated")
+            }
+
+            return {
+                message: "Stripe account activated successfully"
             };
         }
 

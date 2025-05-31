@@ -44,7 +44,6 @@ export class WebhookService {
         }
     }
 
-
     private async handleSuccessfulCheckout(session: Stripe.Checkout.Session) {
         await this.prisma.payment.update({
             where: { transactionId: session.id },
