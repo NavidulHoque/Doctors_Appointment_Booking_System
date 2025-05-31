@@ -61,14 +61,23 @@ export class DoctorController {
         return this.doctorService.updateDoctor(body, id)
     }
 
-    @Patch("/update-create-doctor-stripe-account")
-    createDoctorStripeAccount(
+    @Patch("/stripe/create-account")
+    createStripeAccount(
         @User() user: UserDto
     ) {
         this.checkRoleService.checkIsDoctor(user.role)
-        return this.doctorService.createDoctorStripeAccount(user.id)
+        return this.doctorService.createStripeAccount(user.id)
     }
-   
+    
+    @Patch("/stripe/activate-account")
+    activateStripeAccount(
+        @User() user: UserDto,
+        @Body("stripeAccountId") stripeAccountId: string
+    ){
+        this.checkRoleService.checkIsDoctor(user.role)
+        return this.doctorService.activateStripeAccount(user.id, stripeAccountId)
+    }
+    
     @Delete("/delete-doctor/:id")
     deleteDoctor(
         @Param('id') id: string,
