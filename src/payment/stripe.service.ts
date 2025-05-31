@@ -30,6 +30,7 @@ export class StripeService {
             ],
             success_url: `${this.configService.get('FRONTEND_URL')}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${this.configService.get('FRONTEND_URL')}/cancel?session_id={CHECKOUT_SESSION_ID}`,
+            expires_at: Math.floor(Date.now() / 1000) + 60 * 30,
             metadata: {
                 appointmentId,
             },
