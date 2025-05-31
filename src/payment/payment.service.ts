@@ -21,7 +21,8 @@ export class PaymentService {
             include: {
               doctor: {
                 select: {
-                  stripeAccountId: true
+                  stripeAccountId: true,
+                  isStripeAccountActive: true
                 }
               }
             }
@@ -29,13 +30,20 @@ export class PaymentService {
         }
       });
 
-      const doctorStripeAccountId = appointment?.doctor?.doctor?.stripeAccountId;
+      const doctorInfo = appointment?.doctor?.doctor;
 
-      if (!doctorStripeAccountId) {
+      const stripeAccountId = doctorInfo?.stripeAccountId;
+      const isStripeAccountActive = doctorInfo?.isStripeAccountActive;
+
+      if (!stripeAccountId) {
         this.handleErrorsService.throwForbiddenError("Doctor has no stripe account, you cannot pay for this appointment online");
       }
 
-      const session = await this.stripeService.createCheckoutSession(amount, appointmentId, doctorStripeAccountId!);
+      if (!isStripeAccountActive) {
+        this.handleErrorsService.throwForbiddenError("Doctor's stripe account not activated, you cannot pay for this appointment online");
+      }
+
+      const session = await this.stripeService.createCheckoutSession(amount, appointmentId, stripeAccountId!);
 
       await this.prisma.payment.create({
         data: {
