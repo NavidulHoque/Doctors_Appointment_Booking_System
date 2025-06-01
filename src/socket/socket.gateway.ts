@@ -1,4 +1,3 @@
-// notification.gateway.ts
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -9,18 +8,27 @@ import { Server } from 'socket.io';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', 
+    origin: '*',
   },
 })
 
-export class NotificationGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
+  constructor(){
+    console.log('SocketGateway initialized');
+  }
+
   private clients: Map<string, string> = new Map(); // userId -> socketId
 
-  handleConnection(client: any) {
+  handleConnection(client: any) { // handles connection with frontend
+
     const userId = client.handshake.query.userId as string;
+
+    console.log('✅ Connected userId:', userId);
+    console.log('🆔 Client ID:', client.id);
+
     if (userId) {
       this.clients.set(userId, client.id);
     }
@@ -28,6 +36,8 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
   handleDisconnect(client: any) {
     const userId = [...this.clients.entries()].find(([, socketId]) => socketId === client.id)?.[0];
+    
+    console.log('✅ Disconnected userId:', userId);
     if (userId) {
       this.clients.delete(userId);
     }
@@ -37,6 +47,13 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
     const socketId = this.clients.get(userId);
     if (socketId) {
       this.server.to(socketId).emit('notification', notification);
+    }
+  }
+
+  sendMessage(userId: string, message: any) {
+    const socketId = this.clients.get(userId);
+    if (socketId) {
+      this.server.to(socketId).emit('message', message);
     }
   }
 }

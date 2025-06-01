@@ -3,14 +3,14 @@ import { Injectable } from "@nestjs/common";
 import { Queue } from "bull";
 import { HandleErrorsService } from "src/common/handleErrors.service";
 import { PrismaService } from "src/prisma/prisma.service";
-import { NotificationGateway } from "./notification.gateway";
+import { SocketGateway } from "src/socket/socket.gateway"; 
 
 @Injectable()
 export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly handleErrorsService: HandleErrorsService,
-    private readonly notificationGateway: NotificationGateway,
+    private readonly socketGateway: SocketGateway,
     @InjectQueue("notification-queue") private readonly notificationQueue: Queue
   ) { }
 
@@ -28,7 +28,7 @@ export class NotificationService {
     });
 
     // send notification via WebSocket
-    this.notificationGateway.sendNotification(userId, notification);
+    this.socketGateway.sendNotification(userId, notification);
   }
 
 

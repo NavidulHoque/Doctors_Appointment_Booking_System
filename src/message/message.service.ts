@@ -4,6 +4,7 @@ import { MessageDto } from './dto';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { UserDto } from 'src/user/dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
+import { SocketGateway } from 'src/socket/socket.gateway';
 
 @Injectable()
 export class MessageService {
@@ -11,7 +12,8 @@ export class MessageService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly handleErrorsService: HandleErrorsService,
-        private readonly findEntityByIdService: FindEntityByIdService
+        private readonly findEntityByIdService: FindEntityByIdService,
+        private readonly socketGateway: SocketGateway
     ) { }
 
     async createMessage(dto: MessageDto, senderId: string) {
@@ -21,8 +23,16 @@ export class MessageService {
                 data: {
                     ...dto,
                     senderId
+                },
+                select: {
+                    id: true,
+                    content: true,
+                    createdAt: true
                 }
             });
+
+            // send message via WebSocket
+            this.socketGateway.sendMessage(dto.receiverId, message)
 
             return {
                 data: message,
