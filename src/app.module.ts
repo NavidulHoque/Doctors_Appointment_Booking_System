@@ -17,6 +17,7 @@ import { InactiveUserCronService } from './cron/inactiveUserCron.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UploadsModule } from './uploads/uploads.module';
 import { SocketModule } from './socket/socket.module';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -40,7 +41,8 @@ import { SocketModule } from './socket/socket.module';
     PaymentModule,
     WebhookModule,
     UploadsModule,
-    SocketModule
+    SocketModule,
+    KafkaModule
   ],
   controllers: [AppController],
   providers: [InactiveUserCronService]

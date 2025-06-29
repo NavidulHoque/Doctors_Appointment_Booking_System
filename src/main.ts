@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,6 +15,26 @@ async function bootstrap() {
   app.use('/webhook/stripe', express.raw({ type: 'application/json' }));
 
   await app.listen(Number(process.env.PORT ?? 3000));
+
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        clientId: 'nestjs-kafka-client',
+        brokers: ['localhost:9092'],
+      },
+      consumer: {
+        groupId: 'nestjs-consumer-group',
+      },
+    },
+  });
+
+  // Start Kafka consumer
+  await app.startAllMicroservices()
+    .then(() => console.log('Kafka Microservice connected'))
+    .catch(err => {
+      console.error('Kafka connection failed', err);
+    });
 }
 
 bootstrap();

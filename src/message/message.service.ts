@@ -5,6 +5,8 @@ import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { UserDto } from 'src/user/dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 import { SocketGateway } from 'src/socket/socket.gateway';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { KafkaProducerService } from 'src/kafka/kafka.service';
 
 @Injectable()
 export class MessageService {
@@ -13,17 +15,36 @@ export class MessageService {
         private readonly prisma: PrismaService,
         private readonly handleErrorsService: HandleErrorsService,
         private readonly findEntityByIdService: FindEntityByIdService,
-        private readonly socketGateway: SocketGateway
+        private readonly socketGateway: SocketGateway,
+        private readonly kafkaProducerService: KafkaProducerService
     ) { }
 
     async createMessage(dto: MessageDto, senderId: string) {
 
+        const data = {
+            ...dto,
+            senderId
+        }
+
         try {
+            const response = await this.kafkaProducerService.createMessage('message-topic', data);
+
+            return response
+        }
+
+        catch (error) {
+            this.handleErrorsService.handleError(error)
+        }
+    }
+
+    @MessagePattern('message-topic')
+    async handleMessageTopic(@Payload() data: any) {
+
+        try {
+            const parsedData = JSON.parse(data.value);
+
             const message = await this.prisma.message.create({
-                data: {
-                    ...dto,
-                    senderId
-                },
+                data: parsedData,
                 select: {
                     id: true,
                     content: true,
@@ -32,7 +53,7 @@ export class MessageService {
             });
 
             // send message via WebSocket
-            this.socketGateway.sendMessage(dto.receiverId, message)
+            this.socketGateway.sendMessage(parsedData.receiverId, message)
 
             return {
                 data: message,
