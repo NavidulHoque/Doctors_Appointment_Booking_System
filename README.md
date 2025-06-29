@@ -6,6 +6,7 @@ A full-featured backend system for managing doctor appointments, payments and re
 
 - 🔔 Real-time notifications using **Redis + BullMQ + WebSocket**
 - 💬 Real-time messaging between **Doctor, Patient, and Admin**
+- 📡 Asynchronous message processing with **Kafka** for high throughput
 - 🧾 Automated appointment status updates via **BullMQ**
 - ⏰ Online activity tracking using **Cron Jobs**
 - 🖼️ Avatar image uploads with **Multer + Cloudinary**
