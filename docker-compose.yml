@@ -1,11 +1,13 @@
+version: "3.9"
+
 services:
   postgres:
     image: postgres:16
     restart: always
     ports:
-      - 5432:5432
+      - 5433:5432
     volumes:
-      - ./postgres:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -15,10 +17,13 @@ services:
     image: adminer
     restart: always
     ports:
-      - 8081:8080
+      - 8085:8080
 
   redis:
     image: redis:7
     restart: always
     ports:
-      - 6379:6379
+      - 6385:6379
+
+volumes:
+  postgres-data:
