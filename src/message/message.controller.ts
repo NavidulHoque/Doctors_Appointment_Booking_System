@@ -1,0 +1,76 @@
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { MessageService } from './message.service';
+import { MessageDto } from './dto';
+import { AuthGuard } from 'src/auth/guard';
+import { UserDto } from 'src/user/dto';
+import { User } from 'src/user/decorator';
+import { CheckRoleService } from 'src/common/checkRole.service';
+import { MessageProducerService } from './message.producer.service';
+
+@UseGuards(AuthGuard)
+@Controller('messages')
+export class MessageController {
+
+    constructor(
+        private readonly messageService: MessageService,
+        private readonly checkRoleService: CheckRoleService,
+        private readonly messageProducerService: MessageProducerService
+    ) { }
+
+    @Post("/create-message")
+    @HttpCode(202)
+    async createMessage(
+        @Body() dto: MessageDto,
+        @User() user: UserDto
+    ) {
+        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
+
+        const data = {
+            ...dto,
+            senderId: user.id
+        }
+
+        return await this.messageProducerService.sendCreateMessage(data);
+    }
+
+    @Get("/get-messages/:receiverId")
+    getMessages(
+        @User() user: UserDto,
+        @Param('receiverId') receiverId: string
+    ) {
+        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
+        return this.messageService.getMessages(user, receiverId);
+    }
+
+    @Patch("/update-message/:id")
+    async updateMessage(
+        @Param('id') id: string,
+        @Body() dto: MessageDto,
+        @User() user: UserDto
+    ) {
+        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
+
+        const data = {
+            dto,
+            id,
+            senderId: user.id
+        }
+
+        return await this.messageProducerService.sendUpdateMessage(data);
+    }
+    
+    @Delete("/delete-message/:id")
+    async deleteMessage(
+        @Param('id') id: string,
+        @User() user: UserDto
+    ) {
+        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
+
+        const data = {
+            id,
+            senderId: user.id
+        }
+
+        return await this.messageProducerService.sendDeleteMessage(data);
+    }
+}
