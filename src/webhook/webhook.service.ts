@@ -16,7 +16,7 @@ export class WebhookService {
         private readonly notificationService: NotificationService
     ) {
         this.stripe = new Stripe(configService.get('STRIPE_SECRET_KEY')!, {
-            apiVersion: '2025-04-30.basil',
+            apiVersion: '2025-07-30.basil',
         });
     }
 

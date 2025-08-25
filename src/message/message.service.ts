@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { MessageDto } from './dto';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { UserDto } from 'src/user/dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
@@ -22,30 +21,26 @@ export class MessageService {
 
         console.log(`Creating message with idempotencyKey: ${idempotencyKey}`);
 
-        try {
-            const existingMessage = await this.prisma.message.findUnique({
-                where: { idempotencyKey },
-            });
+        const existingMessage = await this.prisma.message.findUnique({
+            where: { idempotencyKey },
+        });
 
-            if (existingMessage) {
-                return { data: existingMessage, message: "Message created successfully" };
-            }
+        if (existingMessage) {
+            this.socketGateway.sendMessage(data.receiverId, existingMessage);
 
-            const message = await this.prisma.message.create({
-                data,
-                select: {
-                    id: true,
-                    content: true,
-                    createdAt: true,
-                },
-            });
-
-            this.socketGateway.sendMessage(data.receiverId, message);
+            return
         }
-        
-        catch (error) {
-            this.handleErrorsService.handleError(error);
-        }
+
+        const message = await this.prisma.message.create({
+            data,
+            select: {
+                id: true,
+                content: true,
+                createdAt: true,
+            },
+        });
+
+        this.socketGateway.sendMessage(data.receiverId, message);
     }
 
     async getMessages(user: UserDto, receiverId: string) {
@@ -78,54 +73,33 @@ export class MessageService {
 
         const { senderId, id, dto } = data
 
-        try {
-            const message = await this.findEntityByIdService.findEntityById("message", id, { senderId: true })
+        const message = await this.findEntityByIdService.findEntityById("message", id, { senderId: true })
 
-            if (message?.senderId !== senderId) {
-                this.handleErrorsService.throwForbiddenError("You are not authorized to update this message")
-            }
-
-            const updatedMessage = await this.prisma.message.update({
-                where: { id },
-                data: dto,
-                select: {
-                    id: true,
-                    content: true,
-                    createdAt: true
-                }
-            });
-
-            return {
-                data: updatedMessage,
-                message: "Message updated successfully"
-            }
+        if (message?.senderId !== senderId) {
+            this.handleErrorsService.throwForbiddenError("You are not authorized to update this message")
         }
 
-        catch (error) {
-            this.handleErrorsService.handleError(error)
-        }
+        const updatedMessage = await this.prisma.message.update({
+            where: { id },
+            data: dto,
+            select: {
+                id: true,
+                content: true,
+                createdAt: true
+            }
+        });
     }
 
     async deleteMessage(data: any) {
 
         const { id, senderId } = data
 
-        try {
-            const message = await this.findEntityByIdService.findEntityById("message", id, { senderId: true })
+        const message = await this.findEntityByIdService.findEntityById("message", id, { senderId: true })
 
-            if (message?.senderId !== senderId) {
-                this.handleErrorsService.throwForbiddenError("You are not authorized to delete this message")
-            }
-
-            await this.prisma.message.delete({ where: { id } });
-
-            return {
-                message: "Message deleted successfully"
-            }
+        if (message?.senderId !== senderId) {
+            this.handleErrorsService.throwForbiddenError("You are not authorized to delete this message")
         }
 
-        catch (error) {
-            this.handleErrorsService.handleError(error)
-        }
+        await this.prisma.message.delete({ where: { id } });
     }
 }

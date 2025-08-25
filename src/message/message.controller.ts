@@ -1,11 +1,11 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { MessageService } from './message.service';
-import { MessageDto } from './dto';
 import { AuthGuard } from 'src/auth/guard';
 import { UserDto } from 'src/user/dto';
 import { User } from 'src/user/decorator';
 import { CheckRoleService } from 'src/common/checkRole.service';
 import { MessageProducerService } from './message.producer.service';
+import { CreateMessageDto, UpdateMessageDto } from './dto';
 
 @UseGuards(AuthGuard)
 @Controller('messages')
@@ -20,7 +20,7 @@ export class MessageController {
     @Post("/create-message")
     @HttpCode(202)
     async createMessage(
-        @Body() dto: MessageDto,
+        @Body() dto: CreateMessageDto,
         @User() user: UserDto
     ) {
         this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
@@ -45,7 +45,7 @@ export class MessageController {
     @Patch("/update-message/:id")
     async updateMessage(
         @Param('id') id: string,
-        @Body() dto: MessageDto,
+        @Body() dto: UpdateMessageDto,
         @User() user: UserDto
     ) {
         this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)

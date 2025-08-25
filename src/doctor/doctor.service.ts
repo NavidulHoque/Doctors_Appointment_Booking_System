@@ -24,7 +24,7 @@ export class DoctorService {
         private readonly findEntityByIdService: FindEntityByIdService
     ) {
         this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY') as string, {
-            apiVersion: '2025-04-30.basil',
+            apiVersion: '2025-07-30.basil',
         });
     }
 
