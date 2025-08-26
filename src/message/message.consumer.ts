@@ -23,13 +23,13 @@ export class MessageConsumer {
     try {
       switch (action) {
         case 'create':
-          return this.messageService.createMessage(data);
+          return await this.messageService.createMessage(data);
 
         case 'update':
-          return this.messageService.updateMessage(data);
+          return await this.messageService.updateMessage(data);
 
         case 'delete':
-          return this.messageService.deleteMessage(data);
+          return await this.messageService.deleteMessage(data);
 
         default:
           this.handleErrorsService.handleError(`Server side error: Unknown action: ${action}`);

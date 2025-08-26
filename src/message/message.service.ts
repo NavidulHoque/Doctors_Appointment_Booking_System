@@ -4,6 +4,7 @@ import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { UserDto } from 'src/user/dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 import { SocketService } from 'src/common/socket.service';
+import { messageSelect } from 'src/prisma/prisma-selects';
 
 @Injectable()
 export class MessageService {
@@ -30,20 +31,10 @@ export class MessageService {
 
         const message = await this.prisma.message.create({
             data,
-            select: {
-                id: true,
-                content: true,
-                createdAt: true,
-            },
+            select: messageSelect,
         });
 
         this.useSocketService(receiverId, message, senderId, { status: "success", message: "Message created successfully", data: message });
-    }
-
-    private useSocketService(receiverId: string, message: any, senderId: string, response: any) {
-        this.socketService.sendMessage(receiverId, message);
-
-        this.socketService.sendResponse(senderId, response);
     }
 
     async getMessages(user: UserDto, receiverId: string) {
@@ -74,39 +65,45 @@ export class MessageService {
 
     async updateMessage(data: any) {
 
-        const { senderId, id, dto } = data
+        const { senderId, messageId, receiverId, content } = data
 
-        const message = await this.findEntityByIdService.findEntityById("message", id, { senderId: true })
+        const message = await this.findEntityByIdService.findEntityById("message", messageId, { senderId: true })
 
         if (message?.senderId !== senderId) {
-            this.handleErrorsService.throwForbiddenError("You are not authorized to update this message")
+            this.socketService.sendResponse(senderId, { status: "failed", message: "You are not authorized to update this message" });
         }
 
         const updatedMessage = await this.prisma.message.update({
-            where: { id },
-            data: dto,
-            select: {
-                id: true,
-                content: true,
-                createdAt: true
-            }
+            where: { id: messageId },
+            data: { content },
+            select: messageSelect
         });
 
-        this.socketService.sendResponse(senderId, { status: "success", message: "Message updated successfully", data: updatedMessage });
+        this.useSocketService(receiverId, updatedMessage, senderId, { status: "success", message: "Message created successfully", data: updatedMessage });
     }
 
+    
     async deleteMessage(data: any) {
-
-        const { id, senderId } = data
-
-        const message = await this.findEntityByIdService.findEntityById("message", id, { senderId: true })
+        
+        const { messageId, senderId, receiverId } = data
+        
+        const message = await this.findEntityByIdService.findEntityById("message", messageId, { senderId: true })
 
         if (message?.senderId !== senderId) {
-            this.handleErrorsService.throwForbiddenError("You are not authorized to delete this message")
+            this.socketService.sendResponse(senderId, { status: "failed", message: "You are not authorized to update this message" });
         }
+        
+        const deletedMessage = await this.prisma.message.delete({ 
+            where: { id: messageId },
+            select: messageSelect
+        });
+        
+        this.useSocketService(receiverId, deletedMessage, senderId, { status: "success", message: "Message created successfully", data: deletedMessage });
+    }
 
-        await this.prisma.message.delete({ where: { id } });
-
-        this.socketService.sendResponse(senderId, { status: "success", message: "Message deleted successfully" });
+    private useSocketService(receiverId: string, message: any, senderId: string, response: any) {
+        this.socketService.sendMessage(receiverId, message);
+    
+        this.socketService.sendResponse(senderId, response);
     }
 }

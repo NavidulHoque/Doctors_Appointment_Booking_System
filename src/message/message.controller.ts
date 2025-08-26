@@ -45,31 +45,33 @@ export class MessageController {
     @Patch("/update-message/:id")
     @HttpCode(202)
     async updateMessage(
-        @Param('id') id: string,
+        @Param('messageId') messageId: string,
         @Body() dto: UpdateMessageDto,
         @User() user: UserDto
     ) {
         this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
 
         const data = {
-            dto,
-            id,
+            ...dto,
+            messageId,
             senderId: user.id
         }
 
         return await this.messageProducerService.sendUpdateMessage(data);
     }
     
-    @Delete("/delete-message/:id")
+    @Delete("/delete-message/:messageId/:receiverId")
     @HttpCode(202)
     async deleteMessage(
-        @Param('id') id: string,
+        @Param('messageId') messageId: string,
+        @Param('receiverId') receiverId: string,
         @User() user: UserDto
     ) {
         this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
 
         const data = {
-            id,
+            receiverId,
+            messageId,
             senderId: user.id
         }
 
