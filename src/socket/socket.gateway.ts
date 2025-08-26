@@ -56,4 +56,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(socketId).emit('message', message);
     }
   }
+
+  sendResponse(userId: string, response: any) {
+    const socketId = this.clients.get(userId);
+    if (socketId) {
+      this.server.to(socketId).emit('response', response);
+    }
+  }
 }

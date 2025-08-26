@@ -14,8 +14,7 @@ async function bootstrap() {
   // Stripe webhook raw body support
   app.use('/webhook/stripe', express.raw({ type: 'application/json' }));
 
-  await app.listen(Number(process.env.PORT ?? 3000));
-
+  // Connect Kafka microservice
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
@@ -24,11 +23,8 @@ async function bootstrap() {
         brokers: ['localhost:9092'],
       },
       consumer: {
-        groupId: 'nestjs-consumer-group',
+        groupId: 'nestjs-consumer-group-' + Math.random().toString(36).slice(2),
       },
-      // Kafka auto-parses JSON payloads
-      serializer: { serialize: (value) => value },
-      deserializer: { deserialize: (value) => JSON.parse(value.value.toString()) }
     },
   });
 
@@ -38,6 +34,8 @@ async function bootstrap() {
     .catch(err => {
       console.error('Kafka connection failed', err);
     });
+
+  await app.listen(Number(process.env.PORT ?? 3000));
 }
 
 bootstrap();

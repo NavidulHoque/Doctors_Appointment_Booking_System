@@ -43,6 +43,7 @@ export class MessageController {
     }
 
     @Patch("/update-message/:id")
+    @HttpCode(202)
     async updateMessage(
         @Param('id') id: string,
         @Body() dto: UpdateMessageDto,
@@ -60,6 +61,7 @@ export class MessageController {
     }
     
     @Delete("/delete-message/:id")
+    @HttpCode(202)
     async deleteMessage(
         @Param('id') id: string,
         @User() user: UserDto

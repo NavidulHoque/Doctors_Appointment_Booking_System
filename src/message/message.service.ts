@@ -3,7 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { UserDto } from 'src/user/dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
-import { SocketGateway } from 'src/socket/socket.gateway';
+import { SocketService } from 'src/common/socket.service';
 
 @Injectable()
 export class MessageService {
@@ -12,22 +12,19 @@ export class MessageService {
         private readonly prisma: PrismaService,
         private readonly handleErrorsService: HandleErrorsService,
         private readonly findEntityByIdService: FindEntityByIdService,
-        private readonly socketGateway: SocketGateway,
+        private readonly socketService: SocketService,
     ) { }
 
     async createMessage(data: any) {
 
-        const { idempotencyKey } = data;
-
-        console.log(`Creating message with idempotencyKey: ${idempotencyKey}`);
+        const { idempotencyKey, receiverId, senderId } = data;
 
         const existingMessage = await this.prisma.message.findUnique({
             where: { idempotencyKey },
         });
 
         if (existingMessage) {
-            this.socketGateway.sendMessage(data.receiverId, existingMessage);
-
+            this.useSocketService(receiverId, existingMessage, senderId, { status: "success", message: "Message created successfully", data: existingMessage });
             return
         }
 
@@ -40,7 +37,13 @@ export class MessageService {
             },
         });
 
-        this.socketGateway.sendMessage(data.receiverId, message);
+        this.useSocketService(receiverId, message, senderId, { status: "success", message: "Message created successfully", data: message });
+    }
+
+    private useSocketService(receiverId: string, message: any, senderId: string, response: any) {
+        this.socketService.sendMessage(receiverId, message);
+
+        this.socketService.sendResponse(senderId, response);
     }
 
     async getMessages(user: UserDto, receiverId: string) {
@@ -88,6 +91,8 @@ export class MessageService {
                 createdAt: true
             }
         });
+
+        this.socketService.sendResponse(senderId, { status: "success", message: "Message updated successfully", data: updatedMessage });
     }
 
     async deleteMessage(data: any) {
@@ -101,5 +106,7 @@ export class MessageService {
         }
 
         await this.prisma.message.delete({ where: { id } });
+
+        this.socketService.sendResponse(senderId, { status: "success", message: "Message deleted successfully" });
     }
 }
