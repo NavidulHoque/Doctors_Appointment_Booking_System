@@ -17,7 +17,7 @@
   "dependencies": {
     "@nestjs/bull": "^11.0.2",
     "@nestjs/common": "^11.0.1",
-    "@nestjs/config": "^4.0.0",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.6",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/mapped-types": "^2.1.0",
@@ -34,7 +34,7 @@
     "class-validator": "^0.14.1",
     "cloudinary": "^2.6.1",
     "install": "^0.13.0",
-    "ioredis": "^5.6.1",
+    "ioredis": "^5.7.0",
     "kafkajs": "^2.2.4",
     "multer": "^2.0.0",
     "npm": "^11.4.1",

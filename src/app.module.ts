@@ -18,13 +18,14 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { UploadsModule } from './uploads/uploads.module';
 import { SocketModule } from './socket/socket.module';
 import { KafkaModule } from './kafka/kafka.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_HOST || 'localhost', // or 'redis' if running in Docker
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        port: parseInt(process.env.REDIS_PORT || '6385', 10),
       },
     }),
     ConfigModule.forRoot(),
@@ -42,7 +43,8 @@ import { KafkaModule } from './kafka/kafka.module';
     WebhookModule,
     UploadsModule,
     SocketModule,
-    KafkaModule
+    KafkaModule,
+    RedisModule
   ],
   controllers: [AppController],
   providers: [InactiveUserCronService]
