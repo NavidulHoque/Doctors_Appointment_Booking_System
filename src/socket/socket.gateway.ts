@@ -16,7 +16,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  constructor(){
+  constructor() {
     console.log('SocketGateway initialized');
   }
 
@@ -36,7 +36,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: any) {
     const userId = [...this.clients.entries()].find(([, socketId]) => socketId === client.id)?.[0];
-    
+
     console.log('✅ Disconnected userId:', userId);
     if (userId) {
       this.clients.delete(userId);
@@ -45,20 +45,44 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   sendNotification(userId: string, notification: any) {
     const socketId = this.clients.get(userId);
+
+    console.log("Sending notification to userId:", userId, "with socketId:", socketId);
     if (socketId) {
       this.server.to(socketId).emit('notification', notification);
     }
   }
 
-  sendMessage(userId: string, message: any) {
+  sendCreatedMessage(userId: string, data: any) {
     const socketId = this.clients.get(userId);
+
+    console.log('Sending created message to userId:', userId, "with socketId:", socketId);
     if (socketId) {
-      this.server.to(socketId).emit('message', message);
+      this.server.to(socketId).emit('createMessage', data);
+    }
+  }
+
+  sendUpdatedMessage(userId: string, data: any) {
+    const socketId = this.clients.get(userId);
+
+    console.log('Sending updated message to userId:', userId, "with socketId:", socketId);
+    if (socketId) {
+      this.server.to(socketId).emit('updateMessage', data);
+    }
+  }
+
+  sendDeletedMessage(userId: string, data: any) {
+    const socketId = this.clients.get(userId);
+
+    console.log('Sending deleted message to userId:', userId, "with socketId:", socketId);
+    if (socketId) {
+      this.server.to(socketId).emit('deleteMessage', data);
     }
   }
 
   sendResponse(userId: string, response: any) {
     const socketId = this.clients.get(userId);
+
+    console.log("Sending response to userId:", userId, "with socketId:", socketId);
     if (socketId) {
       this.server.to(socketId).emit('response', response);
     }

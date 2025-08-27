@@ -7,9 +7,10 @@ import { ConfigModule } from '@nestjs/config';
 import { MessageProducerService } from './message.producer.service';
 import { MessageConsumer } from './message.consumer';
 import { KafkaModule } from 'src/kafka/kafka.module';
+import { SocketModule } from 'src/socket/socket.module';
 
 @Module({
-  imports: [CommonModule, PrismaModule, ConfigModule, KafkaModule],
+  imports: [CommonModule, PrismaModule, ConfigModule, KafkaModule, SocketModule],
   controllers: [MessageController, MessageConsumer],
   providers: [MessageService, MessageProducerService]
 })

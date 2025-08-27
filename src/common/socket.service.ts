@@ -11,10 +11,6 @@ export class SocketService{
         this.socketGateway.sendNotification(userId, notification);
     }
 
-    sendMessage(userId: string, message: any){
-        this.socketGateway.sendMessage(userId, message);
-    }
-
     sendResponse(userId: string, response: any){
         this.socketGateway.sendResponse(userId, response);
     }

@@ -76,7 +76,6 @@ export class MessageConsumer {
   @MessagePattern('message-dlq')
   async handleFailedMessages(@Payload() payload: any) {
     const { action, data, error } = payload
-
     this.socketService.sendResponse(data.senderId, { status: "failed", message: `Message ${action} request failed after ${this.MAX_RETRIES} retries. Error: ${error}` });
   }
 }

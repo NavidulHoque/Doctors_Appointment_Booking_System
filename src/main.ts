@@ -35,6 +35,11 @@ async function bootstrap() {
       console.error('Kafka connection failed', err);
     });
 
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
   await app.listen(Number(process.env.PORT ?? 3000));
 }
 

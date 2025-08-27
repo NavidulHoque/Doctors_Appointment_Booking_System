@@ -5,6 +5,7 @@ import { UserDto } from 'src/user/dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 import { SocketService } from 'src/common/socket.service';
 import { messageSelect } from 'src/prisma/prisma-selects';
+import { SocketGateway } from 'src/socket/socket.gateway';
 
 @Injectable()
 export class MessageService {
@@ -14,6 +15,7 @@ export class MessageService {
         private readonly handleErrorsService: HandleErrorsService,
         private readonly findEntityByIdService: FindEntityByIdService,
         private readonly socketService: SocketService,
+        private readonly socketGateway: SocketGateway
     ) { }
 
     async createMessage(data: any) {
@@ -22,10 +24,11 @@ export class MessageService {
 
         const existingMessage = await this.prisma.message.findUnique({
             where: { idempotencyKey },
+            select: messageSelect
         });
 
         if (existingMessage) {
-            this.useSocketService(receiverId, existingMessage, senderId, { status: "success", message: "Message created successfully", data: existingMessage });
+            this.useSocketService("create", receiverId, existingMessage, senderId, { status: "success", message: "Message created successfully", data: existingMessage });
             return
         }
 
@@ -34,12 +37,10 @@ export class MessageService {
             select: messageSelect,
         });
 
-        this.useSocketService(receiverId, message, senderId, { status: "success", message: "Message created successfully", data: message });
+        this.useSocketService("create", receiverId, message, senderId, { status: "success", message: "Message created successfully", data: message });
     }
 
-    async getMessages(user: UserDto, receiverId: string) {
-
-        const { id: senderId } = user
+    async getMessages(senderId: string, receiverId: string) {
 
         try {
             const messages = await this.prisma.message.findMany({
@@ -71,6 +72,7 @@ export class MessageService {
 
         if (message?.senderId !== senderId) {
             this.socketService.sendResponse(senderId, { status: "failed", message: "You are not authorized to update this message" });
+            return;
         }
 
         const updatedMessage = await this.prisma.message.update({
@@ -79,10 +81,9 @@ export class MessageService {
             select: messageSelect
         });
 
-        this.useSocketService(receiverId, updatedMessage, senderId, { status: "success", message: "Message created successfully", data: updatedMessage });
+        this.useSocketService("update", receiverId, updatedMessage, senderId, { status: "success", message: "Message updated successfully", data: updatedMessage });
     }
 
-    
     async deleteMessage(data: any) {
         
         const { messageId, senderId, receiverId } = data
@@ -90,7 +91,8 @@ export class MessageService {
         const message = await this.findEntityByIdService.findEntityById("message", messageId, { senderId: true })
 
         if (message?.senderId !== senderId) {
-            this.socketService.sendResponse(senderId, { status: "failed", message: "You are not authorized to update this message" });
+            this.socketService.sendResponse(senderId, { status: "failed", message: "You are not authorized to delete this message" });
+            return
         }
         
         const deletedMessage = await this.prisma.message.delete({ 
@@ -98,11 +100,26 @@ export class MessageService {
             select: messageSelect
         });
         
-        this.useSocketService(receiverId, deletedMessage, senderId, { status: "success", message: "Message created successfully", data: deletedMessage });
+        this.useSocketService("delete", receiverId, deletedMessage, senderId, { status: "success", message: "Message deleted successfully", data: deletedMessage });
     }
 
-    private useSocketService(receiverId: string, message: any, senderId: string, response: any) {
-        this.socketService.sendMessage(receiverId, message);
+    private useSocketService(action: string, receiverId: string, message: any, senderId: string, response: any) {
+        switch (action) {
+            case "create":
+                this.socketGateway.sendCreatedMessage(receiverId, message);
+                break;
+
+            case "update":
+                this.socketGateway.sendUpdatedMessage(receiverId, message);
+                break;
+
+            case "delete":
+                this.socketGateway.sendDeletedMessage(receiverId, message);
+                break;
+        
+            default:
+                break;
+        }
     
         this.socketService.sendResponse(senderId, response);
     }
