@@ -30,11 +30,11 @@ export class MessageController {
         return await this.messageProducerService.sendCreateMessage(data);
     }
 
-    @Get("/get-messages/:receiverId")
+    @Get("/get-messages")
     @Roles(Role.Admin, Role.Patient, Role.Doctor)
     getMessages(
         @User("id") userId: string,
-        @Param('receiverId') receiverId: string
+        @Query('receiverId') receiverId: string
     ) {
         return this.messageService.getMessages(userId, receiverId);
     }

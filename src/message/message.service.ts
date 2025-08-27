@@ -3,7 +3,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 import { SocketService } from 'src/common/socket.service';
-import { messageSelect } from 'src/prisma/prisma-selects';
 import { SocketGateway } from 'src/socket/socket.gateway';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from 'src/redis/redis.service';
@@ -11,6 +10,12 @@ import { RedisService } from 'src/redis/redis.service';
 @Injectable()
 export class MessageService {
     private readonly ttlSeconds: number;
+    private readonly messageSelect = {
+        id: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+    }
 
     constructor(
         private readonly prisma: PrismaService,
@@ -30,7 +35,7 @@ export class MessageService {
 
         const existingMessage = await this.prisma.message.findUnique({
             where: { idempotencyKey },
-            select: messageSelect
+            select: this.messageSelect
         });
 
         if (existingMessage) {
@@ -40,7 +45,7 @@ export class MessageService {
 
         const message = await this.prisma.message.create({
             data,
-            select: messageSelect,
+            select: this.messageSelect,
         });
 
         // invalidate conversation cache
@@ -70,8 +75,7 @@ export class MessageService {
                         { senderId: receiverId, receiverId: senderId }
                     ]
                 },
-                orderBy: { createdAt: 'desc' },
-                select: messageSelect
+                orderBy: { createdAt: 'desc' }
             });
 
             // 3) store in cache with TTL
@@ -102,7 +106,7 @@ export class MessageService {
         const updatedMessage = await this.prisma.message.update({
             where: { id: messageId },
             data: { content },
-            select: messageSelect
+            select: this.messageSelect
         });
 
         // invalidate conversation cache
@@ -124,7 +128,7 @@ export class MessageService {
 
         const deletedMessage = await this.prisma.message.delete({
             where: { id: messageId },
-            select: messageSelect
+            select: this.messageSelect
         });
 
         // invalidate conversation cache
