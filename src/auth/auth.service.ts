@@ -99,7 +99,7 @@ export class AuthService {
 
     const user = await this.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
 
-    if (user?.role.toLowerCase() !== role) {
+    if (user?.role !== role.toUpperCase()) {
       this.handleErrorsService.throwUnauthorizedError(`${role} login only`);
     }
 
@@ -139,26 +139,6 @@ export class AuthService {
     }
   }
 
-  private generateAccessToken(payload: { id: string | undefined }) {
-
-    const accessTokenSecrete = this.config.get<string>('ACCESS_TOKEN_SECRET')
-    const accessTokenExpires = this.config.get<string>('ACCESS_TOKEN_EXPIRES')
-
-    const accessToken = this.jwtService.sign(payload, { secret: accessTokenSecrete, expiresIn: accessTokenExpires });
-
-    return accessToken
-  }
-
-  private generateRefreshToken(payload: { id: string | undefined }) {
-
-    const refreshTokenSecrete = this.config.get<string>('REFRESH_TOKEN_SECRET')
-    const refreshTokenExpires = this.config.get<string>('REFRESH_TOKEN_EXPIRES')
-
-    const refreshToken = this.jwtService.sign(payload, { secret: refreshTokenSecrete, expiresIn: refreshTokenExpires });
-
-    return refreshToken
-  }
-
   async forgetPassword(email: string) {
 
     try {
@@ -176,8 +156,7 @@ export class AuthService {
       })
 
       return {
-        message: 'Otp sent successfully',
-        data: otp
+        message: 'Otp sent successfully'
       }
     }
 
@@ -192,7 +171,7 @@ export class AuthService {
       const user = await this.fetchUserByEmail(email, 'Invalid email')
 
       if (!user.otp || !user.otpExpires) {
-        this.handleErrorsService.throwUnauthorizedError('Otp not found');
+        this.handleErrorsService.throwNotFoundError('Otp not found');
       }
 
       else if (user.otp !== otp) {
@@ -223,7 +202,7 @@ export class AuthService {
 
   async resetPassword(email: string, newPassword: string) {
     try {
-      const user = await this.fetchUserByEmail(email, 'Otp not verified')
+      const user = await this.fetchUserByEmail(email, 'Invalid email')
 
       const hashedPassword = await argon.hash(newPassword);
 
@@ -252,11 +231,11 @@ export class AuthService {
         this.handleErrorsService.throwBadRequestError('Refresh token invalid');
       }
 
-      const decodedToken = this.jwtService.verify(refreshToken, {
+      const decoded = this.jwtService.verify(refreshToken, {
         secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
       });
 
-      if (!decodedToken || decodedToken.id !== user!.id) {
+      if (!decoded || decoded.id !== user!.id) {
         this.handleErrorsService.throwBadRequestError('Refresh token invalid');
       }
 
@@ -270,7 +249,8 @@ export class AuthService {
 
       return {
         message: 'Token refreshed successfully',
-        accessToken
+        accessToken,
+        refreshToken: newRefreshToken
       }
     }
 
@@ -285,7 +265,7 @@ export class AuthService {
       const user = await this.findEntityByIdService.findEntityById('user', id, { isOnline: true })
 
       if (!user.isOnline) {
-        this.handleErrorsService.throwForbiddenError('You cannot logout an offline user');
+        this.handleErrorsService.throwForbiddenError('Cannot logout an offline user');
       }
 
       await this.prisma.user.update({
@@ -305,6 +285,26 @@ export class AuthService {
     catch (error) {
       this.handleErrorsService.handleError(error);
     }
+  }
+
+  private generateAccessToken(payload: { id: string | undefined }) {
+
+    const accessTokenSecrete = this.config.get<string>('ACCESS_TOKEN_SECRET')
+    const accessTokenExpires = this.config.get<string>('ACCESS_TOKEN_EXPIRES')
+
+    const accessToken = this.jwtService.sign(payload, { secret: accessTokenSecrete, expiresIn: accessTokenExpires });
+
+    return accessToken
+  }
+
+  private generateRefreshToken(payload: { id: string | undefined }) {
+
+    const refreshTokenSecrete = this.config.get<string>('REFRESH_TOKEN_SECRET')
+    const refreshTokenExpires = this.config.get<string>('REFRESH_TOKEN_EXPIRES')
+
+    const refreshToken = this.jwtService.sign(payload, { secret: refreshTokenSecrete, expiresIn: refreshTokenExpires });
+
+    return refreshToken
   }
 
   private async fetchUserByEmail(email: string, errorMessage: string): Promise<any> {

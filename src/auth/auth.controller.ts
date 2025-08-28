@@ -1,18 +1,16 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegistrationDto } from './dto';
-import { AuthGuard } from './guard';
-import { User } from 'src/user/decorator';
-import { UserDto } from 'src/user/dto';
-import { CheckRoleService } from 'src/common/checkRole.service';
+import { AuthGuard, RolesGuard } from './guard';
 import { OtherAuthDto } from './dto/otherAuth.dto';
+import { Roles, User } from './decorators';
+import { Role } from './enum';
 
 @Controller('auth')
 export class AuthController {
 
     constructor(
-        private readonly authService: AuthService,
-        private readonly checkRoleService: CheckRoleService
+        private readonly authService: AuthService
     ) { }
 
     @Post("/register")
@@ -51,23 +49,26 @@ export class AuthController {
     }
 
     @Post("/resetPassword")
+    @HttpCode(200)
     resetPassword(@Body() dto: OtherAuthDto) {
         return this.authService.resetPassword(dto.email!, dto.newPassword!)
     }
 
     @Post("/refreshAccessToken")
+    @HttpCode(200)
     refreshAccessToken(
         @Body() dto: OtherAuthDto
     ){
         return this.authService.refreshAccessToken(dto.refreshToken!)
     }
 
-    @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard, RolesGuard)
     @Post("/logout")
-    async logout(
-        @User() user: UserDto
+    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @HttpCode(200)
+    logout(
+        @User("id") userId: string
     ){
-        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
-        return this.authService.logout(user.id)
+        return this.authService.logout(userId)
     }
 }
