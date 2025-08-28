@@ -32,7 +32,11 @@ export class MessageConsumer {
           return await this.messageService.deleteMessage(data);
 
         default:
-          this.handleErrorsService.handleError(`Server side error: Unknown action: ${action}`);
+          const error = {
+            message: `Unknown action: ${action}`,
+          }
+          
+          this.handleErrorsService.handleError(error);
       }
     }
 

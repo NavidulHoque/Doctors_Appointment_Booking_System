@@ -18,7 +18,7 @@ export class MessageController {
     @Post("/create-message")
     @Roles(Role.Admin, Role.Patient, Role.Doctor)
     @HttpCode(202)
-    async createMessage(
+    createMessage(
         @Body() dto: CreateMessageDto,
         @User("id") userId: string
     ) {
@@ -27,7 +27,7 @@ export class MessageController {
             senderId: userId
         }
 
-        return await this.messageProducerService.sendCreateMessage(data);
+        return this.messageProducerService.sendCreateMessage(data);
     }
 
     @Get("/get-messages")
@@ -42,7 +42,7 @@ export class MessageController {
     @Patch("/update-message/:messageId")
     @Roles(Role.Admin, Role.Patient, Role.Doctor)
     @HttpCode(202)
-    async updateMessage(
+    updateMessage(
         @Param('messageId') messageId: string,
         @Body() dto: UpdateMessageDto,
         @User("id") userId: string
@@ -53,13 +53,13 @@ export class MessageController {
             senderId: userId
         }
 
-        return await this.messageProducerService.sendUpdateMessage(data);
+        return this.messageProducerService.sendUpdateMessage(data);
     }
     
     @Delete("/delete-message/:messageId")
     @Roles(Role.Admin, Role.Patient, Role.Doctor)
     @HttpCode(202)
-    async deleteMessage(
+    deleteMessage(
         @Param('messageId') messageId: string,
         @Query("receiverId") receiverId: string,
         @User("id") userId: string
@@ -70,6 +70,6 @@ export class MessageController {
             senderId: userId
         }
 
-        return await this.messageProducerService.sendDeleteMessage(data);
+        return this.messageProducerService.sendDeleteMessage(data);
     }
 }
