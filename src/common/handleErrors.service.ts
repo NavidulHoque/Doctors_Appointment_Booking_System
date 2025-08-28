@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 
 @Injectable()
 export class HandleErrorsService {
@@ -7,19 +7,13 @@ export class HandleErrorsService {
         if (error instanceof BadRequestException ||
             error instanceof NotFoundException ||
             error instanceof UnauthorizedException ||
-            error instanceof ForbiddenException) {
+            error instanceof ForbiddenException ||
+            error instanceof ConflictException) {
 
             throw error; // nest js will throw the correct error
         }
 
         throw new InternalServerErrorException(error.message);
-    }
-
-    throwNotFoundError(message: string) {
-        throw new NotFoundException(message, {
-            cause: new Error(),
-            description: 'Resources not found',
-        })
     }
 
     throwBadRequestError(message: string | string[]) {
@@ -41,5 +35,19 @@ export class HandleErrorsService {
             cause: new Error(),
             description: 'Your certain action is forbidden',
         });
+    }
+
+    throwNotFoundError(message: string) {
+        throw new NotFoundException(message, {
+            cause: new Error(),
+            description: 'Resources not found',
+        })
+    }
+
+    throwConflictError(message: string) {
+        throw new ConflictException(message, {
+            cause: new Error(),
+            description: 'Your requested data conflicts with existing data',
+        })
     }
 }

@@ -5,7 +5,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { doctorSelect } from 'src/prisma/prisma-selects';
 import { UserDto } from 'src/user/dto';
 import * as argon from "argon2";
-import { FetchUserService } from 'src/common/fetchUser.service';
 import { ComparePasswordService } from 'src/common/comparePassword.service';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
@@ -18,7 +17,6 @@ export class DoctorService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly handleErrorsService: HandleErrorsService,
-        private readonly fetchUserService: FetchUserService,
         private readonly comparePasswordService: ComparePasswordService,
         private readonly configService: ConfigService,
         private readonly findEntityByIdService: FindEntityByIdService
@@ -379,11 +377,11 @@ export class DoctorService {
 
             else if (userData) {
 
-                const existingUser = await this.fetchUserService.fetchUser(email)
+                // const existingUser = await this.fetchUserService.fetchUser(email)
 
-                if (existingUser && id !== existingUser.id) {
-                    this.handleErrorsService.throwBadRequestError("Email already exists")
-                }
+                // if (existingUser && id !== existingUser.id) {
+                //     this.handleErrorsService.throwBadRequestError("Email already exists")
+                // }
 
                 await this.prisma.user.update({
                     where: { id },

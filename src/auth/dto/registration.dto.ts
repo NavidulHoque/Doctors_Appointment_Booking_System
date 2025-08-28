@@ -13,12 +13,12 @@ export class RegistrationDto {
     @Matches(/^[a-zA-Z. ]+$/, {
         message: 'Full name can only contain letters, spaces, and dots',
     })
-    fullName: string;
+    fullName!: string;
 
     @IsString()
     @IsNotEmpty({ message: 'Email is required' })
     @IsEmail({}, { message: 'Invalid email format' })
-    email: string;
+    email!: string;
 
     @IsString()
     @IsNotEmpty({ message: 'Password is required' })
@@ -27,5 +27,5 @@ export class RegistrationDto {
         message:
             'Password must contain at least one number and one special character',
     })
-    password: string;
+    password!: string;
 }

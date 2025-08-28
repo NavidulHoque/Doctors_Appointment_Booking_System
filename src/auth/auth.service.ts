@@ -4,11 +4,11 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { FetchUserService } from 'src/common/fetchUser.service';
 import { LoginDto, RegistrationDto } from './dto';
 import { ComparePasswordService } from 'src/common/comparePassword.service';
+import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
-@Injectable({})
+@Injectable()
 export class AuthService {
 
   constructor(
@@ -16,20 +16,15 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly handleErrorsService: HandleErrorsService,
-    private readonly fetchUserService: FetchUserService,
-    private readonly comparePasswordService: ComparePasswordService
+    private readonly comparePasswordService: ComparePasswordService,
+    private readonly findEntityByIdService: FindEntityByIdService,
   ) { }
 
   async register(dto: RegistrationDto) {
 
-    const { email, password } = dto
+    const { password } = dto
 
     try {
-
-      const user = await this.fetchUserService.fetchUser(email)
-
-      if (user) this.handleErrorsService.throwBadRequestError("User already exists")
-
       const hashedPassword = await argon.hash(password);
 
       dto.password = hashedPassword
@@ -40,7 +35,18 @@ export class AuthService {
     }
 
     catch (error) {
-      this.handleErrorsService.handleError(error)
+      // Prisma unique constraint violation
+      if (error.code === 'P2002') {
+        const target = error.meta?.target?.[0];
+
+        if (target === 'email') {
+          this.handleErrorsService.throwConflictError("Email already exists");
+        }
+      }
+
+      else {
+        this.handleErrorsService.handleError(error)
+      }
     }
   }
 
@@ -91,26 +97,28 @@ export class AuthService {
 
   private async login(email: string, plainPassword: string, role: string): Promise<any> {
 
-    const user = await this.fetchUserService.fetchUser(email)
+    const user = await this.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
 
-    if (!user) this.handleErrorsService.throwBadRequestError("User not found");
-
-    if (user?.role.toLowerCase() !== role) this.handleErrorsService.throwForbiddenError(`${role} login only`);
+    if (user?.role.toLowerCase() !== role) {
+      this.handleErrorsService.throwUnauthorizedError(`${role} login only`);
+    }
 
     const { password: hashedPassword, id } = user as any;
 
     const isMatched = await this.comparePasswordService.comparePassword(plainPassword, hashedPassword)
 
-    if (!isMatched) this.handleErrorsService.throwBadRequestError("Password invalid")
+    if (!isMatched) {
+      this.handleErrorsService.throwUnauthorizedError("Password invalid")
+    }
 
     const payload = { id }
 
-    const accessToken = await this.generateAccessToken(payload)
-    const refreshToken = await this.generateRefreshToken(payload)
+    const accessToken = this.generateAccessToken(payload)
+    const refreshToken = this.generateRefreshToken(payload)
 
     const updatedUser = await this.prisma.user.update({
       where: { id },
-      data: { 
+      data: {
         refreshToken,
         isOnline: true,
         lastActiveAt: new Date()
@@ -131,7 +139,7 @@ export class AuthService {
     }
   }
 
-  private async generateAccessToken(payload: { id: string | undefined }): Promise<string> {
+  private generateAccessToken(payload: { id: string | undefined }) {
 
     const accessTokenSecrete = this.config.get<string>('ACCESS_TOKEN_SECRET')
     const accessTokenExpires = this.config.get<string>('ACCESS_TOKEN_EXPIRES')
@@ -141,7 +149,7 @@ export class AuthService {
     return accessToken
   }
 
-  private async generateRefreshToken(payload: { id: string | undefined }): Promise<string> {
+  private generateRefreshToken(payload: { id: string | undefined }) {
 
     const refreshTokenSecrete = this.config.get<string>('REFRESH_TOKEN_SECRET')
     const refreshTokenExpires = this.config.get<string>('REFRESH_TOKEN_EXPIRES')
@@ -154,22 +162,18 @@ export class AuthService {
   async forgetPassword(email: string) {
 
     try {
-      const user = await this.fetchUserService.fetchUser(email)
-
-      if (!user) this.handleErrorsService.throwBadRequestError('Invalid Email');
+      const user = await this.fetchUserByEmail(email, 'Invalid Email')
 
       const otp = Math.floor(100000 + Math.random() * 900000);
       const otpExpires = new Date(Date.now() + Number(this.config.get<number>('OTP_EXPIRES')) * 60 * 1000)
 
       await this.prisma.user.update({
-        where: { id: user?.id },
+        where: { id: user!.id },
         data: {
           otp: otp.toString(),
           otpExpires
         }
       })
-
-      //send otp to email
 
       return {
         message: 'Otp sent successfully',
@@ -183,19 +187,20 @@ export class AuthService {
   }
 
   async verifyOtp(email: string, otp: string) {
-    try {
-      const user = await this.fetchUserService.fetchUser(email)
 
-      if (!user) {
-        this.handleErrorsService.throwBadRequestError('Invalid email');
-      }
+    try {
+      const user = await this.fetchUserByEmail(email, 'Invalid email')
 
       if (!user.otp || !user.otpExpires) {
-        this.handleErrorsService.throwBadRequestError('Otp not found');
+        this.handleErrorsService.throwUnauthorizedError('Otp not found');
       }
 
-      if (user?.otp !== otp || new Date() > user.otpExpires) {
-        this.handleErrorsService.throwBadRequestError('Invalid or expired otp')
+      else if (user.otp !== otp) {
+        this.handleErrorsService.throwBadRequestError('Invalid otp')
+      }
+
+      else if (new Date() > user.otpExpires) {
+        this.handleErrorsService.throwBadRequestError('OTP expired, please request a new one')
       }
 
       await this.prisma.user.update({
@@ -218,15 +223,7 @@ export class AuthService {
 
   async resetPassword(email: string, newPassword: string) {
     try {
-      const user = await this.fetchUserService.fetchUser(email)
-
-      if (!user) {
-        this.handleErrorsService.throwBadRequestError('User not found');
-      }
-
-      if (user.otp || user.otpExpires) {
-        this.handleErrorsService.throwBadRequestError('Otp not verified');
-      }
+      const user = await this.fetchUserByEmail(email, 'Otp not verified')
 
       const hashedPassword = await argon.hash(newPassword);
 
@@ -236,7 +233,7 @@ export class AuthService {
       })
 
       return {
-        message: 'Password reset successfully',
+        message: 'Password reseted successfully',
       }
     }
 
@@ -259,21 +256,21 @@ export class AuthService {
         secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
       });
 
-      if (!decodedToken || decodedToken.id !== user?.id) {
+      if (!decodedToken || decodedToken.id !== user!.id) {
         this.handleErrorsService.throwBadRequestError('Refresh token invalid');
       }
 
-      const accessToken = await this.generateAccessToken({ id: user?.id })
-      const newRefreshToken = await this.generateRefreshToken({ id: user?.id })
+      const accessToken = this.generateAccessToken({ id: user!.id })
+      const newRefreshToken = this.generateRefreshToken({ id: user!.id })
 
       await this.prisma.user.update({
-        where: { id: user?.id },
+        where: { id: user!.id },
         data: { refreshToken: newRefreshToken }
       })
 
       return {
         message: 'Token refreshed successfully',
-        data: accessToken
+        accessToken
       }
     }
 
@@ -285,21 +282,15 @@ export class AuthService {
   async logout(id: string) {
 
     try {
-      const user = await this.prisma.user.findUnique({
-        where: { id }
-      })
+      const user = await this.findEntityByIdService.findEntityById('user', id, { isOnline: true })
 
-      if (!user) {
-        this.handleErrorsService.throwNotFoundError('User not found');
-      }
-
-      else if (!user?.isOnline) {
+      if (!user.isOnline) {
         this.handleErrorsService.throwForbiddenError('You cannot logout an offline user');
       }
-      
+
       await this.prisma.user.update({
         where: { id },
-        data: { 
+        data: {
           refreshToken: null,
           isOnline: false,
           lastActiveAt: new Date()
@@ -314,5 +305,27 @@ export class AuthService {
     catch (error) {
       this.handleErrorsService.handleError(error);
     }
+  }
+
+  private async fetchUserByEmail(email: string, errorMessage: string): Promise<any> {
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        password: true,
+        otp: true,
+        otpExpires: true
+      }
+    });
+
+    if (!user) {
+      this.handleErrorsService.throwBadRequestError(errorMessage);
+    }
+
+    return user;
   }
 }
