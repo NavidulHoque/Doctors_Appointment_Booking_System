@@ -4,7 +4,6 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto } from './dto';
-import { ComparePasswordService } from 'src/common/comparePassword.service';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
 @Injectable()
@@ -14,7 +13,6 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly comparePasswordService: ComparePasswordService,
     private readonly findEntityByIdService: FindEntityByIdService,
   ) { }
 
@@ -83,7 +81,7 @@ export class AuthService {
 
     const { password: hashedPassword, id: userId } = user as any;
 
-    const isMatched = await this.comparePasswordService.comparePassword(plainPassword, hashedPassword)
+    const isMatched = await argon.verify(hashedPassword, plainPassword)
 
     if (!isMatched) {
       throw new UnauthorizedException("Password invalid")
@@ -114,7 +112,8 @@ export class AuthService {
       data: {
         userId,
         deviceName: deviceName,
-        refreshToken: hashedRefreshToken
+        refreshToken: hashedRefreshToken,
+        expiresAt: new Date(Date.now() + Number(this.config.get<number>('REFRESH_TOKEN_EXPIRES')) * 60 * 1000),
       }
     });
 
@@ -201,10 +200,10 @@ export class AuthService {
 
   async refreshAccessToken(dto: RefreshAccessTokenDto) {
 
-    const { sessionId } = dto;
+    const { sessionId, refreshToken } = dto;
     const session = await this.findEntityByIdService.findEntityById('session', sessionId, { refreshToken: true });
 
-    const decoded = this.jwtService.verify(session.refreshToken, {
+    const decoded = this.jwtService.verify(refreshToken, {
       secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
     });
 
