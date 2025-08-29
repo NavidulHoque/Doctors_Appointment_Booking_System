@@ -1,8 +1,7 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, RegistrationDto } from './dto';
+import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto } from './dto';
 import { AuthGuard, RolesGuard } from './guard';
-import { OtherAuthDto } from './dto/otherAuth.dto';
 import { Roles, User } from './decorators';
 import { Role } from './enum';
 
@@ -38,28 +37,28 @@ export class AuthController {
 
     @Post("/forgetPassword")
     @HttpCode(200)
-    forgetPassword(@Body() dto: OtherAuthDto) {
-        return this.authService.forgetPassword(dto.email!)
+    forgetPassword(@Body() dto: ForgetPasswordDto) {
+        return this.authService.forgetPassword(dto)
     }
 
     @Post("/verifyOtp")
     @HttpCode(200)
-    verifyOtp(@Body() dto: OtherAuthDto) {
-        return this.authService.verifyOtp(dto.email!, dto.otp!)
+    verifyOtp(@Body() dto: VerifyOtpDto) {
+        return this.authService.verifyOtp(dto)
     }
 
     @Post("/resetPassword")
     @HttpCode(200)
-    resetPassword(@Body() dto: OtherAuthDto) {
-        return this.authService.resetPassword(dto.email!, dto.newPassword!)
+    resetPassword(@Body() dto: ResetPasswordDto) {
+        return this.authService.resetPassword(dto)
     }
 
     @Post("/refreshAccessToken")
     @HttpCode(200)
     refreshAccessToken(
-        @Body() dto: OtherAuthDto
+        @Body() dto: RefreshAccessTokenDto
     ){
-        return this.authService.refreshAccessToken(dto.refreshToken!)
+        return this.authService.refreshAccessToken(dto)
     }
 
     @UseGuards(AuthGuard, RolesGuard)

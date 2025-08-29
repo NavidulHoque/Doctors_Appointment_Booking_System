@@ -1,3 +1,6 @@
 export * from "./registration.dto"
 export * from "./login.dto"
 export * from "./forgetPassword.dto"
+export * from "./verifyOtp.dto"
+export * from "./resetPassword.dto"
+export * from "./refreshAccessToken.dto"

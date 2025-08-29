@@ -1,72 +1,65 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
-import { AuthGuard } from 'src/auth/guard';
+import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { CheckRoleService } from 'src/common/checkRole.service';
-import { User } from 'src/user/decorator';
-import { UserDto } from 'src/user/dto';
+import { Roles } from 'src/auth/decorators';
+import { Role } from 'src/auth/enum';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentController {
 
     constructor(
-        private appointmentService: AppointmentService,
-        private checkRoleService: CheckRoleService
+        private appointmentService: AppointmentService
     ) { }
 
     @Post("/create-appointment")
+    @Roles(Role.Admin, Role.Patient)
     createAppointment(
         @Body() dto: CreateAppointmentDto,
-        @User() user: UserDto
     ) {
-        this.checkRoleService.checkIsAdminOrPatient(user.role)
         return this.appointmentService.createAppointment(dto)
     }
 
     @Get("/get-all-appointments")
+    @Roles(Role.Admin, Role.Patient, Role.Doctor)
     getAllAppointments(
-        @User() user: UserDto,
         @Query() query: GetAppointmentsDto
     ) {
-        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
         return this.appointmentService.getAllAppointments(query)
     }
 
     @Get("/get-all-appointments-count")
+    @Roles(Role.Admin, Role.Patient, Role.Doctor)
     getAllAppointmentCount(
-        @User() user: UserDto,
         @Query() query: GetAppointmentsDto
     ) {
-        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
         return this.appointmentService.getAllAppointmentCount(query)
     }
 
     @Get("/get-an-appointment/:id")
+    @Roles(Role.Admin, Role.Patient, Role.Doctor)
     getAnAppointment(
         @Param('id') id: string,
-        @User() user: UserDto
     ) {
-        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
         return this.appointmentService.getAnAppointment(id)
     }
 
     @Get("/get-total-appointments-graph")
+    @Roles(Role.Admin, Role.Patient, Role.Doctor)
     getTotalAppointmentsGraph(
-        @User() user: UserDto,
         @Query() query: GetAppointmentsDto
     ) {
-        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
         return this.appointmentService.getTotalAppointmentsGraph(query)
     }
 
     @Patch("/update-appointment/:id")
+    @Roles(Role.Admin, Role.Patient, Role.Doctor)
     updateAppointment(
         @Body() dto: UpdateAppointmentDto, 
         @Param('id') id: string,
-        @User() user: UserDto
     ) {
-        this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
         return this.appointmentService.updateAppointment(dto, id)
     }
 }

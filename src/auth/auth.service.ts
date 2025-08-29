@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as argon from "argon2";
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { LoginDto, RegistrationDto } from './dto';
+import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto } from './dto';
 import { ComparePasswordService } from 'src/common/comparePassword.service';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
@@ -15,7 +14,6 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly handleErrorsService: HandleErrorsService,
     private readonly comparePasswordService: ComparePasswordService,
     private readonly findEntityByIdService: FindEntityByIdService,
   ) { }
@@ -40,86 +38,67 @@ export class AuthService {
         const target = error.meta?.target?.[0];
 
         if (target === 'email') {
-          this.handleErrorsService.throwConflictError("Email already exists");
+          throw new ConflictException("Email already exists");
         }
       }
 
-      else {
-        this.handleErrorsService.handleError(error)
-      }
+      throw error;
     }
   }
 
   async patientLogin(dto: LoginDto) {
 
-    const { email, password: plainPassword } = dto
+    const { email, password: plainPassword, deviceName } = dto
 
-    try {
-      const response = await this.login(email, plainPassword, "patient")
+    const response = await this.login(email, plainPassword, deviceName ?? null, "patient")
 
-      return response
-    }
-
-    catch (error) {
-      this.handleErrorsService.handleError(error)
-    }
+    return response
   }
 
   async adminLogin(dto: LoginDto) {
 
-    const { email, password: plainPassword } = dto
+    const { email, password: plainPassword, deviceName } = dto
 
-    try {
-      const response = await this.login(email, plainPassword, "admin")
+    const response = await this.login(email, plainPassword, deviceName ?? null, "admin")
 
-      return response
-    }
-
-    catch (error) {
-      this.handleErrorsService.handleError(error)
-    }
+    return response
   }
 
   async doctorLogin(dto: LoginDto) {
 
-    const { email, password: plainPassword } = dto
+    const { email, password: plainPassword, deviceName } = dto
 
-    try {
-      const response = await this.login(email, plainPassword, "doctor")
+    const response = await this.login(email, plainPassword, deviceName ?? null, "doctor")
 
-      return response
-    }
-
-    catch (error) {
-      this.handleErrorsService.handleError(error)
-    }
+    return response
   }
 
-  private async login(email: string, plainPassword: string, role: string): Promise<any> {
+  private async login(email: string, plainPassword: string, deviceName: string | null, role: string): Promise<any> {
 
     const user = await this.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
 
-    if (user?.role !== role.toUpperCase()) {
-      this.handleErrorsService.throwUnauthorizedError(`${role} login only`);
+    if (user.role !== role.toUpperCase()) {
+      throw new UnauthorizedException(`${role} login only`);
     }
 
-    const { password: hashedPassword, id } = user as any;
+    const { password: hashedPassword, id: userId } = user as any;
 
     const isMatched = await this.comparePasswordService.comparePassword(plainPassword, hashedPassword)
 
     if (!isMatched) {
-      this.handleErrorsService.throwUnauthorizedError("Password invalid")
+      throw new UnauthorizedException("Password invalid")
     }
 
-    const payload = { id }
+    const payload = { id: userId, role, email }
 
     const accessToken = this.generateAccessToken(payload)
     const refreshToken = this.generateRefreshToken(payload)
 
+    const hashedRefreshToken = await argon.hash(refreshToken);
+
     const updatedUser = await this.prisma.user.update({
-      where: { id },
+      where: { id: userId },
       data: {
-        refreshToken,
         isOnline: true,
         lastActiveAt: new Date()
       },
@@ -127,167 +106,148 @@ export class AuthService {
         id: true,
         fullName: true,
         email: true,
-        role: true,
-        refreshToken: true
+        role: true
       },
     })
+
+    const session = await this.prisma.session.create({
+      data: {
+        userId,
+        deviceName: deviceName,
+        refreshToken: hashedRefreshToken
+      }
+    });
 
     return {
       message: 'Logged in successfully',
       data: updatedUser,
+      session,
       accessToken
     }
   }
 
-  async forgetPassword(email: string) {
+  async forgetPassword(dto: ForgetPasswordDto) {
 
-    try {
-      const user = await this.fetchUserByEmail(email, 'Invalid Email')
+    const { email } = dto
 
-      const otp = Math.floor(100000 + Math.random() * 900000);
-      const otpExpires = new Date(Date.now() + Number(this.config.get<number>('OTP_EXPIRES')) * 60 * 1000)
+    const user = await this.fetchUserByEmail(email, 'Invalid Email')
 
-      await this.prisma.user.update({
-        where: { id: user!.id },
-        data: {
-          otp: otp.toString(),
-          otpExpires
-        }
-      })
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const otpExpires = new Date(Date.now() + Number(this.config.get<number>('OTP_EXPIRES')) * 60 * 1000)
 
-      return {
-        message: 'Otp sent successfully'
+    await this.prisma.user.update({
+      where: { id: user!.id },
+      data: {
+        otp: otp.toString(),
+        otpExpires
       }
-    }
+    })
 
-    catch (error) {
-      this.handleErrorsService.handleError(error)
+    return {
+      message: 'Otp sent successfully'
     }
   }
 
-  async verifyOtp(email: string, otp: string) {
+  async verifyOtp(dto: VerifyOtpDto) {
 
-    try {
-      const user = await this.fetchUserByEmail(email, 'Invalid email')
+    const { email, otp } = dto
 
-      if (!user.otp || !user.otpExpires) {
-        this.handleErrorsService.throwNotFoundError('Otp not found');
-      }
+    const user = await this.fetchUserByEmail(email, 'Invalid email')
 
-      else if (user.otp !== otp) {
-        this.handleErrorsService.throwBadRequestError('Invalid otp')
-      }
-
-      else if (new Date() > user.otpExpires) {
-        this.handleErrorsService.throwBadRequestError('OTP expired, please request a new one')
-      }
-
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          otp: null,
-          otpExpires: null
-        }
-      })
-
-      return {
-        message: 'Otp verified successfully',
-      }
+    if (!user.otp || !user.otpExpires) {
+      throw new NotFoundException('Otp not found');
     }
 
-    catch (error) {
-      this.handleErrorsService.handleError(error)
+    else if (user.otp !== otp) {
+      throw new BadRequestException('Invalid otp')
+    }
+
+    else if (new Date() > user.otpExpires) {
+      throw new BadRequestException('OTP expired, please request a new one')
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: null,
+        otpExpires: null
+      }
+    })
+
+    return {
+      message: 'Otp verified successfully',
     }
   }
 
-  async resetPassword(email: string, newPassword: string) {
-    try {
-      const user = await this.fetchUserByEmail(email, 'Invalid email')
+  async resetPassword(dto: ResetPasswordDto) {
 
-      const hashedPassword = await argon.hash(newPassword);
+    const { email, newPassword } = dto
 
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { password: hashedPassword }
-      })
+    const user = await this.fetchUserByEmail(email, 'Invalid email')
 
-      return {
-        message: 'Password reseted successfully',
+    const hashedPassword = await argon.hash(newPassword);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword
       }
-    }
+    })
 
-    catch (error) {
-      this.handleErrorsService.handleError(error)
+    return {
+      message: 'Password reseted successfully',
     }
   }
 
-  async refreshAccessToken(refreshToken: string) {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { refreshToken }
-      })
+  async refreshAccessToken(dto: RefreshAccessTokenDto) {
 
-      if (!user) {
-        this.handleErrorsService.throwBadRequestError('Refresh token invalid');
-      }
+    const { sessionId } = dto;
+    const session = await this.findEntityByIdService.findEntityById('session', sessionId, { refreshToken: true });
 
-      const decoded = this.jwtService.verify(refreshToken, {
-        secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
-      });
+    const decoded = this.jwtService.verify(session.refreshToken, {
+      secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
+    });
 
-      if (!decoded || decoded.id !== user!.id) {
-        this.handleErrorsService.throwBadRequestError('Refresh token invalid');
-      }
-
-      const accessToken = this.generateAccessToken({ id: user!.id })
-      const newRefreshToken = this.generateRefreshToken({ id: user!.id })
-
-      await this.prisma.user.update({
-        where: { id: user!.id },
-        data: { refreshToken: newRefreshToken }
-      })
-
-      return {
-        message: 'Token refreshed successfully',
-        accessToken,
-        refreshToken: newRefreshToken
-      }
+    if (!decoded || decoded.id !== user!.id) {
+      throw new BadRequestException('Refresh token invalid');
     }
 
-    catch (error) {
-      this.handleErrorsService.handleError(error);
+    const { id, role, email } = user as any;
+
+    const accessToken = this.generateAccessToken({ id, role, email })
+    const newRefreshToken = this.generateRefreshToken({ id, role, email })
+
+    await this.prisma.user.update({
+      where: { id: user!.id },
+      data: { refreshToken: newRefreshToken }
+    })
+
+    return {
+      message: 'Token refreshed successfully',
+      accessToken,
+      refreshToken: newRefreshToken
     }
   }
 
   async logout(id: string) {
 
-    try {
-      const user = await this.findEntityByIdService.findEntityById('user', id, { isOnline: true })
+    await this.findEntityByIdService.findEntityById('user', id, null)
 
-      if (!user.isOnline) {
-        this.handleErrorsService.throwForbiddenError('Cannot logout an offline user');
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        refreshToken: [],
+        isOnline: false,
+        lastActiveAt: new Date()
       }
+    })
 
-      await this.prisma.user.update({
-        where: { id },
-        data: {
-          refreshToken: null,
-          isOnline: false,
-          lastActiveAt: new Date()
-        }
-      })
-
-      return {
-        message: 'Logged out successfully'
-      }
-    }
-
-    catch (error) {
-      this.handleErrorsService.handleError(error);
+    return {
+      message: 'Logged out successfully'
     }
   }
 
-  private generateAccessToken(payload: { id: string | undefined }) {
+  private generateAccessToken(payload: { id: string, role: string, email: string }) {
 
     const accessTokenSecrete = this.config.get<string>('ACCESS_TOKEN_SECRET')
     const accessTokenExpires = this.config.get<string>('ACCESS_TOKEN_EXPIRES')
@@ -297,7 +257,7 @@ export class AuthService {
     return accessToken
   }
 
-  private generateRefreshToken(payload: { id: string | undefined }) {
+  private generateRefreshToken(payload: { id: string, role: string, email: string }) {
 
     const refreshTokenSecrete = this.config.get<string>('REFRESH_TOKEN_SECRET')
     const refreshTokenExpires = this.config.get<string>('REFRESH_TOKEN_EXPIRES')
@@ -323,7 +283,7 @@ export class AuthService {
     });
 
     if (!user) {
-      this.handleErrorsService.throwBadRequestError(errorMessage);
+      throw new BadRequestException(errorMessage);
     }
 
     return user;

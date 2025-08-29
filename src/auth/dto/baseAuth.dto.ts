@@ -7,5 +7,5 @@ export class BaseAuthDto {
 
     @IsString()
     @IsNotEmpty({ message: "Email is required" })
-    email!: string;
+    email: string;
 }

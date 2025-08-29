@@ -35,7 +35,10 @@ export class UserService {
 
             await this.prisma.user.update({
                 where: { id },
-                data: { lastActiveAt: new Date() }
+                data: {
+                    isOnline: true, 
+                    lastActiveAt: new Date() 
+                }
             })
 
             return {

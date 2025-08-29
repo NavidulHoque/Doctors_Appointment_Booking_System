@@ -30,15 +30,7 @@ export class AuthGuard implements CanActivate {
         try {
             const payload = this.jwtService.verify(token!, { secret })
 
-            const user = await this.prisma.user.findUnique({
-                where: { id: payload.id }
-            })
-
-            if (!user) {
-                this.handleErrorService.throwNotFoundError("Tokenized user not found")
-            }
-
-            request['user'] = user;
+            request['user'] = payload;
         }
 
         catch (error) {
