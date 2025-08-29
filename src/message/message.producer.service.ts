@@ -1,13 +1,11 @@
 import { Injectable } from "@nestjs/common";
-import { HandleErrorsService } from "src/common/handleErrors.service";
 import { KafkaProducerService } from "src/kafka/kafka.producer.service";
 
 @Injectable()
 export class MessageProducerService {
 
     constructor(
-        private readonly kafkaProducer: KafkaProducerService,
-        private readonly handleErrorsService: HandleErrorsService
+        private readonly kafkaProducer: KafkaProducerService
     ) { }
 
     async sendCreateMessage(data: any) {
@@ -23,7 +21,7 @@ export class MessageProducerService {
 
         catch (error) {
             // producer exhausted after 5 retries
-            this.handleErrorsService.handleError(error)
+            throw error
         }
     }
 
@@ -40,7 +38,7 @@ export class MessageProducerService {
 
         catch (error) {
             // producer exhausted after 5 retries
-            this.handleErrorsService.handleError(error)
+            throw error
         }
     }
 
@@ -57,7 +55,7 @@ export class MessageProducerService {
 
         catch (error) {
             // producer exhausted after 5 retries
-            this.handleErrorsService.handleError(error)
+           throw error
         }
     }
 }

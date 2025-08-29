@@ -1,71 +1,62 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { StripeService } from 'src/payment/stripe.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { HandleErrorsService } from 'src/common/handleErrors.service';
 
 @Injectable()
 export class PaymentService {
   constructor(
     private readonly stripeService: StripeService,
-    private readonly prisma: PrismaService,
-    private readonly handleErrorsService: HandleErrorsService,
+    private readonly prisma: PrismaService
   ) { }
 
   async createPaymentSession(appointmentId: string, userId: string, amount: number) {
-    try {
-
-      const appointment = await this.prisma.appointment.findUnique({
-        where: { id: appointmentId },
-        include: {
-          doctor: {
-            include: {
-              doctor: {
-                select: {
-                  stripeAccountId: true,
-                  isStripeAccountActive: true
-                }
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        doctor: {
+          include: {
+            doctor: {
+              select: {
+                stripeAccountId: true,
+                isStripeAccountActive: true
               }
             }
           }
         }
-      });
-
-      const doctorInfo = appointment?.doctor?.doctor;
-
-      const stripeAccountId = doctorInfo?.stripeAccountId;
-      const isStripeAccountActive = doctorInfo?.isStripeAccountActive;
-
-      if (!stripeAccountId) {
-        this.handleErrorsService.throwForbiddenError("Doctor has no stripe account, you cannot pay for this appointment online");
       }
+    });
 
-      if (!isStripeAccountActive) {
-        this.handleErrorsService.throwForbiddenError("Doctor's stripe account not activated, you cannot pay for this appointment online");
-      }
+    const doctorInfo = appointment?.doctor?.doctor;
 
-      const session = await this.stripeService.createCheckoutSession(amount, appointmentId, stripeAccountId!);
+    const stripeAccountId = doctorInfo?.stripeAccountId;
+    const isStripeAccountActive = doctorInfo?.isStripeAccountActive;
 
-      await this.prisma.payment.create({
-        data: {
-          userId,
-          appointmentId,
-          amount,
-          transactionId: session.id
-        },
-      });
-
-      return {
-        data: {
-          url: session.url,
-          sessionId: session.id
-        },
-        message: 'Payment session created successfully',
-      };
+    if (!stripeAccountId) {
+      throw new ForbiddenException("Doctor has no stripe account, you cannot pay for this appointment online");
     }
 
-    catch (error) {
-      this.handleErrorsService.handleError(error);
+    if (!isStripeAccountActive) {
+      throw new ForbiddenException("Doctor's stripe account not activated, you cannot pay for this appointment online");
     }
+
+    const session = await this.stripeService.createCheckoutSession(amount, appointmentId, stripeAccountId!);
+
+    await this.prisma.payment.create({
+      data: {
+        userId,
+        appointmentId,
+        amount,
+        transactionId: session.id
+      },
+    });
+
+    return {
+      data: {
+        url: session.url,
+        sessionId: session.id
+      },
+      message: 'Payment session created successfully',
+    };
   }
 
   async getAllPaymentHistory(status: string | undefined, page: number, limit: number, userId: string) {
@@ -73,52 +64,46 @@ export class PaymentService {
     const query: any = status ? { status: status.toUpperCase(), userId } : { userId }
     const skip = (page - 1) * limit
 
-    try {
-      const [payments, totalPayments] = await this.prisma.$transaction([
+    const [payments, totalPayments] = await this.prisma.$transaction([
 
-        this.prisma.payment.findMany({
-          where: query,
-          select: {
-            id: true,
-            appointment: {
-              select: {
-                date: true,
-                doctor: {
-                  select: {
-                    fullName: true
-                  }
+      this.prisma.payment.findMany({
+        where: query,
+        select: {
+          id: true,
+          appointment: {
+            select: {
+              date: true,
+              doctor: {
+                select: {
+                  fullName: true
                 }
               }
-            },
-            amount: true,
-            status: true,
-            createdAt: true,
-            transactionId: true
+            }
           },
-          skip,
-          take: limit,
-          orderBy: { createdAt: 'desc' }
-        }),
-
-        this.prisma.payment.count({
-          where: query
-        })
-      ])
-
-      return {
-        data: payments,
-        pagination: {
-          totalItems: totalPayments,
-          totalPages: Math.ceil(totalPayments / limit),
-          currentPage: page,
-          itemsPerPage: limit
+          amount: true,
+          status: true,
+          createdAt: true,
+          transactionId: true
         },
-        message: 'Payment history fetched successfully'
-      }
-    }
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
 
-    catch (error) {
-      this.handleErrorsService.handleError(error)
+      this.prisma.payment.count({
+        where: query
+      })
+    ])
+
+    return {
+      data: payments,
+      pagination: {
+        totalItems: totalPayments,
+        totalPages: Math.ceil(totalPayments / limit),
+        currentPage: page,
+        itemsPerPage: limit
+      },
+      message: 'Payment history fetched successfully'
     }
   }
 }

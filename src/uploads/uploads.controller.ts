@@ -8,26 +8,26 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from './multer.config';
 import { UploadsService } from './uploads.service';
-import { CheckRoleService } from 'src/common/checkRole.service';
 import { User } from 'src/user/decorator';
 import { UserDto } from 'src/user/dto';
-import { AuthGuard } from 'src/auth/guard';
+import { AuthGuard, RolesGuard } from 'src/auth/guard';
+import { Roles } from 'src/auth/decorators';
+import { Role } from 'src/auth/enum';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Controller('upload')
 export class UploadsController {
   constructor(
-    private readonly uploadsService: UploadsService,
-    private readonly checkRoleService: CheckRoleService
+    private readonly uploadsService: UploadsService
   ) { }
 
   @Post("avatarImage")
+  @Roles(Role.Admin, Role.Patient, Role.Doctor)
   @UseInterceptors(FileInterceptor('image', multerOptions))
   uploadAvatarImage(
     @UploadedFile() file: Express.Multer.File,
-    @User() user: UserDto
+    @User("id") userId: string
   ) {
-    this.checkRoleService.checkIsAdminOrPatientOrDoctor(user.role)
-    return this.uploadsService.uploadAvatarImage(file, user.id);
+    return this.uploadsService.uploadAvatarImage(file, userId);
   }
 }

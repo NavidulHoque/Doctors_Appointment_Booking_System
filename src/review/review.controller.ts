@@ -2,27 +2,27 @@ import { Controller, UseGuards } from '@nestjs/common';
 import { Body, Post } from '@nestjs/common';
 import { ReviewService } from './review.service';
 import { ReviewDto } from './dto';
-import { CheckRoleService } from 'src/common/checkRole.service';
 import { UserDto } from 'src/user/dto';
 import { User } from 'src/user/decorator';
-import { AuthGuard } from 'src/auth/guard';
+import { AuthGuard, RolesGuard } from 'src/auth/guard';
+import { Roles } from 'src/auth/decorators';
+import { Role } from 'src/auth/enum';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Controller('reviews')
 export class ReviewController {
 
     constructor(
-        private readonly reviewService: ReviewService,
-        private checkRoleService: CheckRoleService
+        private readonly reviewService: ReviewService
     ) { }
 
     @Post("/create-review")
+    @Roles(Role.Patient)
     async createReview(
         @Body() reviewDto: ReviewDto,
-        @User() user: UserDto
+        @User("id") userId: string
     ) {
-        this.checkRoleService.checkIsPatient(user.role)
-        return this.reviewService.createReview(reviewDto, user);
+        return this.reviewService.createReview(reviewDto, userId);
     }
 }
 

@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
-import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { doctorSelect } from 'src/prisma/prisma-selects';
 import { UserDto } from 'src/user/dto';
@@ -15,7 +14,6 @@ export class DoctorService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly handleErrorsService: HandleErrorsService,
         private readonly configService: ConfigService,
         private readonly findEntityByIdService: FindEntityByIdService
     ) {

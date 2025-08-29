@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
-import { SocketService } from 'src/common/socket.service';
 import { SocketGateway } from 'src/socket/socket.gateway';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from 'src/redis/redis.service';
@@ -19,12 +17,10 @@ export class MessageService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly handleErrorsService: HandleErrorsService,
         private readonly findEntityByIdService: FindEntityByIdService,
-        private readonly socketService: SocketService,
-        private readonly socketGateway: SocketGateway,
         private readonly redis: RedisService,
-        private readonly config: ConfigService
+        private readonly config: ConfigService,
+        private readonly socketGateway: SocketGateway
     ) {
         this.ttlSeconds = Number(this.config.get('REDIS_TTL_SECONDS') || 60);
     }
@@ -58,37 +54,31 @@ export class MessageService {
 
         const cacheKey = this.generateCacheKey(senderId, receiverId);
 
-        try {
-            // 1) check cache
-            const cachedMessages = await this.redis.get(cacheKey);
+        // 1) check cache
+        const cachedMessages = await this.redis.get(cacheKey);
 
-            if (cachedMessages) {
-                const messages = JSON.parse(cachedMessages);
-                return { data: messages, message: 'Messages fetched successfully from cache' };
-            }
-
-            // 2) fallback to DB
-            const messages = await this.prisma.message.findMany({
-                where: {
-                    OR: [
-                        { senderId, receiverId },
-                        { senderId: receiverId, receiverId: senderId }
-                    ]
-                },
-                orderBy: { createdAt: 'desc' }
-            });
-
-            // 3) store in cache with TTL
-            await this.redis.set(cacheKey, JSON.stringify(messages), this.ttlSeconds);
-
-            return {
-                data: messages,
-                message: "Messages fetched successfully from DB"
-            }
+        if (cachedMessages) {
+            const messages = JSON.parse(cachedMessages);
+            return { data: messages, message: 'Messages fetched successfully from cache' };
         }
 
-        catch (error) {
-            this.handleErrorsService.handleError(error)
+        // 2) fallback to DB
+        const messages = await this.prisma.message.findMany({
+            where: {
+                OR: [
+                    { senderId, receiverId },
+                    { senderId: receiverId, receiverId: senderId }
+                ]
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        // 3) store in cache with TTL
+        await this.redis.set(cacheKey, JSON.stringify(messages), this.ttlSeconds);
+
+        return {
+            data: messages,
+            message: "Messages fetched successfully from DB"
         }
     }
 
@@ -99,7 +89,7 @@ export class MessageService {
         const message = await this.findEntityByIdService.findEntityById("message", messageId, { senderId: true })
 
         if (message?.senderId !== senderId) {
-            this.socketService.sendResponse(senderId, { status: "failed", message: "You are not authorized to update this message" });
+            this.socketGateway.sendResponse(senderId, { status: "failed", message: "You are not authorized to update this message" });
             return;
         }
 
@@ -122,7 +112,7 @@ export class MessageService {
         const message = await this.findEntityByIdService.findEntityById("message", messageId, { senderId: true })
 
         if (message?.senderId !== senderId) {
-            this.socketService.sendResponse(senderId, { status: "failed", message: "You are not authorized to delete this message" });
+            this.socketGateway.sendResponse(senderId, { status: "failed", message: "You are not authorized to delete this message" });
             return
         }
 
@@ -155,7 +145,7 @@ export class MessageService {
                 break;
         }
 
-        this.socketService.sendResponse(senderId, response);
+        this.socketGateway.sendResponse(senderId, response);
     }
 
     private async disableCache(senderId: string, receiverId: string) {

@@ -1,14 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { HandleErrorsService } from 'src/common/handleErrors.service';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserDto } from './dto';
+import { NotFoundError } from 'rxjs';
 
 @Injectable()
 export class UserService {
 
     constructor(
-        private prisma: PrismaService,
-        private handleErrorsService: HandleErrorsService
+        private prisma: PrismaService
     ) { }
 
     getUser(user: UserDto) {
@@ -20,54 +19,42 @@ export class UserService {
     }
 
     async updateUserActivity(id: string) {
-        try {
-            const user = await this.prisma.user.findUnique({
-                where: { id }
-            })
+        const user = await this.prisma.user.findUnique({
+            where: { id }
+        })
 
-            if (!user) {
-                this.handleErrorsService.throwNotFoundError("User not found")
-            }
-
-            else if (!user?.isOnline) {
-                this.handleErrorsService.throwForbiddenError("You cannot update an offline user's last active date")
-            }
-
-            await this.prisma.user.update({
-                where: { id },
-                data: {
-                    isOnline: true, 
-                    lastActiveAt: new Date() 
-                }
-            })
-
-            return {
-                message: 'User activity updated successfully'
-            }
+        if (!user) {
+            throw new NotFoundException("User not found")
         }
 
-        catch (error) {
-            this.handleErrorsService.handleError(error)
+        else if (!user?.isOnline) {
+            throw new ForbiddenException("You cannot update an offline user's last active date")
+        }
+
+        await this.prisma.user.update({
+            where: { id },
+            data: {
+                isOnline: true,
+                lastActiveAt: new Date()
+            }
+        })
+
+        return {
+            message: 'User activity updated successfully'
         }
     }
 
     async updateUser(dto: UserDto, id: string) {
         const { fullName, email, phone, gender, birthDate, address, password } = dto
 
-        try {
-            const updatedUser = await this.prisma.user.update({
-                where: { id },
-                data: { fullName, email, phone, gender, birthDate, address, password }
-            })
+        const updatedUser = await this.prisma.user.update({
+            where: { id },
+            data: { fullName, email, phone, gender, birthDate, address, password }
+        })
 
-            return {
-                message: 'User updated successfully',
-                data: updatedUser
-            }
-        }
-
-        catch (error) {
-            this.handleErrorsService.handleError(error)
+        return {
+            message: 'User updated successfully',
+            data: updatedUser
         }
     }
 
@@ -75,16 +62,10 @@ export class UserService {
 
         const { id } = user
 
-        try {
-            await this.prisma.user.delete({ where: { id } })
+        await this.prisma.user.delete({ where: { id } })
 
-            return {
-                message: 'User deleted successfully'
-            }
-        }
-
-        catch (error) {
-            this.handleErrorsService.handleError(error)
+        return {
+            message: 'User deleted successfully'
         }
     }
 }

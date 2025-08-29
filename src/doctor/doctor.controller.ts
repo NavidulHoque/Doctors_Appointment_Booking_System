@@ -1,89 +1,83 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { AuthGuard } from 'src/auth/guard';
+import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
-import { CheckRoleService } from 'src/common/checkRole.service';
-import { User } from 'src/user/decorator';
 import { UserDto } from 'src/user/dto';
+import { Roles, User } from 'src/auth/decorators';
+import { Role } from 'src/auth/enum';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Controller('doctors')
 export class DoctorController {
 
     constructor(
-        private doctorService: DoctorService,
-        private checkRoleService: CheckRoleService
+        private doctorService: DoctorService
     ) { }
 
     @Post("/create-doctor")
+    @Roles(Role.Admin)
     createDoctor(
         @Body() dto: CreateDoctorDto,
-        @User() user: UserDto
     ) {
-        this.checkRoleService.checkIsAdmin(user.role)
         return this.doctorService.createDoctor(dto)
     }
 
     @Get("/get-all-doctors")
+    @Roles(Role.Admin, Role.Patient)
     getAllDoctors(
-        @User() user: UserDto,
         @Query() query: GetDoctorsDto
     ) {
-        this.checkRoleService.checkIsAdminOrPatient(user.role)
         return this.doctorService.getAllDoctors(query)
     }
 
     @Get("/get-a-doctor/:id")
+    @Roles(Role.Admin, Role.Patient)
     getADoctor(
         @Param('id') id: string,
-        @User() user: UserDto,
         @Query() query: GetDoctorsDto,
     ) {
-        this.checkRoleService.checkIsAdminOrPatient(user.role)
         return this.doctorService.getADoctor(id, query)
     }
 
     @Get("/get-total-revenue")
+    @Roles(Role.Doctor)
     getTotalRevenue(
-        @User() user: UserDto,
+        @User() user: UserDto
     ) {
-        this.checkRoleService.checkIsDoctor(user.role)
         return this.doctorService.getTotalRevenue(user)
     }
 
     @Patch("/update-doctor/:id")
+    @Roles(Role.Doctor, Role.Admin)
     updateDoctor(
         @Body() body: UpdateDoctorDto,
-        @Param('id') id: string,
-        @User() user: UserDto
+        @Param('id') id: string
     ) {
-        this.checkRoleService.checkIsAdminOrDoctor(user.role)
         return this.doctorService.updateDoctor(body, id)
     }
 
     @Patch("/stripe/create-account")
+    @Roles(Role.Doctor)
     createStripeAccount(
-        @User() user: UserDto
+        @User("id") userId: string
     ) {
-        this.checkRoleService.checkIsDoctor(user.role)
-        return this.doctorService.createStripeAccount(user.id)
+        return this.doctorService.createStripeAccount(userId)
     }
     
     @Patch("/stripe/activate-account")
+    @Roles(Role.Doctor)
     activateStripeAccount(
-        @User() user: UserDto,
+        @User("id") userId: string,
         @Body("stripeAccountId") stripeAccountId: string
     ){
-        this.checkRoleService.checkIsDoctor(user.role)
-        return this.doctorService.activateStripeAccount(user.id, stripeAccountId)
+        return this.doctorService.activateStripeAccount(userId, stripeAccountId)
     }
     
-    @Delete("/delete-doctor/:id")
+    @Delete("/delete-doctor/:doctorId")
+    @Roles(Role.Doctor, Role.Admin)
     deleteDoctor(
-        @Param('id') id: string,
-        @User() user: UserDto
+        @Param('doctorId') doctorId: string,
     ) {
-        this.checkRoleService.checkIsAdminOrDoctor(user.role)
-        return this.doctorService.deleteDoctor(id)
+        return this.doctorService.deleteDoctor(doctorId)
     }
 }

@@ -1,35 +1,34 @@
 import { Controller, Post, Body, UseGuards, Get, Query, ParseIntPipe, Param } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { AuthGuard } from 'src/auth/guard';
-import { UserDto } from 'src/user/dto';
+import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { User } from 'src/user/decorator';
-import { CheckRoleService } from 'src/common/checkRole.service';
+import { Roles } from 'src/auth/decorators';
+import { Role } from 'src/auth/enum';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Controller('payment')
 export class PaymentController {
   constructor(
-    private readonly paymentService: PaymentService,
-    private readonly checkRoleService: CheckRoleService
+    private readonly paymentService: PaymentService
   ) {}
 
   @Post('create-session')
+  @Roles(Role.Patient)
   createSession(
     @Body() body: { appointmentId: string; amount: number },
-    @User() user: UserDto
+    @User("id") userId: string
   ) {
-    this.checkRoleService.checkIsPatient(user.role);
-    return this.paymentService.createPaymentSession(body.appointmentId, user.id, body.amount);
+    return this.paymentService.createPaymentSession(body.appointmentId, userId, body.amount);
   }
 
   @Get('payment-history')
+  @Roles(Role.Patient)
   getAllPaymentHistory(
-    @User() user: UserDto,
+    @User("id") userId: string,
     @Query('status') status: string,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
   ) {
-    this.checkRoleService.checkIsPatient(user.role)
-    return this.paymentService.getAllPaymentHistory(status, page, limit, user.id)
+    return this.paymentService.getAllPaymentHistory(status, page, limit, userId)
   }
 }

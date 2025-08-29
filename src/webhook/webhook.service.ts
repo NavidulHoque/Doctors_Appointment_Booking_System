@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { HandleErrorsService } from "src/common/handleErrors.service";
 import { NotificationService } from "src/notification/notification.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import Stripe from "stripe";
@@ -12,7 +11,6 @@ export class WebhookService {
     constructor(
         private readonly configService: ConfigService,
         private readonly prisma: PrismaService,
-        private readonly handleErrorsService: HandleErrorsService,
         private readonly notificationService: NotificationService
     ) {
         this.stripe = new Stripe(configService.get('STRIPE_SECRET_KEY')!, {
@@ -21,26 +19,20 @@ export class WebhookService {
     }
 
     async handleStripeEvent(body: string, signature: string) {
-        try {
-            const endpointSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
-            const event = this.stripe.webhooks.constructEvent(body, signature, endpointSecret!);
+        const endpointSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+        const event = this.stripe.webhooks.constructEvent(body, signature, endpointSecret!);
 
-            switch (event.type) {
-                case 'checkout.session.completed':
-                    await this.handleSuccessfulCheckout(event.data.object as Stripe.Checkout.Session);
-                    break;
+        switch (event.type) {
+            case 'checkout.session.completed':
+                await this.handleSuccessfulCheckout(event.data.object as Stripe.Checkout.Session);
+                break;
 
-                case 'checkout.session.expired':
-                    await this.handleExpiredSession(event.data.object as Stripe.Checkout.Session);
-                    break;
+            case 'checkout.session.expired':
+                await this.handleExpiredSession(event.data.object as Stripe.Checkout.Session);
+                break;
 
-                default:
-                    console.log(`Unhandled event type: ${event.type}`);
-            }
-        }
-
-        catch (error) {
-            this.handleErrorsService.handleError(error);
+            default:
+                console.log(`Unhandled event type: ${event.type}`);
         }
     }
 

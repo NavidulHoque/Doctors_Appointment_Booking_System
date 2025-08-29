@@ -1,15 +1,13 @@
 import { InjectQueue } from "@nestjs/bull";
 import { Injectable } from "@nestjs/common";
 import { Queue } from "bull";
-import { HandleErrorsService } from "src/common/handleErrors.service";
 import { PrismaService } from "src/prisma/prisma.service";
-import { SocketGateway } from "src/socket/socket.gateway"; 
+import { SocketGateway } from "src/socket/socket.gateway";
 
 @Injectable()
 export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly handleErrorsService: HandleErrorsService,
     private readonly socketGateway: SocketGateway,
     @InjectQueue("notification-queue") private readonly notificationQueue: Queue
   ) { }
@@ -34,40 +32,34 @@ export class NotificationService {
 
   async getAllNotifications(userId: string, page: number = 1, limit: number = 10) {
 
-    try {
-      const [notifications, totalItems] = await this.prisma.$transaction([
+    const [notifications, totalItems] = await this.prisma.$transaction([
 
-        this.prisma.notification.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            content: true,
-            createdAt: true
-          },
-          skip: (page - 1) * limit,
-          take: limit
-        }),
-
-        this.prisma.notification.count({
-          where: { userId }
-        })
-      ]);
-
-      return {
-        data: notifications,
-        pagination: {
-          totalItems,
-          totalPages: Math.ceil(totalItems / limit),
-          currentPage: page,
-          itemsPerPage: limit
+      this.prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true
         },
-        message: "Notifications retrieved successfully",
-      }
-    }
+        skip: (page - 1) * limit,
+        take: limit
+      }),
 
-    catch (error) {
-      this.handleErrorsService.handleError(error);
+      this.prisma.notification.count({
+        where: { userId }
+      })
+    ]);
+
+    return {
+      data: notifications,
+      pagination: {
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+        itemsPerPage: limit
+      },
+      message: "Notifications retrieved successfully",
     }
   }
 
