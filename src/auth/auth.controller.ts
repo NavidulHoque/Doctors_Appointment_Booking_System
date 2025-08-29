@@ -66,8 +66,8 @@ export class AuthController {
     @Roles(Role.Admin, Role.Patient, Role.Doctor)
     @HttpCode(200)
     logout(
-        @User("id") userId: string
+        @Body("sessionId") sessionId: string
     ){
-        return this.authService.logout(userId)
+        return this.authService.logout(sessionId)
     }
 }

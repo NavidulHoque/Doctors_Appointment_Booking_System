@@ -201,44 +201,65 @@ export class AuthService {
   async refreshAccessToken(dto: RefreshAccessTokenDto) {
 
     const { sessionId, refreshToken } = dto;
-    const session = await this.findEntityByIdService.findEntityById('session', sessionId, { refreshToken: true });
+    const session = await this.findEntityByIdService.findEntityById('session', sessionId,
+      {
+        refreshToken: true,
+        user: {
+          select: {
+            id: true,
+            role: true,
+            email: true
+          }
+        }
+      }
+    );
+
+    const isMatched = await argon.verify(session.refreshToken, refreshToken)
+
+    if (!isMatched) {
+      throw new BadRequestException('Refresh token invalid');
+    }
 
     const decoded = this.jwtService.verify(refreshToken, {
       secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
     });
 
-    if (!decoded || decoded.id !== user!.id) {
+    if (!decoded) {
       throw new BadRequestException('Refresh token invalid');
     }
 
-    const { id, role, email } = user as any;
+    const { id, role, email } = session.user;
 
     const accessToken = this.generateAccessToken({ id, role, email })
     const newRefreshToken = this.generateRefreshToken({ id, role, email })
 
-    await this.prisma.user.update({
-      where: { id: user!.id },
-      data: { refreshToken: newRefreshToken }
+    const hashedNewRefreshToken = await argon.hash(newRefreshToken);
+
+    const updatedSession = await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { refreshToken: hashedNewRefreshToken },
+      select: {
+        id: true,
+        deviceName: true,
+        createdAt: true,
+        expiresAt: true
+      }
     })
 
     return {
       message: 'Token refreshed successfully',
       accessToken,
-      refreshToken: newRefreshToken
+      refreshToken: newRefreshToken,
+      session: updatedSession
     }
   }
 
-  async logout(id: string) {
+  async logout(sessionId: string) {
 
-    await this.findEntityByIdService.findEntityById('user', id, null)
+    await this.findEntityByIdService.findEntityById('session', sessionId, null)
 
-    await this.prisma.user.update({
-      where: { id },
-      data: {
-        refreshToken: [],
-        isOnline: false,
-        lastActiveAt: new Date()
-      }
+    await this.prisma.session.delete({
+      where: { id: sessionId },
     })
 
     return {
