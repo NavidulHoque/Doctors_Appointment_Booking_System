@@ -2,7 +2,6 @@ import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@ne
 import { AppointmentService } from './appointment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
-import { CheckRoleService } from 'src/common/checkRole.service';
 import { Roles } from 'src/auth/decorators';
 import { Role } from 'src/auth/enum';
 

@@ -1,13 +1,11 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { HandleErrorsService } from 'src/common/handleErrors.service';
 import { IS_PUBLIC_KEY, ROLES_KEY } from '../decorators';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
-    private reflector: Reflector,
-    private readonly handleErrorsService: HandleErrorsService
+    private reflector: Reflector
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -24,7 +22,7 @@ export class RolesGuard implements CanActivate {
     const isAuthorizedRole = requiredRoles.includes(user.role)
 
     if (!isAuthorizedRole) {
-      this.handleErrorsService.throwForbiddenError('You are not authorized to perform this action');
+      throw new ForbiddenException('You are not authorized to perform this action');
     }
 
     return isAuthorizedRole;

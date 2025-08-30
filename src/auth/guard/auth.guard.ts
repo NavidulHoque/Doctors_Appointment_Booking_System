@@ -1,21 +1,18 @@
 import {
     CanActivate,
     ExecutionContext,
-    Injectable
+    Injectable,
+    UnauthorizedException
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
-import { HandleErrorsService } from 'src/common/handleErrors.service';
-import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(
         private readonly jwtService: JwtService,
         private readonly config: ConfigService,
-        private readonly handleErrorService: HandleErrorsService,
-        private readonly prisma: PrismaService,
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -23,7 +20,9 @@ export class AuthGuard implements CanActivate {
         const request = context.switchToHttp().getRequest();
         const token = this.extractTokenFromHeader(request);
 
-        if (!token) this.handleErrorService.throwUnauthorizedError("No token provided, please login")
+        if (!token) {
+            throw new UnauthorizedException("No token provided, please login")
+        }
 
         const secret = this.config.get('ACCESS_TOKEN_SECRET')
 
@@ -35,19 +34,20 @@ export class AuthGuard implements CanActivate {
 
         catch (error) {
 
-            if (error.name === "TokenExpiredError") {
-                this.handleErrorService.throwUnauthorizedError("Token expired, please login again")
-            }
+            switch (error.name) {
 
-            else if (error.name === "JsonWebTokenError") {
-                this.handleErrorService.throwUnauthorizedError("Invalid token, please login again");
-            }
+                case "TokenExpiredError":
+                    throw new UnauthorizedException("Token expired, please login again");
 
-            else if (error.name === "NotBeforeError") {
-                this.handleErrorService.throwUnauthorizedError("Token not active yet, please login again");
-            }
+                case "JsonWebTokenError":
+                    throw new UnauthorizedException("Invalid token, please login again");
 
-            throw error
+                case "NotBeforeError":
+                    throw new UnauthorizedException("Token not active yet, please login again");
+                    
+                default:
+                    throw error;
+            }
         }
 
         return true

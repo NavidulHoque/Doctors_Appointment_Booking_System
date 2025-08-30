@@ -9,6 +9,19 @@ import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 @Injectable()
 export class AuthService {
 
+  private readonly sessionSelect = {
+    id: true,
+    deviceName: true,
+    user: {
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true
+      }
+    }
+  }
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -94,34 +107,28 @@ export class AuthService {
 
     const hashedRefreshToken = await argon.hash(refreshToken);
 
-    const updatedUser = await this.prisma.user.update({
+    await this.prisma.user.update({
       where: { id: userId },
       data: {
         isOnline: true,
         lastActiveAt: new Date()
-      },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        role: true
-      },
+      }
     })
 
     const session = await this.prisma.session.create({
       data: {
         userId,
         deviceName: deviceName,
-        refreshToken: hashedRefreshToken,
-        expiresAt: new Date(Date.now() + Number(this.config.get<number>('REFRESH_TOKEN_EXPIRES')) * 60 * 1000),
-      }
+        refreshToken: hashedRefreshToken
+      },
+      select: this.sessionSelect
     });
 
     return {
       message: 'Logged in successfully',
-      data: updatedUser,
       session,
-      accessToken
+      accessToken,
+      refreshToken
     }
   }
 
@@ -135,7 +142,7 @@ export class AuthService {
     const otpExpires = new Date(Date.now() + Number(this.config.get<number>('OTP_EXPIRES')) * 60 * 1000)
 
     await this.prisma.user.update({
-      where: { id: user!.id },
+      where: { id: user.id },
       data: {
         otp: otp.toString(),
         otpExpires
@@ -201,6 +208,7 @@ export class AuthService {
   async refreshAccessToken(dto: RefreshAccessTokenDto) {
 
     const { sessionId, refreshToken } = dto;
+
     const session = await this.findEntityByIdService.findEntityById('session', sessionId,
       {
         refreshToken: true,
@@ -216,16 +224,35 @@ export class AuthService {
 
     const isMatched = await argon.verify(session.refreshToken, refreshToken)
 
-    if (!isMatched) {
-      throw new BadRequestException('Refresh token invalid');
+    try {
+      if (!isMatched) {
+        throw new BadRequestException('Refresh token invalid');
+      }
+
+      this.jwtService.verify(refreshToken, {
+        secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
+      });
     }
 
-    const decoded = this.jwtService.verify(refreshToken, {
-      secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
-    });
+    catch (error) {
+      await this.prisma.session.delete({
+        where: { id: sessionId },
+      })
 
-    if (!decoded) {
-      throw new BadRequestException('Refresh token invalid');
+      switch (error.name) {
+
+        case "TokenExpiredError":
+          throw new UnauthorizedException("Token expired, please login again");
+
+        case "JsonWebTokenError":
+          throw new UnauthorizedException("Invalid token, please login again");
+
+        case "NotBeforeError":
+          throw new UnauthorizedException("Token not active yet, please login again");
+
+        default:
+          throw error;
+      }
     }
 
     const { id, role, email } = session.user;
@@ -238,12 +265,7 @@ export class AuthService {
     const updatedSession = await this.prisma.session.update({
       where: { id: sessionId },
       data: { refreshToken: hashedNewRefreshToken },
-      select: {
-        id: true,
-        deviceName: true,
-        createdAt: true,
-        expiresAt: true
-      }
+      select: this.sessionSelect
     })
 
     return {
