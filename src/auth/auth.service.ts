@@ -169,20 +169,26 @@ export class AuthService {
     }
 
     else if (new Date() > user.otpExpires) {
+
+      await this.nullifyUserOtp(user.id)
       throw new BadRequestException('OTP expired, please request a new one')
     }
 
+    await this.nullifyUserOtp(user.id)
+
+    return {
+      message: 'Otp verified successfully',
+    }
+  }
+
+  private async nullifyUserOtp(userId: string) {
     await this.prisma.user.update({
-      where: { id: user.id },
+      where: { id: userId },
       data: {
         otp: null,
         otpExpires: null
       }
     })
-
-    return {
-      message: 'Otp verified successfully',
-    }
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -190,6 +196,14 @@ export class AuthService {
     const { email, newPassword } = dto
 
     const user = await this.fetchUserByEmail(email, 'Invalid email')
+
+    if (user.otp || user.otpExpires) {
+      throw new UnauthorizedException('Please verify otp first');
+    }
+
+    else if (!user.isOtpVerified) {
+      throw new UnauthorizedException('Please verify otp first');
+    }
 
     const hashedPassword = await argon.hash(newPassword);
 

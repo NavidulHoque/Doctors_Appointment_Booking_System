@@ -29,6 +29,7 @@ model User {
   doctor                    Doctor?
   otp                       String?          
   otpExpires                DateTime?
+  isOtpVerified             Boolean          @default(false)
   sessions                  Session[]      
   sentMessages              Message[]        @relation("SentMessages")     
   receivedMessages          Message[]        @relation("ReceivedMessages")
