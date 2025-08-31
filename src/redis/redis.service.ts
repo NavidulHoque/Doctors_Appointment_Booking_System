@@ -63,4 +63,25 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async keys(pattern: string) {
     return this.client.keys(pattern);
   }
+
+  getClient(): RedisClient {
+    return this.client;
+  }
+
+  async incr(key: string) {
+    return this.client.incr(key);
+  }
+
+  async pttl(key: string) {
+    return this.client.pttl(key); 
+  }
+
+  async setNxPx(key: string, value: string, ttlMs: number) {
+    const res = await this.client.set(key, value, 'PX', ttlMs, 'NX');
+    return res === 'OK';
+  }
+
+  async pexpire(key: string, ttlMs: number) {
+    return this.client.pexpire(key, ttlMs);
+  }
 }

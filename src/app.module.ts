@@ -20,7 +20,11 @@ import { SocketModule } from './socket/socket.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { RedisModule } from './redis/redis.module';
 import { EmailModule } from './email/email.module';
-
+import { seconds, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { RedisService } from './redis/redis.service';
+import { RedisThrottlerStorage } from './redis/redis-throttler.storage';
+import { SmsModule } from './sms/sms.module';
 @Module({
   imports: [
     BullModule.forRoot({
@@ -28,6 +32,14 @@ import { EmailModule } from './email/email.module';
         host: process.env.REDIS_HOST || 'localhost', // or 'redis' if running in Docker
         port: parseInt(process.env.REDIS_PORT || '6385', 10),
       },
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [RedisService],
+      useFactory: (redis: RedisService) => ({
+        throttlers: [{ ttl: seconds(60), limit: 10 }], // seconds() -> ms helper
+        storage: new RedisThrottlerStorage(redis),     // reuse your RedisService
+      }),
     }),
     ConfigModule.forRoot(),
     ScheduleModule.forRoot(), // for cron jobs to run
@@ -46,9 +58,16 @@ import { EmailModule } from './email/email.module';
     SocketModule,
     KafkaModule,
     RedisModule,
-    EmailModule
+    EmailModule,
+    SmsModule
   ],
   controllers: [AppController],
-  providers: [InactiveUserCronService]
+  providers: [
+    InactiveUserCronService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ]
 })
 export class AppModule { }

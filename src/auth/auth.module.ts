@@ -6,9 +6,11 @@ import { UserModule } from 'src/user/user.module';
 import { JwtModule } from '@nestjs/jwt';
 import { CommonModule } from 'src/common/common.module';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { EmailModule } from 'src/email/email.module';
+import { SmsModule } from 'src/sms/sms.module';
 
 @Module({
-  imports: [UserModule, ConfigModule, CommonModule, PrismaModule, JwtModule.register({
+  imports: [UserModule, ConfigModule, CommonModule, PrismaModule, EmailModule, SmsModule, JwtModule.register({
     global: true,
   })],
   providers: [AuthService],

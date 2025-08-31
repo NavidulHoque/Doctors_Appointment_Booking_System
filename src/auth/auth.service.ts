@@ -5,14 +5,17 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
+import { EmailService } from 'src/email/email.service';
+import { SmsService } from 'src/sms/sms.service';
 
 @Injectable()
 export class AuthService {
 
-  private readonly accessTokenExpires: string;
-  private readonly refreshTokenExpires: string;
-  private readonly accessTokenSecret: string;
-  private readonly refreshTokenSecret: string;
+  private readonly ACCESS_TOKEN_EXPIRES: string;
+  private readonly REFRESH_TOKEN_EXPIRES: string;
+  private readonly ACCESS_TOKEN_SECRET: string;
+  private readonly REFRESH_TOKEN_SECRET: string;
+  private readonly OTP_Expires: number;
 
   private readonly sessionSelect = {
     id: true,
@@ -32,11 +35,14 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly findEntityByIdService: FindEntityByIdService,
+    private readonly email: EmailService,
+    private readonly sms: SmsService
   ) {
-    this.accessTokenExpires = this.config.get<string>('ACCESS_TOKEN_EXPIRES')!;
-    this.refreshTokenExpires = this.config.get<string>('REFRESH_TOKEN_EXPIRES')!;
-    this.accessTokenSecret = this.config.get<string>('ACCESS_TOKEN_SECRET')!;
-    this.refreshTokenSecret = this.config.get<string>('REFRESH_TOKEN_SECRET')!;
+    this.ACCESS_TOKEN_EXPIRES = this.config.get<string>('ACCESS_TOKEN_EXPIRES')!;
+    this.REFRESH_TOKEN_EXPIRES = this.config.get<string>('REFRESH_TOKEN_EXPIRES')!;
+    this.ACCESS_TOKEN_SECRET = this.config.get<string>('ACCESS_TOKEN_SECRET')!;
+    this.REFRESH_TOKEN_SECRET = this.config.get<string>('REFRESH_TOKEN_SECRET')!;
+    this.OTP_Expires = Number(this.config.get<string>('OTP_EXPIRES'))
   }
 
   async register(dto: RegistrationDto) {
@@ -107,7 +113,7 @@ export class AuthService {
 
     const hashedRefreshToken = await argon.hash(refreshToken);
 
-    const refreshTokenExpires = this.generateParsedExpiry(this.refreshTokenExpires)
+    const refreshTokenExpires = this.generateParsedExpiry(this.REFRESH_TOKEN_EXPIRES)
 
     const [_, session] = await this.prisma.$transaction([
       this.prisma.user.update({
@@ -141,19 +147,22 @@ export class AuthService {
 
     const user = await this.fetchUserByEmail(email, 'Invalid Email')
 
-    const otp = Math.floor(100000 + Math.random() * 900000);
-    const otpExpires = new Date(Date.now() + Number(this.config.get<number>('OTP_EXPIRES')) * 60 * 1000)
+    const otp = (Math.floor(100000 + Math.random() * 900000)).toString();
+    const otpExpires = new Date(Date.now() + this.OTP_Expires * 60 * 1000)
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        otp: otp.toString(),
+        otp,
         otpExpires
       }
     })
 
+    this.email.sendOtpEmail(user.email, otp)
+    this.sms.sendSms(user.phone, `Your OTP code is ${otp}. It will expire in ${this.OTP_Expires} minutes.`)
+
     return {
-      message: 'Otp sent successfully'
+      message: 'Otp emailed and sms successfully',
     }
   }
 
@@ -232,7 +241,7 @@ export class AuthService {
 
     try {
       payload = this.jwtService.verify(refreshToken, {
-        secret: this.refreshTokenSecret
+        secret: this.REFRESH_TOKEN_SECRET
       });
     }
 
@@ -291,7 +300,7 @@ export class AuthService {
       where: { id: sessionId },
       data: { 
         refreshToken: hashedNewRefreshToken,
-        expiresAt: new Date(Date.now() + Number(this.generateParsedExpiry(this.refreshTokenExpires)) * 24 * 60 * 60 * 1000)
+        expiresAt: new Date(Date.now() + Number(this.generateParsedExpiry(this.REFRESH_TOKEN_EXPIRES)) * 24 * 60 * 60 * 1000)
       },
       select: this.sessionSelect
     })
@@ -341,11 +350,11 @@ export class AuthService {
   }
 
   private generateAccessToken(payload: { id: string, role: string, email: string }) {
-    return this.jwtService.sign(payload, { secret: this.accessTokenSecret, expiresIn: this.accessTokenExpires });
+    return this.jwtService.sign(payload, { secret: this.ACCESS_TOKEN_SECRET, expiresIn: this.ACCESS_TOKEN_EXPIRES });
   }
 
   private generateRefreshToken(payload: { id: string, role: string, email: string, sessionId: string }) {
-    return this.jwtService.sign(payload, { secret: this.refreshTokenSecret, expiresIn: this.refreshTokenExpires });
+    return this.jwtService.sign(payload, { secret: this.REFRESH_TOKEN_SECRET, expiresIn: this.REFRESH_TOKEN_EXPIRES });
   }
 
   private async fetchUserByEmail(email: string, errorMessage: string): Promise<any> {
@@ -356,6 +365,7 @@ export class AuthService {
         id: true,
         fullName: true,
         email: true,
+        phone: true,
         role: true,
         password: true,
         otp: true,
