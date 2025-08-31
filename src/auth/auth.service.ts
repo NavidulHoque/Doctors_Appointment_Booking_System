@@ -107,7 +107,7 @@ export class AuthService {
 
     const hashedRefreshToken = await argon.hash(refreshToken);
 
-    const refreshTokenExpires = Number(this.refreshTokenExpires.replace(/\D/g, ''))
+    const refreshTokenExpires = this.generateParsedExpiry(this.refreshTokenExpires)
 
     const [_, session] = await this.prisma.$transaction([
       this.prisma.user.update({
@@ -214,7 +214,8 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        password: hashedPassword
+        password: hashedPassword,
+        isOtpVerified: false
       }
     })
 
@@ -227,7 +228,7 @@ export class AuthService {
 
     const { refreshToken } = dto;
 
-    let payload
+    let payload: { sessionId: string, id: string, role: string, email: string }
 
     try {
       payload = this.jwtService.verify(refreshToken, {
@@ -236,9 +237,13 @@ export class AuthService {
     }
 
     catch (error) {
-      await this.prisma.session.delete({
-        where: { id: sessionId },
-      })
+
+      const decoded = this.jwtService.decode(refreshToken);
+      const sessionId = decoded.sessionId;
+
+      if (sessionId) {
+        await this.deleteSession(sessionId);
+      }
 
       switch (error.name) {
 
@@ -255,6 +260,8 @@ export class AuthService {
           throw error;
       }
     }
+
+    const { sessionId } = payload;
     const session = await this.findEntityByIdService.findEntityById('session', sessionId,
       {
         refreshToken: true,
@@ -271,20 +278,21 @@ export class AuthService {
     const isMatched = await argon.verify(session.refreshToken, refreshToken)
 
     if (!isMatched) {
-      throw new BadRequestException('Refresh token invalid');
+      await this.deleteSession(sessionId);
+      throw new BadRequestException('Refresh token invalid, please login again');
     }
 
-
-    const { id, role, email } = session.user;
-
-    const accessToken = this.generateAccessToken({ id, role, email })
-    const newRefreshToken = this.generateRefreshToken({ id, role, email })
+    const accessToken = this.generateAccessToken(session.user)
+    const newRefreshToken = this.generateRefreshToken({ ...session.user, sessionId })
 
     const hashedNewRefreshToken = await argon.hash(newRefreshToken);
 
     const updatedSession = await this.prisma.session.update({
       where: { id: sessionId },
-      data: { refreshToken: hashedNewRefreshToken },
+      data: { 
+        refreshToken: hashedNewRefreshToken,
+        expiresAt: new Date(Date.now() + Number(this.generateParsedExpiry(this.refreshTokenExpires)) * 24 * 60 * 60 * 1000)
+      },
       select: this.sessionSelect
     })
 
@@ -295,19 +303,19 @@ export class AuthService {
       session: updatedSession
     }
   }
-
+  
   async logout(dto: LogoutDto) {
-
+    
     const { sessionId } = dto
-
+    
     const session = await this.findEntityByIdService.findEntityById('session', sessionId, { user: { select: { id: true } } })
-
+    
     await this.prisma.$transaction([
-
+      
       this.prisma.session.delete({
         where: { id: sessionId },
       }),
-
+      
       this.prisma.user.update({
         where: { id: session.user.id },
         data: {
@@ -316,10 +324,20 @@ export class AuthService {
         }
       })
     ])
-
+    
     return {
       message: 'Logged out successfully'
     }
+  }
+
+  private async deleteSession(sessionId: string) {
+    await this.prisma.session.delete({
+      where: { id: sessionId }
+    })
+  } 
+
+  private generateParsedExpiry(expiresIn: string) {
+    return Number(expiresIn.replace(/\D/g, ''))
   }
 
   private generateAccessToken(payload: { id: string, role: string, email: string }) {
