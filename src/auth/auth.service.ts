@@ -3,11 +3,16 @@ import * as argon from "argon2";
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto } from './dto';
+import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
 @Injectable()
 export class AuthService {
+
+  private readonly accessTokenExpires: string;
+  private readonly refreshTokenExpires: string;
+  private readonly accessTokenSecret: string;
+  private readonly refreshTokenSecret: string;
 
   private readonly sessionSelect = {
     id: true,
@@ -27,7 +32,12 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly findEntityByIdService: FindEntityByIdService,
-  ) { }
+  ) {
+    this.accessTokenExpires = this.config.get<string>('ACCESS_TOKEN_EXPIRES')!;
+    this.refreshTokenExpires = this.config.get<string>('REFRESH_TOKEN_EXPIRES')!;
+    this.accessTokenSecret = this.config.get<string>('ACCESS_TOKEN_SECRET')!;
+    this.refreshTokenSecret = this.config.get<string>('REFRESH_TOKEN_SECRET')!;
+  }
 
   async register(dto: RegistrationDto) {
 
@@ -57,34 +67,9 @@ export class AuthService {
     }
   }
 
-  async patientLogin(dto: LoginDto) {
+  async login(dto: LoginDto): Promise<any> {
 
-    const { email, password: plainPassword, deviceName } = dto
-
-    const response = await this.login(email, plainPassword, deviceName ?? null, "patient")
-
-    return response
-  }
-
-  async adminLogin(dto: LoginDto) {
-
-    const { email, password: plainPassword, deviceName } = dto
-
-    const response = await this.login(email, plainPassword, deviceName ?? null, "admin")
-
-    return response
-  }
-
-  async doctorLogin(dto: LoginDto) {
-
-    const { email, password: plainPassword, deviceName } = dto
-
-    const response = await this.login(email, plainPassword, deviceName ?? null, "doctor")
-
-    return response
-  }
-
-  private async login(email: string, plainPassword: string, deviceName: string | null, role: string): Promise<any> {
+    const { email, password: plainPassword, deviceName, role } = dto
 
     const user = await this.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
 
@@ -100,29 +85,47 @@ export class AuthService {
       throw new UnauthorizedException("Password invalid")
     }
 
-    const payload = { id: userId, role, email }
-
-    const accessToken = this.generateAccessToken(payload)
-    const refreshToken = this.generateRefreshToken(payload)
-
-    const hashedRefreshToken = await argon.hash(refreshToken);
-
-    await this.prisma.user.update({
-      where: { id: userId },
+    const { id: sessionId } = await this.prisma.session.create({
       data: {
-        isOnline: true,
-        lastActiveAt: new Date()
+        userId,
+        deviceName: deviceName || null,
+        refreshToken: "abc",
+        expiresAt: new Date()
+      },
+      select: {
+        id: true
       }
     })
 
-    const session = await this.prisma.session.create({
-      data: {
-        userId,
-        deviceName: deviceName,
-        refreshToken: hashedRefreshToken
-      },
-      select: this.sessionSelect
-    });
+    const payload = { id: userId, role, email }
+
+    const accessToken = this.generateAccessToken(payload)
+    const refreshToken = this.generateRefreshToken({
+      ...payload,
+      sessionId
+    })
+
+    const hashedRefreshToken = await argon.hash(refreshToken);
+
+    const refreshTokenExpires = Number(this.refreshTokenExpires.replace(/\D/g, ''))
+
+    const [_, session] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          isOnline: true,
+          lastActiveAt: new Date()
+        }
+      }),
+      this.prisma.session.update({
+        where: { id: sessionId },
+        data: {
+          refreshToken: hashedRefreshToken,
+          expiresAt: new Date(Date.now() + refreshTokenExpires * 24 * 60 * 60 * 1000)
+        },
+        select: this.sessionSelect
+      })
+    ]);
 
     return {
       message: 'Logged in successfully',
@@ -170,25 +173,30 @@ export class AuthService {
 
     else if (new Date() > user.otpExpires) {
 
-      await this.nullifyUserOtp(user.id)
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          otp: null,
+          otpExpires: null,
+          isOtpVerified: false
+        }
+      })
+
       throw new BadRequestException('OTP expired, please request a new one')
     }
 
-    await this.nullifyUserOtp(user.id)
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: null,
+        otpExpires: null,
+        isOtpVerified: true
+      }
+    })
 
     return {
       message: 'Otp verified successfully',
     }
-  }
-
-  private async nullifyUserOtp(userId: string) {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        otp: null,
-        otpExpires: null
-      }
-    })
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -197,11 +205,7 @@ export class AuthService {
 
     const user = await this.fetchUserByEmail(email, 'Invalid email')
 
-    if (user.otp || user.otpExpires) {
-      throw new UnauthorizedException('Please verify otp first');
-    }
-
-    else if (!user.isOtpVerified) {
+    if (user.otp || user.otpExpires || !user.isOtpVerified) {
       throw new UnauthorizedException('Please verify otp first');
     }
 
@@ -221,30 +225,13 @@ export class AuthService {
 
   async refreshAccessToken(dto: RefreshAccessTokenDto) {
 
-    const { sessionId, refreshToken } = dto;
+    const { refreshToken } = dto;
 
-    const session = await this.findEntityByIdService.findEntityById('session', sessionId,
-      {
-        refreshToken: true,
-        user: {
-          select: {
-            id: true,
-            role: true,
-            email: true
-          }
-        }
-      }
-    );
-
-    const isMatched = await argon.verify(session.refreshToken, refreshToken)
+    let payload
 
     try {
-      if (!isMatched) {
-        throw new BadRequestException('Refresh token invalid');
-      }
-
-      this.jwtService.verify(refreshToken, {
-        secret: this.config.get<string>('REFRESH_TOKEN_SECRET')
+      payload = this.jwtService.verify(refreshToken, {
+        secret: this.refreshTokenSecret
       });
     }
 
@@ -268,6 +255,25 @@ export class AuthService {
           throw error;
       }
     }
+    const session = await this.findEntityByIdService.findEntityById('session', sessionId,
+      {
+        refreshToken: true,
+        user: {
+          select: {
+            id: true,
+            role: true,
+            email: true
+          }
+        }
+      }
+    );
+
+    const isMatched = await argon.verify(session.refreshToken, refreshToken)
+
+    if (!isMatched) {
+      throw new BadRequestException('Refresh token invalid');
+    }
+
 
     const { id, role, email } = session.user;
 
@@ -290,13 +296,26 @@ export class AuthService {
     }
   }
 
-  async logout(sessionId: string) {
+  async logout(dto: LogoutDto) {
 
-    await this.findEntityByIdService.findEntityById('session', sessionId, null)
+    const { sessionId } = dto
 
-    await this.prisma.session.delete({
-      where: { id: sessionId },
-    })
+    const session = await this.findEntityByIdService.findEntityById('session', sessionId, { user: { select: { id: true } } })
+
+    await this.prisma.$transaction([
+
+      this.prisma.session.delete({
+        where: { id: sessionId },
+      }),
+
+      this.prisma.user.update({
+        where: { id: session.user.id },
+        data: {
+          isOnline: false,
+          lastActiveAt: new Date()
+        }
+      })
+    ])
 
     return {
       message: 'Logged out successfully'
@@ -304,23 +323,11 @@ export class AuthService {
   }
 
   private generateAccessToken(payload: { id: string, role: string, email: string }) {
-
-    const accessTokenSecrete = this.config.get<string>('ACCESS_TOKEN_SECRET')
-    const accessTokenExpires = this.config.get<string>('ACCESS_TOKEN_EXPIRES')
-
-    const accessToken = this.jwtService.sign(payload, { secret: accessTokenSecrete, expiresIn: accessTokenExpires });
-
-    return accessToken
+    return this.jwtService.sign(payload, { secret: this.accessTokenSecret, expiresIn: this.accessTokenExpires });
   }
 
-  private generateRefreshToken(payload: { id: string, role: string, email: string }) {
-
-    const refreshTokenSecrete = this.config.get<string>('REFRESH_TOKEN_SECRET')
-    const refreshTokenExpires = this.config.get<string>('REFRESH_TOKEN_EXPIRES')
-
-    const refreshToken = this.jwtService.sign(payload, { secret: refreshTokenSecrete, expiresIn: refreshTokenExpires });
-
-    return refreshToken
+  private generateRefreshToken(payload: { id: string, role: string, email: string, sessionId: string }) {
+    return this.jwtService.sign(payload, { secret: this.refreshTokenSecret, expiresIn: this.refreshTokenExpires });
   }
 
   private async fetchUserByEmail(email: string, errorMessage: string): Promise<any> {
@@ -334,7 +341,8 @@ export class AuthService {
         role: true,
         password: true,
         otp: true,
-        otpExpires: true
+        otpExpires: true,
+        isOtpVerified: true
       }
     });
 

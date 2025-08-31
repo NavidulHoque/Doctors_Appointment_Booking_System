@@ -19,6 +19,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { SocketModule } from './socket/socket.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { RedisModule } from './redis/redis.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -44,7 +45,8 @@ import { RedisModule } from './redis/redis.module';
     UploadsModule,
     SocketModule,
     KafkaModule,
-    RedisModule
+    RedisModule,
+    EmailModule
   ],
   controllers: [AppController],
   providers: [InactiveUserCronService]

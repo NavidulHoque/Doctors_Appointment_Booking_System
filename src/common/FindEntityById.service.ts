@@ -11,7 +11,8 @@ export class FindEntityByIdService {
         review: "id",
         message: "id",
         notification: "id",
-        payment: "id"
+        payment: "id",
+        session: "id"
     };
 
     constructor(
