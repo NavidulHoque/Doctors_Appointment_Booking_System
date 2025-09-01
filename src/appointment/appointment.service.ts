@@ -6,7 +6,6 @@ import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
 @Injectable()
 export class AppointmentService {
@@ -16,7 +15,6 @@ export class AppointmentService {
         private readonly prisma: PrismaService,
         private readonly notificationService: NotificationService,
         private readonly config: ConfigService,
-        private readonly findEntityByService: FindEntityByIdService,
         @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
     ) { }
 
@@ -249,16 +247,6 @@ export class AppointmentService {
         }
     }
 
-    async getAnAppointment(id: string) {
-
-        const appointment = await this.findEntityByService.findEntityById('appointment', id, appointmentSelect)
-
-        return {
-            data: appointment,
-            message: "Appointment fetched successfully"
-        }
-    }
-
     async getTotalAppointmentsGraph(queryParam: GetAppointmentsDto) {
 
         const { doctorId, patientId } = queryParam;
@@ -307,9 +295,11 @@ export class AppointmentService {
         };
     }
 
-    async updateAppointment(dto: UpdateAppointmentDto, id: string) {
+    async updateAppointment(dto: UpdateAppointmentDto, appointment: any) {
 
         const { status, isPaid, paymentMethod, cancellationReason } = dto
+
+        const { id: appointmentId } = appointment
 
         const data: any = status ? { status } : {}
 
@@ -318,8 +308,6 @@ export class AppointmentService {
             data.isPaid = isPaid
             data.paymentMethod = paymentMethod
         }
-
-        const appointment = await this.findEntityByService.findEntityById('appointment', id, appointmentSelect)
 
         const now = new Date();
 
@@ -346,7 +334,7 @@ export class AppointmentService {
 
                 this.appointmentQueue.add(
                     "start-appointment",
-                    { status: 'RUNNING', id },
+                    { status: 'RUNNING', id: appointmentId },
                     {
                         delay: date.getTime() - now.getTime(),
                         attempts: 3,
@@ -373,7 +361,7 @@ export class AppointmentService {
         }
 
         const updatedAppointment = await this.prisma.appointment.update({
-            where: { id },
+            where: { id: appointmentId },
             data,
             select: appointmentSelect
         })

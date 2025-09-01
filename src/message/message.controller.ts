@@ -5,6 +5,7 @@ import { MessageProducerService } from './message.producer.service';
 import { CreateMessageDto, UpdateMessageDto } from './dto';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
+import { EntityByIdPipe } from 'src/common/pipes';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('messages')
@@ -39,17 +40,17 @@ export class MessageController {
         return this.messageService.getMessages(userId, receiverId);
     }
 
-    @Patch("/update-message/:messageId")
+    @Patch("/update-message/:id")
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     @HttpCode(202)
     updateMessage(
-        @Param('messageId') messageId: string,
+        @Param('id', EntityByIdPipe('message', { senderId: true, id: true })) message: any,
         @Body() dto: UpdateMessageDto,
         @User("id") userId: string
     ) {
         const data = {
             ...dto,
-            messageId,
+            message,
             senderId: userId
         }
 
@@ -60,13 +61,13 @@ export class MessageController {
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     @HttpCode(202)
     deleteMessage(
-        @Param('messageId') messageId: string,
+        @Param('id', EntityByIdPipe('message', { senderId: true, id: true })) message: any,
         @Query("receiverId") receiverId: string,
         @User("id") userId: string
     ) {
         const data = {
             receiverId,
-            messageId,
+            message,
             senderId: userId
         }
 

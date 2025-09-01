@@ -4,6 +4,8 @@ import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { Roles } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
+import { EntityByIdPipe } from 'src/common/pipes';
+import { appointmentSelect } from 'src/prisma/prisma-selects';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('appointments')
@@ -40,9 +42,12 @@ export class AppointmentController {
     @Get("/get-an-appointment/:id")
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     getAnAppointment(
-        @Param('id') id: string,
+        @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: any,
     ) {
-        return this.appointmentService.getAnAppointment(id)
+        return {
+            data: appointment,
+            message: "Appointment fetched successfully"
+        }
     }
 
     @Get("/get-total-appointments-graph")
@@ -57,8 +62,8 @@ export class AppointmentController {
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     updateAppointment(
         @Body() dto: UpdateAppointmentDto, 
-        @Param('id') id: string,
+        @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: any,
     ) {
-        return this.appointmentService.updateAppointment(dto, id)
+        return this.appointmentService.updateAppointment(dto, appointment)
     }
 }

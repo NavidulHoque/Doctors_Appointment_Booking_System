@@ -84,17 +84,15 @@ export class MessageService {
 
     async updateMessage(data: any) {
 
-        const { senderId, messageId, receiverId, content } = data
+        const { senderId, message, receiverId, content } = data
 
-        const message = await this.findEntityByIdService.findEntityById("message", messageId, { senderId: true })
-
-        if (message?.senderId !== senderId) {
+        if (message.senderId !== senderId) {
             this.socketGateway.sendResponse(senderId, { status: "failed", message: "You are not authorized to update this message" });
             return;
         }
 
         const updatedMessage = await this.prisma.message.update({
-            where: { id: messageId },
+            where: { id: message.id },
             data: { content },
             select: this.messageSelect
         });
@@ -107,17 +105,15 @@ export class MessageService {
 
     async deleteMessage(data: any) {
 
-        const { messageId, senderId, receiverId } = data
+        const { message, senderId, receiverId } = data
 
-        const message = await this.findEntityByIdService.findEntityById("message", messageId, { senderId: true })
-
-        if (message?.senderId !== senderId) {
+        if (message.senderId !== senderId) {
             this.socketGateway.sendResponse(senderId, { status: "failed", message: "You are not authorized to delete this message" });
             return
         }
 
         const deletedMessage = await this.prisma.message.delete({
-            where: { id: messageId },
+            where: { id: message.id },
             select: this.messageSelect
         });
 

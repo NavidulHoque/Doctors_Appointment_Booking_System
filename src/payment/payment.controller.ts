@@ -1,8 +1,7 @@
 import { Controller, Post, Body, UseGuards, Get, Query, ParseIntPipe, Param } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
-import { User } from 'src/user/decorator';
-import { Roles } from 'src/auth/decorators';
+import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 
 @UseGuards(AuthGuard, RolesGuard)

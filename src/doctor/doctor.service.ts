@@ -142,18 +142,18 @@ export class DoctorService {
         }
     }
 
-    async getADoctor(id: string, queryParams: GetDoctorsDto) {
+    async getADoctor(doctor: any, queryParams: GetDoctorsDto) {
 
         const { page, limit } = queryParams
 
-        const skip = (page - 1) * limit
+        const { id: doctorId } = doctor
 
-        const doctor = await this.findEntityByIdService.findEntityById("doctor", id, doctorSelect)
+        const skip = (page - 1) * limit
 
         const [reviews, totalReviews, averageRating, relatedDoctors, bookedAppointmentDates] = await this.prisma.$transaction([
 
             this.prisma.review.findMany({
-                where: { doctorId: id },
+                where: { doctorId },
                 orderBy: { createdAt: 'desc' },
                 select: {
                     id: true,
@@ -173,10 +173,10 @@ export class DoctorService {
                 take: limit
             }),
 
-            this.prisma.review.count({ where: { doctorId: id } }),
+            this.prisma.review.count({ where: { doctorId } }),
 
             this.prisma.review.aggregate({
-                where: { doctorId: id },
+                where: { doctorId },
                 _avg: { rating: true }
             }),
 
@@ -185,7 +185,7 @@ export class DoctorService {
                     specialization: doctor?.specialization,
                     isActive: true,
                     userId: {
-                        not: id,
+                        not: doctorId,
                     }
                 },
                 take: 5,
@@ -194,7 +194,7 @@ export class DoctorService {
 
             this.prisma.appointment.findMany({
                 where: {
-                    doctorId: id,
+                    doctorId,
                     status: {
                         in: ["PENDING", "CONFIRMED"]
                     }
@@ -281,7 +281,7 @@ export class DoctorService {
         }
     }
 
-    async updateDoctor(dto: UpdateDoctorDto, id: string) {
+    async updateDoctor(dto: UpdateDoctorDto, doctorId: string) {
 
         const { fullName, email, currentPassword, newPassword, phone, gender, birthDate, address, specialization, education, experience, aboutMe, fees, addAvailableTime, removeAvailableTime, isActive } = dto
 
@@ -317,11 +317,9 @@ export class DoctorService {
 
         else if (isActive !== undefined) doctorData = { isActive }
 
-        await this.findEntityByIdService.findEntityById("doctor", id, null)
-
         if (currentPassword && newPassword) {
 
-            const user = await this.prisma.user.findUnique({ where: { id } })
+            const user = await this.prisma.user.findUnique({ where: { id: doctorId } })
 
             if (!user) {
                 throw new NotFoundException("User not found")
@@ -336,7 +334,7 @@ export class DoctorService {
             const hashedPassword = await argon.hash(newPassword)
 
             await this.prisma.user.update({
-                where: { id },
+                where: { id: doctorId },
                 data: {
                     password: hashedPassword
                 }
@@ -349,7 +347,7 @@ export class DoctorService {
 
         else if (removeAvailableTime) {
 
-            const doctorRecord = await this.prisma.doctor.findUnique({ where: { userId: id } })
+            const doctorRecord = await this.prisma.doctor.findUnique({ where: { userId: doctorId } })
 
             if (!doctorRecord) {
                 throw new NotFoundException("Doctor not found")
@@ -373,13 +371,13 @@ export class DoctorService {
             // }
 
             await this.prisma.user.update({
-                where: { id },
+                where: { id: doctorId },
                 data: userData
             })
         }
 
         const updatedDoctor = await this.prisma.doctor.update({
-            where: { userId: id },
+            where: { userId: doctorId },
             data: doctorData,
             select: {
                 userId: true,
@@ -472,11 +470,9 @@ export class DoctorService {
         };
     }
 
-    async deleteDoctor(id: string) {
+    async deleteDoctor(doctorId: string) {
 
-        await this.findEntityByIdService.findEntityById("doctor", id, null)
-
-        await this.prisma.doctor.delete({ where: { userId: id } })
+        await this.prisma.doctor.delete({ where: { userId: doctorId } })
 
         return {
             message: "Doctor deleted successfully"

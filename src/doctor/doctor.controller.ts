@@ -5,6 +5,8 @@ import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
 import { UserDto } from 'src/user/dto';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
+import { EntityByIdPipe } from 'src/common/pipes';
+import { doctorSelect } from 'src/prisma/prisma-selects';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('doctors')
@@ -33,10 +35,10 @@ export class DoctorController {
     @Get("/get-a-doctor/:id")
     @Roles(Role.ADMIN, Role.PATIENT)
     getADoctor(
-        @Param('id') id: string,
+        @Param('id', EntityByIdPipe('doctor', doctorSelect)) doctor: any,
         @Query() query: GetDoctorsDto,
     ) {
-        return this.doctorService.getADoctor(id, query)
+        return this.doctorService.getADoctor(doctor, query)
     }
 
     @Get("/get-total-revenue")
@@ -51,9 +53,9 @@ export class DoctorController {
     @Roles(Role.DOCTOR, Role.ADMIN)
     updateDoctor(
         @Body() body: UpdateDoctorDto,
-        @Param('id') id: string
+        @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: any,
     ) {
-        return this.doctorService.updateDoctor(body, id)
+        return this.doctorService.updateDoctor(body, doctorId)
     }
 
     @Patch("/stripe/create-account")
@@ -63,20 +65,20 @@ export class DoctorController {
     ) {
         return this.doctorService.createStripeAccount(userId)
     }
-    
+
     @Patch("/stripe/activate-account")
     @Roles(Role.DOCTOR)
     activateStripeAccount(
         @User("id") userId: string,
         @Body("stripeAccountId") stripeAccountId: string
-    ){
+    ) {
         return this.doctorService.activateStripeAccount(userId, stripeAccountId)
     }
-    
-    @Delete("/delete-doctor/:doctorId")
+
+    @Delete("/delete-doctor/:id")
     @Roles(Role.DOCTOR, Role.ADMIN)
     deleteDoctor(
-        @Param('doctorId') doctorId: string,
+        @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: any,
     ) {
         return this.doctorService.deleteDoctor(doctorId)
     }
