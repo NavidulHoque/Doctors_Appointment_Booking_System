@@ -25,6 +25,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { RedisService } from './redis/redis.service';
 import { RedisThrottlerStorage } from './redis/redis-throttler.storage';
 import { SmsModule } from './sms/sms.module';
+import { RemoveExpiredSessionsCronService } from './cron/removeExpiredSessionsCron.service';
 @Module({
   imports: [
     BullModule.forRoot({
@@ -64,6 +65,7 @@ import { SmsModule } from './sms/sms.module';
   controllers: [AppController],
   providers: [
     InactiveUserCronService,
+    RemoveExpiredSessionsCronService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

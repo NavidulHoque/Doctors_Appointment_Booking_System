@@ -4,7 +4,7 @@ import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { MessageProducerService } from './message.producer.service';
 import { CreateMessageDto, UpdateMessageDto } from './dto';
 import { Roles, User } from 'src/auth/decorators';
-import { Role } from 'src/auth/enum';
+import { Role } from '@prisma/client';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('messages')
@@ -16,7 +16,7 @@ export class MessageController {
     ) { }
 
     @Post("/create-message")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     @HttpCode(202)
     createMessage(
         @Body() dto: CreateMessageDto,
@@ -31,7 +31,7 @@ export class MessageController {
     }
 
     @Get("/get-messages")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     getMessages(
         @User("id") userId: string,
         @Query('receiverId') receiverId: string
@@ -40,7 +40,7 @@ export class MessageController {
     }
 
     @Patch("/update-message/:messageId")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     @HttpCode(202)
     updateMessage(
         @Param('messageId') messageId: string,
@@ -57,7 +57,7 @@ export class MessageController {
     }
     
     @Delete("/delete-message/:messageId")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     @HttpCode(202)
     deleteMessage(
         @Param('messageId') messageId: string,

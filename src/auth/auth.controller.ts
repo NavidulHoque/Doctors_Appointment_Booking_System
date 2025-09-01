@@ -1,9 +1,8 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
-import { AuthGuard, RolesGuard } from './guard';
-import { Roles } from './decorators';
-import { Role } from './enum';
+import { AuthGuard } from './guard';
+import { Role } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -20,19 +19,19 @@ export class AuthController {
     @Post("/patientLogin")
     @HttpCode(200)
     patientLogin(@Body() dto: LoginDto) {
-        return this.authService.login(dto)
+        return this.authService.login({ ...dto, role: Role.PATIENT })
     }
 
     @Post("/doctorLogin")
     @HttpCode(200)
     doctorLogin(@Body() dto: LoginDto) {
-        return this.authService.login(dto)
+        return this.authService.login({ ...dto, role: Role.DOCTOR })
     }
 
     @Post("/adminLogin")
     @HttpCode(200)
     adminLogin(@Body() dto: LoginDto) {
-        return this.authService.login(dto)
+        return this.authService.login({ ...dto, role: Role.ADMIN })
     }
 
     @Post("/forgetPassword")
@@ -61,9 +60,8 @@ export class AuthController {
         return this.authService.refreshAccessToken(dto)
     }
 
-    @UseGuards(AuthGuard, RolesGuard)
+    @UseGuards(AuthGuard)
     @Post("/logout")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
     @HttpCode(200)
     logout(
         @Body() dto: LogoutDto

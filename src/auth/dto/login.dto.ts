@@ -14,8 +14,4 @@ export class LoginDto extends BaseAuthDto {
     @IsString()
     @IsOptional()
     deviceName?: string;
-
-    @IsString()
-    @IsNotEmpty({ message: 'Role is required' })
-    role: string;
 }

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { KafkaProducerService } from "src/kafka/kafka.producer.service";
 
 @Injectable()
@@ -21,7 +21,8 @@ export class MessageProducerService {
 
         catch (error) {
             // producer exhausted after 5 retries
-            throw error
+            console.error("Kafka sendCreateMessage failed:", error.message);
+            throw new ServiceUnavailableException("Kafka unavailable, try again later");
         }
     }
 
@@ -38,7 +39,8 @@ export class MessageProducerService {
 
         catch (error) {
             // producer exhausted after 5 retries
-            throw error
+            console.error("Kafka sendUpdateMessage failed:", error.message);
+            throw new ServiceUnavailableException("Kafka unavailable, try again later");
         }
     }
 
@@ -55,7 +57,8 @@ export class MessageProducerService {
 
         catch (error) {
             // producer exhausted after 5 retries
-           throw error
+            console.error("Kafka sendDeleteMessage failed:", error.message);
+            throw new ServiceUnavailableException("Kafka unavailable, try again later");
         }
     }
 }

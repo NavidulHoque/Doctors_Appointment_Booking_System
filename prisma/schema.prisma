@@ -132,6 +132,7 @@ model Message {
   receiverId      String
   idempotencyKey  String     @unique
   createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
 
 model Notification {

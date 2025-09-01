@@ -3,7 +3,7 @@ import { AppointmentService } from './appointment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { Roles } from 'src/auth/decorators';
-import { Role } from 'src/auth/enum';
+import { Role } from '@prisma/client';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('appointments')
@@ -14,7 +14,7 @@ export class AppointmentController {
     ) { }
 
     @Post("/create-appointment")
-    @Roles(Role.Admin, Role.Patient)
+    @Roles(Role.ADMIN, Role.PATIENT)
     createAppointment(
         @Body() dto: CreateAppointmentDto,
     ) {
@@ -22,7 +22,7 @@ export class AppointmentController {
     }
 
     @Get("/get-all-appointments")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     getAllAppointments(
         @Query() query: GetAppointmentsDto
     ) {
@@ -30,7 +30,7 @@ export class AppointmentController {
     }
 
     @Get("/get-all-appointments-count")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     getAllAppointmentCount(
         @Query() query: GetAppointmentsDto
     ) {
@@ -38,7 +38,7 @@ export class AppointmentController {
     }
 
     @Get("/get-an-appointment/:id")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     getAnAppointment(
         @Param('id') id: string,
     ) {
@@ -46,7 +46,7 @@ export class AppointmentController {
     }
 
     @Get("/get-total-appointments-graph")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     getTotalAppointmentsGraph(
         @Query() query: GetAppointmentsDto
     ) {
@@ -54,7 +54,7 @@ export class AppointmentController {
     }
 
     @Patch("/update-appointment/:id")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     updateAppointment(
         @Body() dto: UpdateAppointmentDto, 
         @Param('id') id: string,

@@ -2,9 +2,8 @@ import { Controller, Get, ParseIntPipe, Query, UseGuards } from '@nestjs/common'
 import { NotificationService } from './notification.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { User } from 'src/user/decorator';
-import { UserDto } from 'src/user/dto';
 import { Roles } from 'src/auth/decorators';
-import { Role } from 'src/auth/enum';
+import { Role } from '@prisma/client';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('notifications')
@@ -14,7 +13,7 @@ export class NotificationController {
     ) { }
 
     @Get("/get-all-notifications")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     getNotifications(
         @User("id") userId: string,
         @Query('page', ParseIntPipe) page: number,

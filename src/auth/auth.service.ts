@@ -3,10 +3,11 @@ import * as argon from "argon2";
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
+import { ForgetPasswordDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
 import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 import { EmailService } from 'src/email/email.service';
 import { SmsService } from 'src/sms/sms.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -61,7 +62,7 @@ export class AuthService {
 
     catch (error) {
       // Prisma unique constraint violation
-      if (error.code === 'P2002') {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const target = error.meta?.target?.[0];
 
         if (target === 'email') {
@@ -73,13 +74,11 @@ export class AuthService {
     }
   }
 
-  async login(dto: LoginDto): Promise<any> {
-
-    const { email, password: plainPassword, deviceName, role } = dto
+  async login({ email, password: plainPassword, deviceName, role }: any) {
 
     const user = await this.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
 
-    if (user.role !== role.toUpperCase()) {
+    if (user.role !== role) {
       throw new UnauthorizedException(`${role} login only`);
     }
 
@@ -159,7 +158,9 @@ export class AuthService {
     })
 
     this.email.sendOtpEmail(user.email, otp)
-    this.sms.sendSms(user.phone, `Your OTP code is ${otp}. It will expire in ${this.OTP_Expires} minutes.`)
+    if (user.phone) {
+      this.sms.sendSms(user.phone, `Your OTP code is ${otp}. It will expire in ${this.OTP_Expires} minutes.`);
+    }
 
     return {
       message: 'Otp emailed and sms successfully',
@@ -274,6 +275,7 @@ export class AuthService {
     const session = await this.findEntityByIdService.findEntityById('session', sessionId,
       {
         refreshToken: true,
+        expiresAt: true,
         user: {
           select: {
             id: true,
@@ -291,6 +293,11 @@ export class AuthService {
       throw new BadRequestException('Refresh token invalid, please login again');
     }
 
+    else if (new Date() > session.expiresAt) {
+      await this.deleteSession(sessionId);
+      throw new UnauthorizedException("Session expired, please login again");
+    }
+
     const accessToken = this.generateAccessToken(session.user)
     const newRefreshToken = this.generateRefreshToken({ ...session.user, sessionId })
 
@@ -298,7 +305,7 @@ export class AuthService {
 
     const updatedSession = await this.prisma.session.update({
       where: { id: sessionId },
-      data: { 
+      data: {
         refreshToken: hashedNewRefreshToken,
         expiresAt: new Date(Date.now() + Number(this.generateParsedExpiry(this.REFRESH_TOKEN_EXPIRES)) * 24 * 60 * 60 * 1000)
       },
@@ -312,19 +319,19 @@ export class AuthService {
       session: updatedSession
     }
   }
-  
+
   async logout(dto: LogoutDto) {
-    
+
     const { sessionId } = dto
-    
+
     const session = await this.findEntityByIdService.findEntityById('session', sessionId, { user: { select: { id: true } } })
-    
+
     await this.prisma.$transaction([
-      
+
       this.prisma.session.delete({
         where: { id: sessionId },
       }),
-      
+
       this.prisma.user.update({
         where: { id: session.user.id },
         data: {
@@ -333,7 +340,7 @@ export class AuthService {
         }
       })
     ])
-    
+
     return {
       message: 'Logged out successfully'
     }
@@ -343,7 +350,7 @@ export class AuthService {
     await this.prisma.session.delete({
       where: { id: sessionId }
     })
-  } 
+  }
 
   private generateParsedExpiry(expiresIn: string) {
     return Number(expiresIn.replace(/\D/g, ''))

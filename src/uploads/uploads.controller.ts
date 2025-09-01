@@ -9,10 +9,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from './multer.config';
 import { UploadsService } from './uploads.service';
 import { User } from 'src/user/decorator';
-import { UserDto } from 'src/user/dto';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { Roles } from 'src/auth/decorators';
-import { Role } from 'src/auth/enum';
+import { Role } from '@prisma/client';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('upload')
@@ -22,7 +21,7 @@ export class UploadsController {
   ) { }
 
   @Post("avatarImage")
-  @Roles(Role.Admin, Role.Patient, Role.Doctor)
+  @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
   @UseInterceptors(FileInterceptor('image', multerOptions))
   uploadAvatarImage(
     @UploadedFile() file: Express.Multer.File,

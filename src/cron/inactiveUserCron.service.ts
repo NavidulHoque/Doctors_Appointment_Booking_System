@@ -32,10 +32,14 @@ export class InactiveUserCronService {
             if (result.count > 0) {
                 this.logger.log(`⏰ Marked ${result.count} users as inactive.`);
             }
+
+            else{
+                this.logger.log("⏰ No inactive users were found.");
+            }
         }
 
         catch (error) {
-            this.logger.error('Failed to update inactive users:', error);
+            this.logger.error('Failed to update inactive users:', error?.stack || error.message);
         }
     }
 }

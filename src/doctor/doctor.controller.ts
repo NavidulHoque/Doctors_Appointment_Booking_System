@@ -4,7 +4,7 @@ import { DoctorService } from './doctor.service';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
 import { UserDto } from 'src/user/dto';
 import { Roles, User } from 'src/auth/decorators';
-import { Role } from 'src/auth/enum';
+import { Role } from '@prisma/client';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('doctors')
@@ -15,7 +15,7 @@ export class DoctorController {
     ) { }
 
     @Post("/create-doctor")
-    @Roles(Role.Admin)
+    @Roles(Role.ADMIN)
     createDoctor(
         @Body() dto: CreateDoctorDto,
     ) {
@@ -23,7 +23,7 @@ export class DoctorController {
     }
 
     @Get("/get-all-doctors")
-    @Roles(Role.Admin, Role.Patient)
+    @Roles(Role.ADMIN, Role.PATIENT)
     getAllDoctors(
         @Query() query: GetDoctorsDto
     ) {
@@ -31,7 +31,7 @@ export class DoctorController {
     }
 
     @Get("/get-a-doctor/:id")
-    @Roles(Role.Admin, Role.Patient)
+    @Roles(Role.ADMIN, Role.PATIENT)
     getADoctor(
         @Param('id') id: string,
         @Query() query: GetDoctorsDto,
@@ -40,7 +40,7 @@ export class DoctorController {
     }
 
     @Get("/get-total-revenue")
-    @Roles(Role.Doctor)
+    @Roles(Role.DOCTOR)
     getTotalRevenue(
         @User() user: UserDto
     ) {
@@ -48,7 +48,7 @@ export class DoctorController {
     }
 
     @Patch("/update-doctor/:id")
-    @Roles(Role.Doctor, Role.Admin)
+    @Roles(Role.DOCTOR, Role.ADMIN)
     updateDoctor(
         @Body() body: UpdateDoctorDto,
         @Param('id') id: string
@@ -57,7 +57,7 @@ export class DoctorController {
     }
 
     @Patch("/stripe/create-account")
-    @Roles(Role.Doctor)
+    @Roles(Role.DOCTOR)
     createStripeAccount(
         @User("id") userId: string
     ) {
@@ -65,7 +65,7 @@ export class DoctorController {
     }
     
     @Patch("/stripe/activate-account")
-    @Roles(Role.Doctor)
+    @Roles(Role.DOCTOR)
     activateStripeAccount(
         @User("id") userId: string,
         @Body("stripeAccountId") stripeAccountId: string
@@ -74,7 +74,7 @@ export class DoctorController {
     }
     
     @Delete("/delete-doctor/:doctorId")
-    @Roles(Role.Doctor, Role.Admin)
+    @Roles(Role.DOCTOR, Role.ADMIN)
     deleteDoctor(
         @Param('doctorId') doctorId: string,
     ) {

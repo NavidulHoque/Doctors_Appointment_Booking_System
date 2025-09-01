@@ -3,7 +3,7 @@ import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { UserService } from './user.service';
 import { UserDto } from './dto';
 import { Roles, User } from 'src/auth/decorators';
-import { Role } from 'src/auth/enum';
+import { Role } from '@prisma/client';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('users')
@@ -14,13 +14,13 @@ export class UserController {
     ) { }
 
     @Get("/get-user")
-    @Roles(Role.Admin, Role.Patient)
+    @Roles(Role.ADMIN, Role.PATIENT)
     getUser(@User() user: UserDto) {
         return this.userService.getUser(user)
     }
 
     @Patch("/update-user-activity")
-    @Roles(Role.Admin, Role.Patient, Role.Doctor)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     updateUserActivity(
         @User("id") userId: string
     ) {
@@ -28,7 +28,7 @@ export class UserController {
     }
 
     @Put("/update-user")
-    @Roles(Role.Admin, Role.Patient)
+    @Roles(Role.ADMIN, Role.PATIENT)
     updateUser(
         @Body() dto: UserDto, 
         @User("id") userId: string
@@ -37,7 +37,7 @@ export class UserController {
     }
 
     @Delete("")
-    @Roles(Role.Admin, Role.Patient)
+    @Roles(Role.ADMIN, Role.PATIENT)
     deleteUser(@User() user: UserDto) {
         return this.userService.deleteUser(user)
     }
