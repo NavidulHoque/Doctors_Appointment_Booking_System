@@ -3,7 +3,6 @@ import { Module } from '@nestjs/common';
 import { NotificationProcessor } from './notification.processor';
 import { NotificationService } from './notification.service';
 import { PrismaModule } from 'src/prisma/prisma.module';
-import { CommonModule } from 'src/common/common.module';
 import { NotificationController } from './notifications.controller';
 import { ConfigModule } from '@nestjs/config';
 import { SocketModule } from 'src/socket/socket.module';
@@ -14,7 +13,6 @@ import { SocketModule } from 'src/socket/socket.module';
       name: 'notification-queue',
     }),
     PrismaModule,
-    CommonModule,
     ConfigModule,
     SocketModule
   ],

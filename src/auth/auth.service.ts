@@ -4,7 +4,6 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ForgetPasswordDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
-import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 import { EmailService } from 'src/email/email.service';
 import { SmsService } from 'src/sms/sms.service';
 import { Prisma } from '@prisma/client';
@@ -35,7 +34,6 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly findEntityByIdService: FindEntityByIdService,
     private readonly email: EmailService,
     private readonly sms: SmsService
   ) {
@@ -272,7 +270,7 @@ export class AuthService {
     }
 
     const { sessionId } = payload;
-    const session = await this.findEntityByIdService.findEntityById('session', sessionId,
+    const session = await this.findSessionById(sessionId,
       {
         refreshToken: true,
         expiresAt: true,
@@ -299,7 +297,12 @@ export class AuthService {
     }
 
     const accessToken = this.generateAccessToken(session.user)
-    const newRefreshToken = this.generateRefreshToken({ ...session.user, sessionId })
+    const newRefreshToken = this.generateRefreshToken({
+      id: session.user.id,
+      role: session.user.role,
+      email: session.user.email,
+      sessionId
+    })
 
     const hashedNewRefreshToken = await argon.hash(newRefreshToken);
 
@@ -324,7 +327,7 @@ export class AuthService {
 
     const { sessionId } = dto
 
-    const session = await this.findEntityByIdService.findEntityById('session', sessionId, { user: { select: { id: true } } })
+    const session = await this.findSessionById(sessionId, { user: { select: { id: true } } })
 
     await this.prisma.$transaction([
 
@@ -344,6 +347,19 @@ export class AuthService {
     return {
       message: 'Logged out successfully'
     }
+  }
+
+  private async findSessionById(sessionId: string, select: any): Promise<any> {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      select
+    })
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    return session
   }
 
   private async deleteSession(sessionId: string) {

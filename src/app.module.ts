@@ -5,7 +5,6 @@ import { UserModule } from './user/user.module';
 import { AppointmentModule } from './appointment/appointment.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { AppController } from './app.controller';
-import { CommonModule } from './common/common.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReviewModule } from './review/review.module';
 import { MessageModule } from './message/message.module';
@@ -48,7 +47,6 @@ import { RemoveExpiredSessionsCronService } from './cron/removeExpiredSessionsCr
     UserModule, 
     AppointmentModule, 
     DoctorModule, 
-    CommonModule, 
     PrismaModule, 
     ReviewModule, 
     MessageModule,

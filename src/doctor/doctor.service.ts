@@ -6,7 +6,6 @@ import { UserDto } from 'src/user/dto';
 import * as argon from "argon2";
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
-import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 
 @Injectable()
 export class DoctorService {
@@ -14,8 +13,7 @@ export class DoctorService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly configService: ConfigService,
-        private readonly findEntityByIdService: FindEntityByIdService
+        private readonly configService: ConfigService
     ) {
         this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY') as string, {
             apiVersion: '2025-07-30.basil',
@@ -407,22 +405,27 @@ export class DoctorService {
 
     async createStripeAccount(userId: string) {
 
-        const doctor = await this.findEntityByIdService.findEntityById("doctor", userId,
-            {
+        const doctor = await this.prisma.doctor.findUnique({
+            where: { userId },
+            select: {
                 user: {
                     select: { email: true }
                 },
                 stripeAccountId: true
-            })
+            }
+        })
 
+        if (!doctor) {
+            throw new NotFoundException("Doctor not found")
+        }
 
-        if (doctor?.stripeAccountId) {
+        if (doctor.stripeAccountId) {
             throw new BadRequestException("Stripe account already exists")
         }
 
         const account = await this.stripe.accounts.create({
             type: 'express',
-            email: doctor?.user?.email,
+            email: doctor.user.email,
         });
 
         await this.prisma.doctor.update({

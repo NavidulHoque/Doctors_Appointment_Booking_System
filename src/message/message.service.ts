@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { FindEntityByIdService } from 'src/common/FindEntityById.service';
 import { SocketGateway } from 'src/socket/socket.gateway';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from 'src/redis/redis.service';
@@ -17,7 +16,6 @@ export class MessageService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly findEntityByIdService: FindEntityByIdService,
         private readonly redis: RedisService,
         private readonly config: ConfigService,
         private readonly socketGateway: SocketGateway

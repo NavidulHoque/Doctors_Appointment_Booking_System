@@ -3,9 +3,19 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { RedisService } from './redis/redis.service';
+import { Reflector } from '@nestjs/core';
+import { Http_CacheInterceptor } from './interceptors/http-cache.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const redisService = app.get(RedisService);
+  const reflector = app.get(Reflector);
+
+  // global interceptor
+  app.useGlobalInterceptors(new Http_CacheInterceptor(redisService, reflector));
+
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
     whitelist: true
