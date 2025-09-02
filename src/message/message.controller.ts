@@ -19,7 +19,7 @@ import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { Cache } from 'src/common/decorators';
-import { RequestWithTrace, RequestWithUser } from './types';
+import { RequestWithTrace } from './types';
 import { CacheKeyHelper } from './helper';
 
 @UseGuards(AuthGuard, RolesGuard)

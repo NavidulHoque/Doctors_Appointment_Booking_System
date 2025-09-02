@@ -29,6 +29,8 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
         ? cacheOptions.key(req)
         : cacheOptions.key) || `cache:${method}:${url}`;
 
+    let logSuffix = '';
+
     const handleResponse = next.handle().pipe(
       map((data) => {
         const response = {
@@ -50,28 +52,29 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
 
           if (typeof invalidate === 'function') {
             pattern = invalidate(req);
-          } 
-          
+          }
+
           else if (typeof invalidate === 'string') {
             pattern = invalidate;
           }
 
           if (pattern) {
+            logSuffix = '(cache invalidated)';
             this.redisService.delByPattern(pattern);
-          } 
-          
+          }
+
           else if (this.redisService.delByPattern) {
-            // fallback (broad) invalidation
+            logSuffix = '(cache invalidated)';
             this.redisService.delByPattern('cache:GET:*');
           }
         }
-        
+
         return response;
       }),
       tap({
         next: () =>
           console.log(
-            `[✅] ${method} ${url} - ${Date.now() - now}ms | traceId=${traceId}`,
+            `[✅] ${method} ${url} - ${Date.now() - now}ms ${logSuffix} | traceId=${traceId}`,
           ),
         error: (err) =>
           console.error(
@@ -103,7 +106,15 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
 
     if (cacheOptions.enabled && method === 'GET') {
       return from(this.redisService.get(resolvedKey)).pipe(
-        switchMap((cached) => (cached ? of(JSON.parse(cached)) : handleResponse)),
+        switchMap((cached) => {
+          if (cached) {
+            console.log(
+              `[✅] ${method} ${url} - ${Date.now() - now}ms (cache hit) | traceId=${traceId}`,
+            );
+            return of(JSON.parse(cached));
+          }
+          return handleResponse;
+        }),
       );
     }
 
@@ -117,7 +128,7 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
   }
 
   private removeSensitive(item: any) {
-    const { password, refreshToken, ...rest } = item ?? {};
+    const { password, ...rest } = item ?? {};
     return rest;
   }
 }
