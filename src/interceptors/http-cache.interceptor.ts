@@ -1,34 +1,19 @@
 import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-  HttpException,
+  Injectable, NestInterceptor, ExecutionContext, CallHandler, HttpException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import {
-  Observable,
-  map,
-  catchError,
-  throwError,
-  tap,
-  from,
-  switchMap,
-  of,
-} from 'rxjs';
+import { Observable, map, catchError, throwError, tap, from, switchMap, of } from 'rxjs';
 import { randomUUID } from 'crypto';
 import { RedisService } from '../redis/redis.service';
 import { CACHE_KEY, CacheOptions } from 'src/common/decorators/cache.decorator';
+import { Request } from 'express';
 
 @Injectable()
 export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
-  constructor(
-    private redisService: RedisService,
-    private reflector: Reflector,
-  ) {}
+  constructor(private redisService: RedisService, private reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const req = context.switchToHttp().getRequest();
+    const req = context.switchToHttp().getRequest<Request & { traceId?: string }>();
     const method = req.method;
     const url = req.url;
     const traceId = randomUUID();
@@ -37,12 +22,12 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
 
     const handler = context.getHandler();
     const cacheOptions: CacheOptions =
-      this.reflector.get(CACHE_KEY, handler) || {
-        ttl: 60,
-        enabled: false,
-      };
+      this.reflector.get(CACHE_KEY, handler) || { ttl: 60, enabled: false };
 
-    const cacheKey = cacheOptions.key || `cache:${method}:${url}`;
+    const resolvedKey =
+      (typeof cacheOptions.key === 'function'
+        ? cacheOptions.key(req)
+        : cacheOptions.key) || `cache:${method}:${url}`;
 
     const handleResponse = next.handle().pipe(
       map((data) => {
@@ -53,16 +38,22 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
           data: this.sanitize(data),
         };
 
+        // Cache only GETs
         if (cacheOptions.enabled && method === 'GET') {
-          this.redisService.set(
-            cacheKey,
-            JSON.stringify(response),
-            cacheOptions.ttl || 60,
-          );
+          this.redisService.set(resolvedKey, JSON.stringify(response), cacheOptions.ttl ?? 60);
         }
 
+        // Invalidate on writes
         if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-          if (this.redisService.delByPattern) {
+          const inv = cacheOptions.invalidate;
+          if (inv) {
+            const patterns = Array.isArray(inv) ? inv : inv(req);
+            if (patterns?.length) {
+              // delete each pattern; your RedisService.delByPattern should SCAN+DEL
+              patterns.forEach((p) => this.redisService.delByPattern(p));
+            }
+          } else if (this.redisService.delByPattern) {
+            // fallback (broad) invalidation
             this.redisService.delByPattern('cache:GET:*');
           }
         }
@@ -72,39 +63,30 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
       tap({
         next: () =>
           console.log(
-            `[✅] ${method} ${url} - ${Date.now() - now}ms`,
+            `[✅] ${method} ${url} - ${Date.now() - now}ms | traceId=${traceId}`,
           ),
         error: (err) =>
           console.error(
-            `[❌] ${method} ${url} - ${Date.now() - now}ms | Error: ${err.message}`,
+            `[❌] ${method} ${url} - ${Date.now() - now}ms | Error: ${err.message} | traceId=${traceId}`,
           ),
       }),
       catchError((err) => {
         let statusCode = 500;
         let responseBody: any;
 
-        if (err.getStatus) {
-          statusCode = err.getStatus();
-          const res = err.getResponse();
-          responseBody =
-            typeof res === 'object'
-              ? res
-              : { message: res || err.message, error: err.name };
+        if ((err as any).getStatus) {
+          statusCode = (err as any).getStatus();
+          const res = (err as any).getResponse();
+          responseBody = typeof res === 'object' ? res : { message: res || err.message, error: err.name };
         } else {
-          responseBody = {
-            message: err.message || 'Internal Server Error',
-            error: 'Internal Error',
-          };
+          responseBody = { message: err.message || 'Internal Server Error', error: 'Internal Error' };
         }
 
         const wrappedError = {
           success: false,
           timestamp: new Date().toISOString(),
           traceId,
-          error: {
-            statusCode,
-            ...responseBody,
-          },
+          error: { statusCode, ...responseBody },
         };
 
         return throwError(() => new HttpException(wrappedError, statusCode));
@@ -112,10 +94,8 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
     );
 
     if (cacheOptions.enabled && method === 'GET') {
-      return from(this.redisService.get(cacheKey)).pipe(
-        switchMap((cached) =>
-          cached ? of(JSON.parse(cached)) : handleResponse,
-        ),
+      return from(this.redisService.get(resolvedKey)).pipe(
+        switchMap((cached) => (cached ? of(JSON.parse(cached)) : handleResponse)),
       );
     }
 

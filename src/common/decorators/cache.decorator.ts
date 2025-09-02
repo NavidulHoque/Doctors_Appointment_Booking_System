@@ -1,12 +1,16 @@
 import { SetMetadata } from '@nestjs/common';
+import { Request } from 'express';
 
-export const CACHE_KEY = 'cache_options';
+export const CACHE_KEY = 'cache:options';
+
+export type CacheKeyFn = (req: Request) => string;
+export type InvalidateFn = (req: Request) => string[];
 
 export interface CacheOptions {
-  ttl?: number;      
-  enabled?: boolean;  
-  key?: string;       
+  enabled?: boolean;
+  ttl?: number;                           
+  key?: string | CacheKeyFn;              // dynamic keys
+  invalidate?: string[] | InvalidateFn;   // patterns/keys to delete after writes
 }
 
-export const Cache = (options: CacheOptions = { ttl: 60, enabled: true }) =>
-  SetMetadata(CACHE_KEY, options);
+export const Cache = (options: CacheOptions) => SetMetadata(CACHE_KEY, options);

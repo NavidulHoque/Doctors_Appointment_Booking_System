@@ -32,7 +32,9 @@ export class MessageConsumer {
         default:
           console.log(`[⚠️] traceId=${traceId} Unknown action: ${action}`);
       }
-    } catch (error) {
+    } 
+    
+    catch (error) {
       console.error(`[❌] traceId=${traceId} Consumer error: ${error.message}`);
 
       if (retryCount < this.MAX_RETRIES) {
@@ -43,7 +45,9 @@ export class MessageConsumer {
             data,
             retryCount: retryCount + 1,
           });
-        } catch (error) {
+        } 
+        
+        catch (error) {
           console.error(
             `[❌] traceId=${traceId} producer error trying to increase retryCount in consumer issue: ${error.message}`,
           );
@@ -54,7 +58,9 @@ export class MessageConsumer {
             message: `Message ${action} request failed after 5 retries. Error: ${error}`,
           });
         }
-      } else {
+      } 
+      
+      else {
         try {
           await this.kafkaProducer.triggerEvent('message-dlq', {
             traceId,
@@ -63,7 +69,9 @@ export class MessageConsumer {
             error: error.message,
             failedAt: new Date().toISOString(),
           });
-        } catch (error) {
+        } 
+        
+        catch (error) {
           console.error(
             `[❌] traceId=${traceId} producer error trying to insert the corrupted message into DLQ: ${error.message}`,
           );
