@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  HttpException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import {
@@ -30,17 +31,17 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
     const req = context.switchToHttp().getRequest();
     const method = req.method;
     const url = req.url;
-    const requestId = randomUUID();
+    const traceId = randomUUID();
+    req.traceId = traceId;
     const now = Date.now();
 
     const handler = context.getHandler();
     const cacheOptions: CacheOptions =
       this.reflector.get(CACHE_KEY, handler) || {
         ttl: 60,
-        enabled: method === 'GET',
+        enabled: false,
       };
 
-    // Determine cache key
     const cacheKey = cacheOptions.key || `cache:${method}:${url}`;
 
     const handleResponse = next.handle().pipe(
@@ -48,11 +49,10 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
         const response = {
           success: true,
           timestamp: new Date().toISOString(),
-          requestId,
+          traceId,
           data: this.sanitize(data),
         };
 
-        // Cache GET responses
         if (cacheOptions.enabled && method === 'GET') {
           this.redisService.set(
             cacheKey,
@@ -61,10 +61,9 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
           );
         }
 
-        // Invalidate cache on write operations
         if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
           if (this.redisService.delByPattern) {
-            this.redisService.delByPattern('cache:GET:*'); // Clear all GET caches
+            this.redisService.delByPattern('cache:GET:*');
           }
         }
 
@@ -80,20 +79,38 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
             `[❌] ${method} ${url} - ${Date.now() - now}ms | Error: ${err.message}`,
           ),
       }),
-      catchError((err) =>
-        throwError(() => ({
+      catchError((err) => {
+        let statusCode = 500;
+        let responseBody: any;
+
+        if (err.getStatus) {
+          statusCode = err.getStatus();
+          const res = err.getResponse();
+          responseBody =
+            typeof res === 'object'
+              ? res
+              : { message: res || err.message, error: err.name };
+        } else {
+          responseBody = {
+            message: err.message || 'Internal Server Error',
+            error: 'Internal Error',
+          };
+        }
+
+        const wrappedError = {
           success: false,
           timestamp: new Date().toISOString(),
-          requestId,
+          traceId,
           error: {
-            message: err.message || 'Internal Server Error',
-            code: err.code || 'INTERNAL_ERROR',
+            statusCode,
+            ...responseBody,
           },
-        })),
-      ),
+        };
+
+        return throwError(() => new HttpException(wrappedError, statusCode));
+      }),
     );
 
-    // Check cache only for GET requests
     if (cacheOptions.enabled && method === 'GET') {
       return from(this.redisService.get(cacheKey)).pipe(
         switchMap((cached) =>
