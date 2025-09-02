@@ -10,7 +10,7 @@ import { Request } from 'express';
 
 @Injectable()
 export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
-  constructor(private redisService: RedisService, private reflector: Reflector) {}
+  constructor(private redisService: RedisService, private reflector: Reflector) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest<Request & { traceId?: string }>();
@@ -40,24 +40,32 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
 
         // Cache only GETs
         if (cacheOptions.enabled && method === 'GET') {
-          this.redisService.set(resolvedKey, JSON.stringify(response), cacheOptions.ttl ?? 60);
+          this.redisService.set(resolvedKey, JSON.stringify(response), cacheOptions.ttl || 60);
         }
 
         // Invalidate on writes
         if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-          const inv = cacheOptions.invalidate;
-          if (inv) {
-            const patterns = Array.isArray(inv) ? inv : inv(req);
-            if (patterns?.length) {
-              // delete each pattern; your RedisService.delByPattern should SCAN+DEL
-              patterns.forEach((p) => this.redisService.delByPattern(p));
-            }
-          } else if (this.redisService.delByPattern) {
+          const invalidate = cacheOptions.invalidate;
+          let pattern: string | undefined;
+
+          if (typeof invalidate === 'function') {
+            pattern = invalidate(req);
+          } 
+          
+          else if (typeof invalidate === 'string') {
+            pattern = invalidate;
+          }
+
+          if (pattern) {
+            this.redisService.delByPattern(pattern);
+          } 
+          
+          else if (this.redisService.delByPattern) {
             // fallback (broad) invalidation
             this.redisService.delByPattern('cache:GET:*');
           }
         }
-
+        
         return response;
       }),
       tap({

@@ -35,7 +35,7 @@ export class MessageController {
     @HttpCode(202)
     @Cache({
         enabled: true,
-        invalidate: CacheKeyHelper.messagesPair,
+        invalidate: CacheKeyHelper.generateMessagesPairedKey,
     })
     createMessage(
         @Body() dto: CreateMessageDto,
@@ -56,12 +56,7 @@ export class MessageController {
     @Cache({
         enabled: true,
         ttl: 60,
-        key: (req: RequestWithUser) => {
-            const sid = String(req.user!.id ?? '');
-            const rid = String(req.query.receiverId ?? '');
-            const [a, b] = [sid, rid].sort();
-            return `cache:GET:/messages:pair:${a}:${b}`;
-        },
+        key: CacheKeyHelper.generateMessagesPairedKey,
     })
     getMessages(
         @User('id') userId: string,
@@ -75,7 +70,7 @@ export class MessageController {
     @HttpCode(202)
     @Cache({
         enabled: true,
-        invalidate: CacheKeyHelper.messagesPair,
+        invalidate: CacheKeyHelper.generateMessagesPairedKey,
     })
     updateMessage(
         @Param('id', EntityByIdPipe('message', { senderId: true, id: true }))
@@ -94,12 +89,12 @@ export class MessageController {
         return this.messageProducerService.sendUpdateMessage(data, traceId);
     }
 
-    @Delete('/delete-message/:messageId')
+    @Delete('/delete-message/:id')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     @HttpCode(202)
     @Cache({
         enabled: true,
-        invalidate: CacheKeyHelper.messagesPair,
+        invalidate: CacheKeyHelper.generateMessagesPairedKey,
     })
     deleteMessage(
         @Param('id', EntityByIdPipe('message', { senderId: true, id: true }))

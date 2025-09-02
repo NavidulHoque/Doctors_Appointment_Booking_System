@@ -1,11 +1,10 @@
 import { RequestWithUser } from "../types";
 
 export class CacheKeyHelper {
-  static messagesPair(req: RequestWithUser): string[] {
+  static generateMessagesPairedKey(req: RequestWithUser) {
     const sid = String(req.user?.id ?? '');
-    const rid = String((req.query as any).receiverId ?? '');
-    if (!sid || !rid) return ['cache:GET:/messages:*'];
+    const rid = String(req.query.receiverId ?? '');
     const [a, b] = [sid, rid].sort();
-    return [`cache:GET:/messages:pair:${a}:${b}`];
+    return `cache:GET:/messages:pair:${a}:${b}`;
   }
 }
