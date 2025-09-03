@@ -12,6 +12,9 @@ import { SocketModule } from 'src/socket/socket.module';
     BullModule.registerQueue({
       name: 'notification-queue',
     }),
+    BullModule.registerQueue({
+      name: 'failed-notifications', // DLQ
+    }),
     PrismaModule,
     ConfigModule,
     SocketModule

@@ -15,7 +15,8 @@ export class MessageService {
 
     async createMessage(data: any, traceId: string) {
         const { idempotencyKey, receiverId, senderId } = data;
-        console.log(`Creating message with traceId ${traceId} and idempotencyKey ${idempotencyKey}`);
+
+        this.logger.log(`✉️ Creating message with traceId ${traceId} and idempotencyKey ${idempotencyKey}`);
 
         const existingMessage = await this.prisma.message.findUnique({
             where: { idempotencyKey },
@@ -56,7 +57,8 @@ export class MessageService {
 
     async updateMessage(data: any, traceId: string) {
         const { senderId, message, receiverId, content } = data;
-        console.log(`Updating message with traceId ${traceId}`);
+
+        this.logger.log(`✉️ Updating message with traceId ${traceId}`);
 
         if (message.senderId !== senderId) {
             this.socketGateway.sendResponse(senderId, {
@@ -80,7 +82,8 @@ export class MessageService {
 
     async deleteMessage(data: any, traceId: string) {
         const { message, senderId, receiverId } = data;
-        console.log(`Deleting message with traceId ${traceId}`);
+
+        this.logger.log(`✉️ Deleting message with traceId ${traceId}`);
 
         if (message.senderId !== senderId) {
             this.socketGateway.sendResponse(senderId, {

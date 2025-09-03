@@ -25,6 +25,7 @@ import { RedisService } from './redis/redis.service';
 import { RedisThrottlerStorage } from './redis/redis-throttler.storage';
 import { SmsModule } from './sms/sms.module';
 import { RemoveExpiredSessionsCronService } from './cron/removeExpiredSessionsCron.service';
+import { CronModule } from './cron/cron.module';
 @Module({
   imports: [
     BullModule.forRoot({
@@ -58,12 +59,11 @@ import { RemoveExpiredSessionsCronService } from './cron/removeExpiredSessionsCr
     KafkaModule,
     RedisModule,
     EmailModule,
-    SmsModule
+    SmsModule,
+    CronModule
   ],
   controllers: [AppController],
   providers: [
-    InactiveUserCronService,
-    RemoveExpiredSessionsCronService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

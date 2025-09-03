@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { RedisService } from './redis/redis.service';
@@ -9,6 +9,7 @@ import { Http_CacheInterceptor } from './interceptors/http-cache.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
 
   const redisService = app.get(RedisService);
   const reflector = app.get(Reflector);
@@ -40,9 +41,9 @@ async function bootstrap() {
 
   // Start Kafka consumer
   await app.startAllMicroservices()
-    .then(() => console.log('Kafka Microservice connected'))
+    .then(() => logger.log('Kafka Microservice connected'))
     .catch(err => {
-      console.error('Kafka connection failed', err);
+      logger.error('Kafka connection failed', err);
     });
 
   app.enableCors({
@@ -50,6 +51,7 @@ async function bootstrap() {
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+  
   await app.listen(Number(process.env.PORT ?? 3000));
 }
 

@@ -65,7 +65,7 @@ export class AppointmentService {
         this.logger.log(`📢 Sending notification to admin about new appointment with traceId: ${traceId}`);
 
         this.notificationService.sendNotifications(
-            this.config.get('ADMIN_ID') as string, 
+            this.config.get('ADMIN_ID') as string,
             `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`)
             .catch((err) => {
                 // it will throw an error if the job fails to be added in the queue
@@ -351,7 +351,9 @@ export class AppointmentService {
             data.cancellationReason = cancellationReason
 
             // send notification to patient
-            this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is cancelled for ${date.toLocaleString()}. Reason: ${cancellationReason}`)
+            this.notificationService.sendNotifications(
+                patientId,
+                `Your appointment with ${doctorName} is cancelled for ${date.toLocaleString()}. Reason: ${cancellationReason}`)
                 .catch((err) => {
                     this.logger.warn(`Failed to send notification: ${err.message}`)
                 })

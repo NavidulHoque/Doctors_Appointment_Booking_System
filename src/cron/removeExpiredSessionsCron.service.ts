@@ -28,7 +28,7 @@ export class RemoveExpiredSessionsCronService {
         }
 
         catch (error) {
-            this.logger.error('Failed to delete sessions:', error?.stack || error.message);
+            this.logger.error('❌ Failed to delete sessions:', error.message);
         }
     }
 }

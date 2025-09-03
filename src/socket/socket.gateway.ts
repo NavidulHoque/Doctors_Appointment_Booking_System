@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -13,11 +14,13 @@ import { Server } from 'socket.io';
 })
 
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly logger = new Logger(SocketGateway.name);
+
   @WebSocketServer()
   server: Server;
 
   constructor() {
-    console.log('SocketGateway initialized');
+    this.logger.log('SocketGateway initialized');
   }
 
   private clients: Map<string, string> = new Map(); // userId -> socketId
@@ -26,8 +29,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const userId = client.handshake.query.userId as string;
 
-    console.log('✅ Connected userId:', userId);
-    console.log('🆔 Client ID:', client.id);
+    this.logger.log('✅ Connected userId:', userId);
+    this.logger.log('🆔 Client ID:', client.id);
 
     if (userId) {
       this.clients.set(userId, client.id);
@@ -37,7 +40,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: any) {
     const userId = [...this.clients.entries()].find(([, socketId]) => socketId === client.id)?.[0];
 
-    console.log('✅ Disconnected userId:', userId);
+    this.logger.log('✅ Disconnected userId:', userId);
     if (userId) {
       this.clients.delete(userId);
     }
@@ -46,7 +49,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   sendNotification(userId: string, notification: any) {
     const socketId = this.clients.get(userId);
 
-    console.log("Sending notification to userId:", userId, "with socketId:", socketId);
+    this.logger.log("Sending notification to userId:", userId, "with socketId:", socketId);
     if (socketId) {
       this.server.to(socketId).emit('notification', notification);
     }
@@ -55,7 +58,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   sendCreatedMessage(userId: string, data: any) {
     const socketId = this.clients.get(userId);
 
-    console.log('Sending created message to userId:', userId, "with socketId:", socketId);
+    this.logger.log('Sending created message to userId:', userId, "with socketId:", socketId);
     if (socketId) {
       this.server.to(socketId).emit('createMessage', data);
     }
@@ -64,7 +67,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   sendUpdatedMessage(userId: string, data: any) {
     const socketId = this.clients.get(userId);
 
-    console.log('Sending updated message to userId:', userId, "with socketId:", socketId);
+    this.logger.log('Sending updated message to userId:', userId, "with socketId:", socketId);
     if (socketId) {
       this.server.to(socketId).emit('updateMessage', data);
     }
@@ -73,7 +76,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   sendDeletedMessage(userId: string, data: any) {
     const socketId = this.clients.get(userId);
 
-    console.log('Sending deleted message to userId:', userId, "with socketId:", socketId);
+    this.logger.log('Sending deleted message to userId:', userId, "with socketId:", socketId);
     if (socketId) {
       this.server.to(socketId).emit('deleteMessage', data);
     }
@@ -82,7 +85,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   sendResponse(userId: string, response: any) {
     const socketId = this.clients.get(userId);
 
-    console.log("Sending response to userId:", userId, "with socketId:", socketId);
+    this.logger.log("Sending response to userId:", userId, "with socketId:", socketId);
     if (socketId) {
       this.server.to(socketId).emit('response', response);
     }

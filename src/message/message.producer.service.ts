@@ -20,7 +20,7 @@ export class MessageProducerService {
     } 
     
     catch (error) {
-      this.logger.error(`❌ traceId=${traceId} Kafka sendCreateMessage failed: ${error.message} with traceId=${traceId}`);
+      this.logger.error(`❌ Kafka sendCreateMessage failed: ${error.message} with traceId=${traceId}`);
       throw new ServiceUnavailableException('Kafka unavailable, try again later');
     }
   }
@@ -38,7 +38,7 @@ export class MessageProducerService {
     } 
     
     catch (error) {
-      this.logger.error(`❌ traceId=${traceId} Kafka sendUpdateMessage failed: ${error.message} with traceId=${traceId}`);
+      this.logger.error(`❌ Kafka sendUpdateMessage failed: ${error.message} with traceId=${traceId}`);
       throw new ServiceUnavailableException('Kafka unavailable, try again later');
     }
   }
@@ -56,7 +56,7 @@ export class MessageProducerService {
     } 
     
     catch (error) {
-      this.logger.error(`❌ traceId=${traceId} Kafka sendDeleteMessage failed: ${error.message} with traceId=${traceId}`);
+      this.logger.error(`❌ Kafka sendDeleteMessage failed: ${error.message} with traceId=${traceId}`);
       throw new ServiceUnavailableException('Kafka unavailable, try again later');
     }
   }

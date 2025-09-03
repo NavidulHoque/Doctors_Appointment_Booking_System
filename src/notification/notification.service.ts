@@ -70,6 +70,7 @@ export class NotificationService {
       { userId, content },
       {
         delay,
+        backoff: { type: 'exponential', delay: 5000 },
         attempts: 3,           // retry up to 3 times if the job fails
         removeOnComplete: true, // remove from queue after success
         removeOnFail: false,    // keep in queue if failed

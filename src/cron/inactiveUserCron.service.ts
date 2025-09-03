@@ -39,7 +39,7 @@ export class InactiveUserCronService {
         }
 
         catch (error) {
-            this.logger.error('Failed to update inactive users:', error?.stack || error.message);
+            this.logger.error('❌ Failed to update inactive users:', error.message);
         }
     }
 }
