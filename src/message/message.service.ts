@@ -1,10 +1,11 @@
-// src/message/message.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SocketGateway } from 'src/socket/socket.gateway';
 
 @Injectable()
 export class MessageService {
+    private readonly logger = new Logger(MessageService.name);
+
     private readonly messageSelect = { id: true, content: true, createdAt: true, updatedAt: true };
 
     constructor(
@@ -14,6 +15,7 @@ export class MessageService {
 
     async createMessage(data: any, traceId: string) {
         const { idempotencyKey, receiverId, senderId } = data;
+        console.log(`Creating message with traceId ${traceId} and idempotencyKey ${idempotencyKey}`);
 
         const existingMessage = await this.prisma.message.findUnique({
             where: { idempotencyKey },
@@ -54,6 +56,7 @@ export class MessageService {
 
     async updateMessage(data: any, traceId: string) {
         const { senderId, message, receiverId, content } = data;
+        console.log(`Updating message with traceId ${traceId}`);
 
         if (message.senderId !== senderId) {
             this.socketGateway.sendResponse(senderId, {
@@ -77,6 +80,7 @@ export class MessageService {
 
     async deleteMessage(data: any, traceId: string) {
         const { message, senderId, receiverId } = data;
+        console.log(`Deleting message with traceId ${traceId}`);
 
         if (message.senderId !== senderId) {
             this.socketGateway.sendResponse(senderId, {

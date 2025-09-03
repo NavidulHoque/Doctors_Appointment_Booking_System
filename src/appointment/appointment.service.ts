@@ -9,7 +9,7 @@ import { Queue } from 'bull';
 
 @Injectable()
 export class AppointmentService {
-    private readonly logger = new Logger();
+    private readonly logger = new Logger(AppointmentService.name);
 
     constructor(
         private readonly prisma: PrismaService,
@@ -18,7 +18,7 @@ export class AppointmentService {
         @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
     ) { }
 
-    async createAppointment(dto: CreateAppointmentDto) {
+    async createAppointment(dto: CreateAppointmentDto, traceId: string) {
 
         const { patientId, doctorId, date } = dto
 
@@ -62,11 +62,14 @@ export class AppointmentService {
 
         const { patient: { fullName: patientName }, doctor: { fullName: doctorName } } = appointment as any
 
-        // send notifications to admin
-        this.notificationService.sendNotifications(this.config.get('ADMIN_ID') as string, `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`)
+        this.logger.log(`📢 Sending notification to admin about new appointment with traceId: ${traceId}`);
+
+        this.notificationService.sendNotifications(
+            this.config.get('ADMIN_ID') as string, 
+            `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`)
             .catch((err) => {
-                //it will throw an error if the job fails to be added in the queue
-                this.logger.warn(`Failed to send notification: ${err.message}`)
+                // it will throw an error if the job fails to be added in the queue
+                this.logger.error(`❌ Failed to send notification: ${err.message} with traceId: ${traceId}`)
             })
 
         return {

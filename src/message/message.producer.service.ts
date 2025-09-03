@@ -1,8 +1,10 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { KafkaProducerService } from 'src/kafka/kafka.producer.service';
 
 @Injectable()
 export class MessageProducerService {
+  private readonly logger = new Logger(MessageProducerService.name);
+  
   constructor(private readonly kafkaProducer: KafkaProducerService) {}
 
   async sendCreateMessage(data: any, traceId: string) {
@@ -18,7 +20,7 @@ export class MessageProducerService {
     } 
     
     catch (error) {
-      console.error(`[❌] traceId=${traceId} Kafka sendCreateMessage failed:`, error.message);
+      this.logger.error(`❌ traceId=${traceId} Kafka sendCreateMessage failed: ${error.message} with traceId=${traceId}`);
       throw new ServiceUnavailableException('Kafka unavailable, try again later');
     }
   }
@@ -36,7 +38,7 @@ export class MessageProducerService {
     } 
     
     catch (error) {
-      console.error(`[❌] traceId=${traceId} Kafka sendUpdateMessage failed:`, error.message);
+      this.logger.error(`❌ traceId=${traceId} Kafka sendUpdateMessage failed: ${error.message} with traceId=${traceId}`);
       throw new ServiceUnavailableException('Kafka unavailable, try again later');
     }
   }
@@ -54,7 +56,7 @@ export class MessageProducerService {
     } 
     
     catch (error) {
-      console.error(`[❌] traceId=${traceId} Kafka sendDeleteMessage failed:`, error.message);
+      this.logger.error(`❌ traceId=${traceId} Kafka sendDeleteMessage failed: ${error.message} with traceId=${traceId}`);
       throw new ServiceUnavailableException('Kafka unavailable, try again later');
     }
   }

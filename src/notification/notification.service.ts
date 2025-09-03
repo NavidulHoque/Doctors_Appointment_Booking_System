@@ -71,7 +71,8 @@ export class NotificationService {
       {
         delay,
         attempts: 3,           // retry up to 3 times if the job fails
-        removeOnComplete: true // remove from queue after success
+        removeOnComplete: true, // remove from queue after success
+        removeOnFail: false,    // keep in queue if failed
       }
     );
   }

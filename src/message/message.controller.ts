@@ -19,7 +19,7 @@ import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { Cache } from 'src/common/decorators';
-import { RequestWithTrace } from './types';
+import { RequestWithTrace } from '../common/types';
 import { CacheKeyHelper } from './helper';
 
 @UseGuards(AuthGuard, RolesGuard)
@@ -35,7 +35,7 @@ export class MessageController {
     @HttpCode(202)
     @Cache({
         enabled: true,
-        invalidate: CacheKeyHelper.generateMessagesPairedKey,
+        key: CacheKeyHelper.generateMessagesPairedKey
     })
     createMessage(
         @Body() dto: CreateMessageDto,
@@ -56,7 +56,7 @@ export class MessageController {
     @Cache({
         enabled: true,
         ttl: 60,
-        key: CacheKeyHelper.generateMessagesPairedKey,
+        key: CacheKeyHelper.generateMessagesPairedKey
     })
     getMessages(
         @User('id') userId: string,
@@ -70,7 +70,7 @@ export class MessageController {
     @HttpCode(202)
     @Cache({
         enabled: true,
-        invalidate: CacheKeyHelper.generateMessagesPairedKey,
+        key: CacheKeyHelper.generateMessagesPairedKey
     })
     updateMessage(
         @Param('id', EntityByIdPipe('message', { senderId: true, id: true }))
@@ -94,7 +94,7 @@ export class MessageController {
     @HttpCode(202)
     @Cache({
         enabled: true,
-        invalidate: CacheKeyHelper.generateMessagesPairedKey,
+        key: CacheKeyHelper.generateMessagesPairedKey
     })
     deleteMessage(
         @Param('id', EntityByIdPipe('message', { senderId: true, id: true }))

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
@@ -6,6 +6,7 @@ import { Roles } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
+import { RequestWithTrace } from 'src/common/types';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('appointments')
@@ -19,8 +20,10 @@ export class AppointmentController {
     @Roles(Role.ADMIN, Role.PATIENT)
     createAppointment(
         @Body() dto: CreateAppointmentDto,
+        @Req() request: RequestWithTrace
     ) {
-        return this.appointmentService.createAppointment(dto)
+        const traceId = request.traceId;
+        return this.appointmentService.createAppointment(dto, traceId)
     }
 
     @Get("/get-all-appointments")

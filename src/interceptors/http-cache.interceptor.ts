@@ -22,10 +22,10 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
 
     const handler = context.getHandler();
     const cacheOptions: CacheOptions =
-      this.reflector.get(CACHE_KEY, handler) || { ttl: 60, enabled: false };
+      this.reflector.get(CACHE_KEY, handler) || { enabled: false };
 
-    const resolvedKey =
-      (typeof cacheOptions.key === 'function'
+    const cachedKey =
+      ((cacheOptions.key && typeof cacheOptions.key === 'function')
         ? cacheOptions.key(req)
         : cacheOptions.key) || `cache:${method}:${url}`;
 
@@ -37,36 +37,18 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
           success: true,
           timestamp: new Date().toISOString(),
           traceId,
-          data: this.sanitize(data),
+          data
         };
 
         // Cache only GETs
         if (cacheOptions.enabled && method === 'GET') {
-          this.redisService.set(resolvedKey, JSON.stringify(response), cacheOptions.ttl || 60);
+          this.redisService.set(cachedKey, JSON.stringify(response), cacheOptions.ttl || 60);
         }
 
         // Invalidate on writes
-        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-          const invalidate = cacheOptions.invalidate;
-          let pattern: string | undefined;
-
-          if (typeof invalidate === 'function') {
-            pattern = invalidate(req);
-          }
-
-          else if (typeof invalidate === 'string') {
-            pattern = invalidate;
-          }
-
-          if (pattern) {
-            logSuffix = '(cache invalidated)';
-            this.redisService.delByPattern(pattern);
-          }
-
-          else if (this.redisService.delByPattern) {
-            logSuffix = '(cache invalidated)';
-            this.redisService.delByPattern('cache:GET:*');
-          }
+        else if (cacheOptions.enabled && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+          logSuffix = '(cache cleared)';
+          this.redisService.del(cachedKey);
         }
 
         return response;
@@ -89,7 +71,9 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
           statusCode = (err as any).getStatus();
           const res = (err as any).getResponse();
           responseBody = typeof res === 'object' ? res : { message: res || err.message, error: err.name };
-        } else {
+        }
+
+        else {
           responseBody = { message: err.message || 'Internal Server Error', error: 'Internal Error' };
         }
 
@@ -105,7 +89,7 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
     );
 
     if (cacheOptions.enabled && method === 'GET') {
-      return from(this.redisService.get(resolvedKey)).pipe(
+      return from(this.redisService.get(cachedKey)).pipe(
         switchMap((cached) => {
           if (cached) {
             console.log(
@@ -119,16 +103,5 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
     }
 
     return handleResponse;
-  }
-
-  private sanitize(obj: any) {
-    if (!obj) return obj;
-    if (Array.isArray(obj)) return obj.map((item) => this.removeSensitive(item));
-    return this.removeSensitive(obj);
-  }
-
-  private removeSensitive(item: any) {
-    const { password, ...rest } = item ?? {};
-    return rest;
   }
 }
