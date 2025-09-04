@@ -9,8 +9,8 @@ export class NotificationProcessor {
 
     constructor(
         private readonly notificationService: NotificationService,
-        @InjectQueue('failed-notifications') 
-    private readonly failedQueue: Queue, // inject DLQ
+        @InjectQueue('failed-notifications')
+        private readonly failedQueue: Queue, // inject DLQ
     ) { }
 
     @Process('send-notification')
@@ -20,15 +20,23 @@ export class NotificationProcessor {
     }
 
     @OnQueueFailed()
-    async handleFailed(job: Job, error: any) {
+    async handleFailedNotification(job: Job, error: any) {
         this.logger.error(
             `❌ Job ${job.id} failed after ${job.attemptsMade} attempts. Moving to DLQ...`,
         );
 
-        await this.failedQueue.add('failed-notification', {
-            ...job.data,
-            failedReason: error.message,
-            failedAt: new Date(),
-        });
+        try {
+            await this.failedQueue.add('failed-notification', {
+                ...job.data,
+                failedReason: error.message,
+                failedAt: new Date(),
+            });
+        }
+
+        catch (error) {
+            this.logger.error(
+                `❌ Job ${job.id} failed to move to DLQ. Reason: ${error.message}`,
+            );
+        }
     }
 }
