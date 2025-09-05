@@ -15,7 +15,7 @@ import { DLQProcessor } from './dlq.processor';
       name: 'notification-queue',
     }),
     BullModule.registerQueue({
-      name: 'failed-notifications', // DLQ
+      name: 'failed-notification', // DLQ
     }),
     PrismaModule,
     ConfigModule,

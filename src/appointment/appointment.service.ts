@@ -71,14 +71,17 @@ export class AppointmentService {
             `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`,
             traceId
         )
-            .catch((err) => {
+            .catch((error) => {
                 // it will throw an error if the job fails to be added in the queue
-                this.logger.error(`❌ Failed to send notification: ${err.message} with traceId: ${traceId}`)
+                this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
 
                 this.email.alertAdmin(
-                    'Failed to send notification about new appointment',
-                    `Failed to send notification, Reason: ${err.message} with traceId: ${traceId}`
+                    'Failed to send notification',
+                    `Failed to send notification about new appointment, Reason: ${error.message} with traceId: ${traceId}`
                 )
+                    .catch((error) => {
+                        this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
+                    })
             })
 
         return {
@@ -331,55 +334,108 @@ export class AppointmentService {
 
             this.logger.log(`📢 Sending notification to patient and doctor for appointment confirmation with traceId: ${traceId}`);
 
-            try {
-                // Send confirmation first (await to guarantee order)
-                await Promise.all([
+            // Send confirmation first (await to guarantee order)
+            await Promise.all([
 
-                    this.notificationService.sendNotifications(
-                        patientId,
-                        `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`,
-                        traceId
-                    ),
+                this.notificationService.sendNotifications(
+                    patientId,
+                    `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`,
+                    traceId
+                )
+                    .catch((error) => {
+                        this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
 
-                    this.notificationService.sendNotifications(
-                        doctorId, 
-                        `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`,
-                        traceId
-                    )
-                ]);
+                        this.email.alertAdmin(
+                            'Failed to send notification',
+                            `Failed to send notification about appointment confirmation to patientId=${patientId}, Reason: ${error.message} with traceId: ${traceId}`
+                        )
+                            .catch((error) => {
+                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
+                            })
+                    }),
 
-                // Queue the delayed "1 hour before" notifications and appointment start in parallel
-                await Promise.all([
+                this.notificationService.sendNotifications(
+                    doctorId,
+                    `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`,
+                    traceId
+                )
+                    .catch((error) => {
+                        this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
 
-                    this.notificationService.sendNotifications(
-                        patientId, 
-                        `Your appointment with ${doctorName} starts in 1 hour.`,
-                        traceId,
-                        oneHourBefore.getTime() - now.getTime()
-                    ),
+                        this.email.alertAdmin(
+                            'Failed to send notification',
+                            `Failed to send notification about appointment confirmation to doctorId=${doctorId}, Reason: ${error.message} with traceId: ${traceId}`
+                        )
+                            .catch((error) => {
+                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
+                            })
+                    })
+            ]);
 
-                    this.notificationService.sendNotifications(
-                        doctorId, 
-                        `Your appointment with ${patientName} starts in 1 hour.`,
-                        traceId,
-                        (oneHourBefore.getTime() - now.getTime())
-                    ),
+            // Queue the delayed "1 hour before" notifications and appointment start in parallel
+            await Promise.all([
 
-                    this.appointmentQueue.add(
-                        "start-appointment",
-                        { status: 'RUNNING', id: appointmentId },
-                        {
-                            delay: date.getTime() - now.getTime(),
-                            attempts: 5,
-                            removeOnComplete: true
-                        }
-                    )
-                ]);
-            }
+                this.notificationService.sendNotifications(
+                    patientId,
+                    `Your appointment with ${doctorName} starts in 1 hour.`,
+                    traceId,
+                    oneHourBefore.getTime() - now.getTime()
+                )
+                    .catch((error) => {
+                        this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
 
-            catch (error) {
+                        this.email.alertAdmin(
+                            'Failed to send notification',
+                            `Failed to send notification about appointment reminder to patientId=${patientId}, Reason: ${error.message} with traceId: ${traceId}`
+                        )
+                            .catch((error) => {
+                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
+                            })
+                    }),
 
-            }
+                this.notificationService.sendNotifications(
+                    doctorId,
+                    `Your appointment with ${patientName} starts in 1 hour.`,
+                    traceId,
+                    (oneHourBefore.getTime() - now.getTime())
+                )
+                    .catch((error) => {
+                        this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
+
+                        this.email.alertAdmin(
+                            'Failed to send notification',
+                            `Failed to send notification about appointment reminder to doctorId=${doctorId}, Reason: ${error.message} with traceId: ${traceId}`
+                        )
+                            .catch((error) => {
+                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
+                            })
+                    }),
+
+                this.appointmentQueue.add(
+                    "start-appointment",
+                    { status: 'RUNNING', id: appointmentId, traceId },
+                    {
+                        delay: date.getTime() - now.getTime(),
+                        backoff: { type: 'exponential', delay: 5000 },
+                        attempts: 5,
+                        removeOnComplete: true,
+                        removeOnFail: false
+                    }
+                )
+                    .catch((error) => {
+                        this.logger.error(
+                            `❌ Failed to insert start-appointment job into queue, Reason: ${error.message} with traceId: ${traceId}`
+                        )
+
+                        this.email.alertAdmin(
+                            'Failed to start appointment',
+                            `Failed to start appointment, Reason: ${error.message} with traceId: ${traceId}`
+                        )
+                            .catch((error) => {
+                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
+                            })
+                    })
+            ]);
         }
 
         else if (status === 'CANCELLED') {
@@ -392,7 +448,15 @@ export class AppointmentService {
                 traceId
             )
                 .catch((error) => {
-                    this.logger.error(`❌ Failed to insert notification into queue: ${error.message}`)
+                    this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
+
+                    this.email.alertAdmin(
+                        'Failed to send notification',
+                        `Failed to send notification about appointment cancellation to patientId=${patientId}, Reason: ${error.message} with traceId: ${traceId}`
+                    )
+                        .catch((error) => {
+                            this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
+                        })
                 })
         }
 
@@ -409,8 +473,16 @@ export class AppointmentService {
         })
 
         return {
-            data: updatedAppointment,
+            appointment: updatedAppointment,
             message: "Appointment updated successfully"
         }
+    }
+
+    private generateNotificationErrorMessage(message: string, traceId: string) {
+        return `❌ Failed to insert notification into queue, Reason: ${message} with traceId: ${traceId}`
+    }
+
+    private generateAdminAlertErrorMessage(message: string, traceId: string) {
+        return `❌ Failed to send alert email to admin, Reason: ${message} with traceId: ${traceId}`
     }
 }

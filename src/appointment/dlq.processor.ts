@@ -4,7 +4,7 @@ import { Job } from "bull";
 import { EmailService } from "src/email/email.service";
 import { PrismaService } from "src/prisma/prisma.service";
 
-@Processor('failed-notification')
+@Processor('failed-appointment')
 export class DLQProcessor {
     private readonly logger = new Logger(DLQProcessor.name);
 
@@ -13,7 +13,7 @@ export class DLQProcessor {
         private readonly prisma: PrismaService
     ) { }
 
-    @Process('failed-notification')
+    @Process('failed-appointment')
     async handleDLQedNotification(job: Job) {
         const { userId, failedReason, traceId } = job.data;
 
@@ -32,8 +32,8 @@ export class DLQProcessor {
         await this.email.sendNotificationFailureEmail(user!.email, failedReason);
 
         await this.email.alertAdmin(
-            'Notification Delivery Failed',
-            `Failed to deliver notification to userId=${userId}, Reason: ${failedReason} with traceId=${traceId}`,
+            'Appointment Status Update Failed',
+            `Failed to update appointment status of userId=${userId}, Reason: ${failedReason} with traceId=${traceId}`,
         );
     }
 

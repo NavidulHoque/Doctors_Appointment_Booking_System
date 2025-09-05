@@ -11,8 +11,7 @@ export class NotificationProcessor {
     constructor(
         private readonly notificationService: NotificationService,
         private readonly email: EmailService,
-        @InjectQueue('failed-notifications')
-        private readonly failedQueue: Queue, // inject DLQ
+        @InjectQueue('failed-notification') private readonly failedQueue: Queue, // inject DLQ
     ) { }
 
     @Process('send-notification')
@@ -49,10 +48,13 @@ export class NotificationProcessor {
                 `❌ Job ${job.id} failed to move to DLQ. Reason: ${error.message} with traceId=${job.data.traceId}`
             );
 
-            await this.email.alertAdmin(
+            this.email.alertAdmin(
                 'CRITICAL: DLQ Insertion Failure',
                 `DLQ insertion failed for jobId=${job.id}, userId=${job.data.userId}, traceId=${job.data.traceId}. Reason: ${error.message}`
-            );
+            )
+                .catch((error) => this.logger.error(
+                    `❌ Failed to alert admin. Reason: ${error.message} with traceId=${job.data.traceId}`
+                ));
         }
     }
 }

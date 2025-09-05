@@ -2,9 +2,11 @@ import {
   Controller,
   Post,
   Headers,
-  Body
+  Body,
+  Req
 } from '@nestjs/common';
 import { WebhookService } from './webhook.service';
+import { RequestWithTrace } from 'src/common/types';
 
 @Controller('webhook')
 export class WebhookController {
@@ -16,8 +18,10 @@ export class WebhookController {
   async handleStripeWebhook(
     @Body() body: any,
     @Headers('stripe-signature') signature: string,
+    @Req() request: RequestWithTrace
   ) {
-    await this.webhookService.handleStripeEvent(body, signature);
+    const traceId = request.traceId;
+    await this.webhookService.handleStripeEvent(body, signature, traceId);
     return { received: true };
   }
 }

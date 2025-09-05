@@ -8,11 +8,15 @@ import { NotificationModule } from 'src/notification/notification.module';
 import { AppointmentProcessor } from './appointment.processor';
 import { BullModule } from '@nestjs/bull';
 import { EmailModule } from 'src/email/email.module';
+import { DLQProcessor } from './dlq.processor';
 
 @Module({
   imports: [
     BullModule.registerQueue({
       name: 'appointment-queue',
+    }),
+    BullModule.registerQueue({
+      name: 'failed-appointment', // DLQ
     }),
     ConfigModule,
     DoctorModule,
@@ -21,6 +25,6 @@ import { EmailModule } from 'src/email/email.module';
     EmailModule
   ],
   controllers: [AppointmentController],
-  providers: [AppointmentService, AppointmentProcessor]
+  providers: [AppointmentService, AppointmentProcessor, DLQProcessor]
 })
 export class AppointmentModule { }
