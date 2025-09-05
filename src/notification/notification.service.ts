@@ -1,34 +1,47 @@
 import { InjectQueue } from "@nestjs/bull";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { Queue } from "bull";
 import { PrismaService } from "src/prisma/prisma.service";
 import { SocketGateway } from "src/socket/socket.gateway";
 
 @Injectable()
 export class NotificationService {
+  private readonly logger = new Logger(NotificationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly socketGateway: SocketGateway,
     @InjectQueue("notification-queue") private readonly notificationQueue: Queue
   ) { }
 
-  async createNotification(userId: string, content: string) {
-    const notification = await this.prisma.notification.create({
-      data: {
-        userId,
-        content,
-      },
-      select: {
-        id: true,
-        content: true,
-        createdAt: true
-      }
-    });
+  async createNotification(userId: string, content: string, traceId: string) {
+    try {
+      this.logger.log(`Creating notification for userId=${userId} with traceId=${traceId}`);
 
-    // send notification via WebSocket
-    this.socketGateway.sendNotification(userId, notification);
+      const notification = await this.prisma.notification.create({
+        data: {
+          userId,
+          content,
+        },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true
+        }
+      });
+
+      // send notification via WebSocket
+      this.socketGateway.sendNotification(userId, notification);
+    }
+
+    catch (error) {
+      this.logger.error(
+        `❌ Failed to create notification for userId=${userId} with traceId=${traceId}. Reason: ${error.message}, Retrying...`,
+      );
+
+      throw error; // rethrow → BullMQ will retry according to attempts/backoff
+    }
   }
-
 
   async getAllNotifications(userId: string, page: number = 1, limit: number = 10) {
 
@@ -63,15 +76,15 @@ export class NotificationService {
     }
   }
 
-  async sendNotifications(userId: string, content: string, delay: number = 0) {
+  async sendNotifications(userId: string, content: string, traceId: string, delay: number = 0) {
 
     await this.notificationQueue.add(
       'send-notification',
-      { userId, content },
+      { userId, content, traceId },
       {
         delay,
         backoff: { type: 'exponential', delay: 5000 },
-        attempts: 3,           // retry up to 3 times if the job fails
+        attempts: 5,           // retry up to 5 times if the job fails
         removeOnComplete: true, // remove from queue after success
         removeOnFail: false,    // keep in queue if failed
       }

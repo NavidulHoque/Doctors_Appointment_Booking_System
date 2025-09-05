@@ -2,6 +2,7 @@ import { Processor, Process, OnQueueFailed, InjectQueue } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
 import { NotificationService } from './notification.service';
 import { Logger } from '@nestjs/common';
+import { EmailService } from 'src/email/email.service';
 
 @Processor('notification-queue')
 export class NotificationProcessor {
@@ -9,33 +10,48 @@ export class NotificationProcessor {
 
     constructor(
         private readonly notificationService: NotificationService,
+        private readonly email: EmailService,
         @InjectQueue('failed-notifications')
         private readonly failedQueue: Queue, // inject DLQ
     ) { }
 
     @Process('send-notification')
     async handleNotification(job: Job) {
-        const { userId, content } = job.data;
-        await this.notificationService.createNotification(userId, content);
+        const { userId, content, traceId } = job.data;
+        await this.notificationService.createNotification(userId, content, traceId);
     }
 
     @OnQueueFailed()
     async handleFailedNotification(job: Job, error: any) {
         this.logger.error(
-            `❌ Job ${job.id} failed after ${job.attemptsMade} attempts. Moving to DLQ...`,
+            `❌ Job ${job.id} failed after ${job.attemptsMade} attempts with traceId=${job.data.traceId}. Moving to DLQ...`,
         );
 
         try {
-            await this.failedQueue.add('failed-notification', {
-                ...job.data,
-                failedReason: error.message,
-                failedAt: new Date(),
-            });
+            await this.failedQueue.add(
+                'failed-notification',
+                {
+                    ...job.data,
+                    failedReason: error.message,
+                    failedAt: new Date(),
+                },
+                {
+                    backoff: { type: 'exponential', delay: 5000 },
+                    attempts: 5,           // retry up to 5 times if the job fails
+                    removeOnComplete: true, // remove from queue after success
+                    removeOnFail: false,    // keep in queue if failed
+                }
+            );
         }
 
         catch (error) {
             this.logger.error(
-                `❌ Job ${job.id} failed to move to DLQ. Reason: ${error.message}`,
+                `❌ Job ${job.id} failed to move to DLQ. Reason: ${error.message} with traceId=${job.data.traceId}`
+            );
+
+            await this.email.alertAdmin(
+                'CRITICAL: DLQ Insertion Failure',
+                `DLQ insertion failed for jobId=${job.id}, userId=${job.data.userId}, traceId=${job.data.traceId}. Reason: ${error.message}`
             );
         }
     }

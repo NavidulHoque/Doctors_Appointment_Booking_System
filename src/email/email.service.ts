@@ -43,4 +43,25 @@ export class EmailService {
       html: `<p>Your OTP is: <b>${otp}</b></p><p>It expires in <b>${this.Otp_Expires_Minutes}</b> minutes.</p>`,
     });
   }
+
+  async sendNotificationFailureEmail(to: string, reason: string) {
+    await this.sendEmail({
+      to,
+      subject: 'Notification Delivery Failed',
+      text: `We were unable to deliver a notification to your account. Reason: ${reason}`,
+      html: `<p>We were unable to deliver a notification to your account.</p><p>Reason: <b>${reason}</b></p>`,
+    });
+  }
+
+  async alertAdmin(subject: string, message: string) {
+    const adminEmail = this.config.get<string>('ADMIN_EMAIL');
+    if (!adminEmail) return;
+
+    await this.sendEmail({
+      to: adminEmail,
+      subject: `[ALERT] ${subject}`,
+      text: message,
+      html: `<p>${message}</p>`,
+    });
+  }
 }

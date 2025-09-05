@@ -6,6 +6,7 @@ import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class AppointmentService {
@@ -15,6 +16,7 @@ export class AppointmentService {
         private readonly prisma: PrismaService,
         private readonly notificationService: NotificationService,
         private readonly config: ConfigService,
+        private readonly email: EmailService,
         @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
     ) { }
 
@@ -66,10 +68,17 @@ export class AppointmentService {
 
         this.notificationService.sendNotifications(
             this.config.get('ADMIN_ID') as string,
-            `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`)
+            `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`,
+            traceId
+        )
             .catch((err) => {
                 // it will throw an error if the job fails to be added in the queue
                 this.logger.error(`❌ Failed to send notification: ${err.message} with traceId: ${traceId}`)
+
+                this.email.alertAdmin(
+                    'Failed to send notification about new appointment',
+                    `Failed to send notification, Reason: ${err.message} with traceId: ${traceId}`
+                )
             })
 
         return {
@@ -298,7 +307,7 @@ export class AppointmentService {
         };
     }
 
-    async updateAppointment(dto: UpdateAppointmentDto, appointment: any) {
+    async updateAppointment(dto: UpdateAppointmentDto, appointment: any, traceId: string) {
 
         const { status, isPaid, paymentMethod, cancellationReason } = dto
 
@@ -320,31 +329,57 @@ export class AppointmentService {
 
             const oneHourBefore = new Date(date.getTime() as number - 60 * 60 * 1000)
 
-            // Send confirmation first (await to guarantee order)
-            await Promise.all([
+            this.logger.log(`📢 Sending notification to patient and doctor for appointment confirmation with traceId: ${traceId}`);
 
-                this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`),
+            try {
+                // Send confirmation first (await to guarantee order)
+                await Promise.all([
 
-                this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`)
-            ]);
+                    this.notificationService.sendNotifications(
+                        patientId,
+                        `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`,
+                        traceId
+                    ),
 
-            // Queue the delayed "1 hour before" notifications and appointment start in parallel
-            await Promise.all([
+                    this.notificationService.sendNotifications(
+                        doctorId, 
+                        `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`,
+                        traceId
+                    )
+                ]);
 
-                this.notificationService.sendNotifications(patientId, `Your appointment with ${doctorName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime()),
+                // Queue the delayed "1 hour before" notifications and appointment start in parallel
+                await Promise.all([
 
-                this.notificationService.sendNotifications(doctorId, `Your appointment with ${patientName} starts in 1 hour.`, oneHourBefore.getTime() - now.getTime()),
+                    this.notificationService.sendNotifications(
+                        patientId, 
+                        `Your appointment with ${doctorName} starts in 1 hour.`,
+                        traceId,
+                        oneHourBefore.getTime() - now.getTime()
+                    ),
 
-                this.appointmentQueue.add(
-                    "start-appointment",
-                    { status: 'RUNNING', id: appointmentId },
-                    {
-                        delay: date.getTime() - now.getTime(),
-                        attempts: 3,
-                        removeOnComplete: true
-                    }
-                )
-            ]);
+                    this.notificationService.sendNotifications(
+                        doctorId, 
+                        `Your appointment with ${patientName} starts in 1 hour.`,
+                        traceId,
+                        (oneHourBefore.getTime() - now.getTime())
+                    ),
+
+                    this.appointmentQueue.add(
+                        "start-appointment",
+                        { status: 'RUNNING', id: appointmentId },
+                        {
+                            delay: date.getTime() - now.getTime(),
+                            attempts: 5,
+                            removeOnComplete: true
+                        }
+                    )
+                ]);
+            }
+
+            catch (error) {
+
+            }
         }
 
         else if (status === 'CANCELLED') {
@@ -353,9 +388,11 @@ export class AppointmentService {
             // send notification to patient
             this.notificationService.sendNotifications(
                 patientId,
-                `Your appointment with ${doctorName} is cancelled for ${date.toLocaleString()}. Reason: ${cancellationReason}`)
-                .catch((err) => {
-                    this.logger.warn(`Failed to send notification: ${err.message}`)
+                `Your appointment with ${doctorName} is cancelled for ${date.toLocaleString()}. Reason: ${cancellationReason}`,
+                traceId
+            )
+                .catch((error) => {
+                    this.logger.error(`❌ Failed to insert notification into queue: ${error.message}`)
                 })
         }
 

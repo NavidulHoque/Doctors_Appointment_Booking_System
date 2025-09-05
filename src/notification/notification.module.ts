@@ -6,6 +6,8 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { NotificationController } from './notifications.controller';
 import { ConfigModule } from '@nestjs/config';
 import { SocketModule } from 'src/socket/socket.module';
+import { EmailModule } from 'src/email/email.module';
+import { DLQProcessor } from './dlq.processor';
 
 @Module({
   imports: [
@@ -17,10 +19,11 @@ import { SocketModule } from 'src/socket/socket.module';
     }),
     PrismaModule,
     ConfigModule,
-    SocketModule
+    SocketModule,
+    EmailModule
   ],
-  providers: [NotificationProcessor, NotificationService],
+  providers: [NotificationProcessor, NotificationService, DLQProcessor],
   exports: [NotificationService],
-  controllers: [NotificationController],
+  controllers: [NotificationController]
 })
 export class NotificationModule {}

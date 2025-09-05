@@ -7,6 +7,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { NotificationModule } from 'src/notification/notification.module';
 import { AppointmentProcessor } from './appointment.processor';
 import { BullModule } from '@nestjs/bull';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { BullModule } from '@nestjs/bull';
     ConfigModule,
     DoctorModule,
     PrismaModule,
-    NotificationModule
+    NotificationModule,
+    EmailModule
   ],
   controllers: [AppointmentController],
   providers: [AppointmentService, AppointmentProcessor]

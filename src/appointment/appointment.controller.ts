@@ -66,7 +66,9 @@ export class AppointmentController {
     updateAppointment(
         @Body() dto: UpdateAppointmentDto, 
         @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: any,
+        @Req() request: RequestWithTrace
     ) {
-        return this.appointmentService.updateAppointment(dto, appointment)
+        const traceId = request.traceId;
+        return this.appointmentService.updateAppointment(dto, appointment, traceId)
     }
 }
