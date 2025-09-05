@@ -1,8 +1,9 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
 import { AuthGuard } from './guard';
 import { Role } from '@prisma/client';
+import { RequestWithTrace } from 'src/common/types';
 
 @Controller('auth')
 export class AuthController {
@@ -36,8 +37,12 @@ export class AuthController {
 
     @Post("/forgetPassword")
     @HttpCode(200)
-    forgetPassword(@Body() dto: ForgetPasswordDto) {
-        return this.authService.forgetPassword(dto)
+    forgetPassword(
+        @Body() dto: ForgetPasswordDto,
+        @Req() req: RequestWithTrace
+    ) {
+        const traceId = req.traceId
+        return this.authService.forgetPassword(dto, traceId)
     }
 
     @Post("/verifyOtp")

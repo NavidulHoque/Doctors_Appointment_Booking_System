@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as argon from "argon2";
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 @Injectable()
 export class AuthService {
 
+  private readonly logger = new Logger(AuthService.name);
   private readonly ACCESS_TOKEN_EXPIRES: string;
   private readonly REFRESH_TOKEN_EXPIRES: string;
   private readonly ACCESS_TOKEN_SECRET: string;
@@ -138,7 +139,7 @@ export class AuthService {
     }
   }
 
-  async forgetPassword(dto: ForgetPasswordDto) {
+  async forgetPassword(dto: ForgetPasswordDto, traceId: string) {
 
     const { email } = dto
 
@@ -156,12 +157,40 @@ export class AuthService {
     })
 
     this.email.sendOtpEmail(user.email, otp)
+
+      .catch((error) => {
+
+        this.logger.error(`❌ Failed to email otp, Reason: ${error.message} with traceId=${traceId}`);
+
+        this.email.alertAdmin(
+          'Failed to email otp',
+          `Failed to email otp userId=${user.id}, email=${user.email}, Reason: ${error.message} with traceId: ${traceId}`
+        )
+          .catch((error) => {
+            this.logger.error(`❌ Failed to alert admin. Reason: ${error.message} with traceId=${traceId}`);
+          })
+      })
+
     if (user.phone) {
-      this.sms.sendSms(user.phone, `Your OTP code is ${otp}. It will expire in ${this.OTP_Expires} minutes.`);
+      this.sms.sendSms(
+        user.phone,
+        `Your OTP code is ${otp}. It will expire in ${this.OTP_Expires} minutes.`
+      )
+        .catch((error) => {
+          this.logger.error(`❌ Failed to send otp via sms, Reason: ${error.message} with traceId=${traceId}`);
+
+          this.email.alertAdmin(
+            'Failed to send otp via sms',
+            `Failed to send otp via sms userId=${user.id}, email=${user.email}, Reason: ${error.message} with traceId: ${traceId}`
+          )
+            .catch((error) => {
+              this.logger.error(`❌ Failed to alert admin. Reason: ${error.message} with traceId=${traceId}`);
+            })
+        })
     }
 
     return {
-      message: 'Otp emailed and sms successfully',
+      message: 'Otp is send via email and sms successfully',
     }
   }
 
