@@ -18,7 +18,7 @@ export class DLQProcessor {
         const { userId, failedReason, traceId } = job.data;
 
         this.logger.warn(
-            `📥 DLQ Job received for userId=${userId}, reason=${failedReason} with traceId=${traceId}`,
+            `📥 DLQ job ${job.id} received for userId=${userId}, reason=${failedReason} with traceId=${traceId}`,
         );
 
         const user = await this.prisma.user.findUnique({

@@ -36,7 +36,7 @@ export class NotificationProcessor {
                 },
                 {
                     backoff: { type: 'exponential', delay: 5000 },
-                    attempts: 5,           // retry up to 5 times if the job fails
+                    attempts: 3,           // retry up to 3 times if the job fails
                     removeOnComplete: true, // remove from queue after success
                     removeOnFail: false,    // keep in queue if failed
                 }
@@ -50,7 +50,7 @@ export class NotificationProcessor {
 
             this.email.alertAdmin(
                 'CRITICAL: DLQ Insertion Failure',
-                `DLQ insertion failed for jobId=${job.id}, userId=${job.data.userId}, traceId=${job.data.traceId}. Reason: ${error.message}`
+                `DLQ insertion failed for jobId=${job.id}, userId=${job.data.userId}, Reason: ${error.message} with traceId=${job.data.traceId}`
             )
                 .catch((error) => this.logger.error(
                     `❌ Failed to alert admin. Reason: ${error.message} with traceId=${job.data.traceId}`

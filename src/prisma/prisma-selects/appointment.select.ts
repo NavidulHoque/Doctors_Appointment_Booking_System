@@ -5,6 +5,7 @@ export const appointmentSelect = {
             id: true,
             fullName: true,
             email: true,
+            phone: true,
             avatarImage: true,
             doctor: {
                 select: {
@@ -18,6 +19,7 @@ export const appointmentSelect = {
             id: true,
             fullName: true,
             email: true,
+            phone: true,
             avatarImage: true
         },
     },

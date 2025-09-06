@@ -22,7 +22,7 @@ export class AppointmentProcessor {
     }
 
     @OnQueueFailed()
-    async handleFailedNotification(job: Job, error: any) {
+    async handleFailedAppointment(job: Job, error: any) {
         this.logger.error(
             `❌ Job ${job.id} failed after ${job.attemptsMade} attempts with traceId=${job.data.traceId}. Moving to DLQ...`,
         );
@@ -37,9 +37,9 @@ export class AppointmentProcessor {
                 },
                 {
                     backoff: { type: 'exponential', delay: 5000 },
-                    attempts: 5,           
+                    attempts: 3,           
                     removeOnComplete: true, 
-                    removeOnFail: false,    
+                    removeOnFail: false   
                 }
             );
         }

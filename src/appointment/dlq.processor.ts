@@ -14,7 +14,7 @@ export class DLQProcessor {
     ) { }
 
     @Process('failed-appointment')
-    async handleDLQedNotification(job: Job) {
+    async handleDLQedAppointment(job: Job) {
         const { userId, failedReason, traceId } = job.data;
 
         this.logger.warn(
