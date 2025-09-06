@@ -16,9 +16,9 @@ export class AppointmentProcessor {
 
     @Process('start-appointment')
     async handleStartAppointment(job: Job) {
-        const { status, id, traceId } = job.data;
+        const { status, appointmentId, traceId } = job.data;
         const dto = { status }
-        await this.appointmentService.updateAppointment(dto, id, traceId);
+        await this.appointmentService.updateAppointment(dto, appointmentId, traceId);
     }
 
     @OnQueueFailed()
@@ -50,8 +50,12 @@ export class AppointmentProcessor {
             );
 
             this.email.alertAdmin(
-                'CRITICAL: DLQ Insertion Failure',
-                `DLQ insertion failed for jobId=${job.id}, userId=${job.data.userId}, traceId=${job.data.traceId}. Reason: ${error.message}`
+                'Appointment Status Update Failure',
+                `Failed to update appointment status,<br>
+                 AppointmentId=${job.data.appointmentId},<br>
+                 Status=${job.data.status},<br>
+                 TraceId=${job.data.traceId},<br>
+                 Reason: ${error.message}`
             )
                 .catch((error) => this.logger.error(
                     `❌ Failed to alert admin. Reason: ${error.message} with traceId=${job.data.traceId}`

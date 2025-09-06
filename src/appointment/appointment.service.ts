@@ -24,11 +24,21 @@ export class AppointmentService {
 
         const { patientId, doctorId, date } = dto
 
-        if (patientId === doctorId) {
-            throw new BadRequestException("Patient and doctor cannot be the same")
+        const patient = await this.prisma.user.findUnique({ 
+            where: { id: patientId },
+            select: { role: true } 
+        })
+
+        const doctor = await this.prisma.user.findUnique({ 
+            where: { id: doctorId },
+            select: { role: true }
+        })
+
+        if (patient!.role !== 'PATIENT' || doctor!.role !== 'DOCTOR') {
+            throw new BadRequestException("Requested patient is not patient or requested doctor is not doctor")
         }
 
-        if (date.getTime() < Date.now()) {
+        else if (date.getTime() < Date.now()) {
             throw new BadRequestException("Date must be in the future")
         }
 
@@ -314,7 +324,7 @@ export class AppointmentService {
         };
     }
 
-    async updateAppointment(dto: UpdateAppointmentDto, appointment: any, traceId: string) {
+    async updateAppointment(dto: UpdateAppointmentDto, appointment: Record<string, any>, traceId: string) {
 
         const { status, isPaid, paymentMethod, cancellationReason } = dto
 
@@ -352,8 +362,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to send notification',
                             `Failed to send notification about appointment confirmation to, <br>
-                             ${patientName} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                             of ${doctorName},<br>
+                             ${patientName} of appointmentId=${appointmentId} for ${date.toLocaleString()} of ${doctorName},<br>
                              Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -374,8 +383,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to send notification',
                             `Failed to send notification about appointment confirmation to,<br>
-                             ${doctorName} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                             with ${patientName},<br>
+                             ${doctorName} of appointmentId=${appointmentId} for ${date.toLocaleString()} with ${patientName},<br>
                              Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -400,8 +408,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to send notification',
                             `Failed to send notification about appointment reminder to,<br>
-                             ${patientName} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                             of ${doctorName},<br>
+                             ${patientName} of appointmentId=${appointmentId} for ${date.toLocaleString()} of ${doctorName},<br>
                              Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -422,8 +429,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to send notification',
                             `Failed to send notification about appointment reminder to,<br>
-                             ${doctorName} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                             with ${patientName},<br>
+                             ${doctorName} of appointmentId=${appointmentId} for ${date.toLocaleString()} with ${patientName},<br>
                              Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -433,7 +439,7 @@ export class AppointmentService {
 
                 this.appointmentQueue.add(
                     "start-appointment",
-                    { status: 'RUNNING', id: appointmentId, traceId },
+                    { status: 'RUNNING', appointmentId, traceId },
                     {
                         delay: date.getTime() - now.getTime(),
                         backoff: { type: 'exponential', delay: 5000 },
@@ -504,46 +510,6 @@ export class AppointmentService {
             appointment: updatedAppointment,
             message: "Appointment updated successfully"
         }
-    }
-
-    private generateCancellationMessage(doctorId: string, appointmentId: string, date: Date, patientId: string, cancellationReason: string | undefined, errorMessage: string, traceId: string) {
-
-        return `Failed to send notification about appointment cancellation to,<br>
-                patientId=${patientId} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                of doctorId=${doctorId},<br>
-                Cancellation reason: ${cancellationReason},<br>
-                Error reason: ${errorMessage} with traceId: ${traceId}`
-    }
-
-    private generatePatientReminderMessage(doctorId: string, appointmentId: string, date: Date, patientId: string, errorMessage: string, traceId: string) {
-
-        return `Failed to send notification about appointment reminder to,<br>
-                patientId=${patientId} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                of doctorId=${doctorId},<br>
-                Error reason: ${errorMessage} with traceId: ${traceId}`
-    }
-
-    private generatePatientConfirmationMessage(doctorId: string, appointmentId: string, date: Date, patientId: string, errorMessage: string, traceId: string) {
-
-        return `Failed to send notification about appointment confirmation to,<br>
-                patientId=${patientId} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                of doctorId=${doctorId},<br>
-                Error reason: ${errorMessage} with traceId: ${traceId}`
-    }
-
-    private generateDoctorReminderMessage(doctorId: string, appointmentId: string, date: Date, patientId: string, errorMessage: string, traceId: string) {
-
-        return `Failed to send notification about appointment reminder to,<br>
-                doctorId=${doctorId} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                with patientId=${patientId},<br>
-                Error reason: ${errorMessage} with traceId: ${traceId}`
-    }
-
-    private generateDoctorConfirmationMessage(doctorId: string, appointmentId: string, date: Date, patientId: string, errorMessage: string, traceId: string) {
-        return `Failed to send notification about appointment confirmation to,<br>
-                doctorId=${doctorId} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
-                with patientId=${patientId},<br>
-                Error reason: ${errorMessage} with traceId: ${traceId}`
     }
 
     private generateNotificationErrorMessage(message: string, traceId: string) {

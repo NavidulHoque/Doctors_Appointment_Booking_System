@@ -15,40 +15,40 @@ export class DLQProcessor {
 
     @Process('failed-appointment')
     async handleDLQedAppointment(job: Job) {
-        const { userId, failedReason, traceId } = job.data;
+        const { appointmentId, failedReason, traceId, failedAt, status } = job.data;
 
         this.logger.warn(
-            `📥 DLQ Job received for userId=${userId}, reason=${failedReason} with traceId=${traceId}`,
+            `📥 DLQ Job ${job.id} received for appointmentId="${appointmentId}" at "${failedAt.toLocaleString()}", reason="${failedReason}" with traceId="${traceId}"`,
         );
 
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                fullName: true,
-                email: true
-            }
-        });
-
-        await this.email.sendNotificationFailureEmail(user!.email, failedReason);
-
         await this.email.alertAdmin(
-            'Appointment Status Update Failed',
-            `Failed to update appointment status of userId=${userId}, Reason: ${failedReason} with traceId=${traceId}`,
+            'Appointment Status Update Failure',
+            `Failed to update appointment status,<br>
+                 AppointmentId=${appointmentId},<br>
+                 Status=${status},<br>
+                 TraceId=${traceId},<br>
+                 Reason: ${failedReason}`
         );
     }
 
     @OnQueueFailed()
     async handleFailedDLQOperation(job: Job, error: any) {
+        const { appointmentId, traceId, failedAt, status } = job.data;
+
         this.logger.error(
-            `💥 DLQ job ${job.id} also failed! Reason: ${error.message} with traceId=${job.data.traceId}`,
+            `💥 DLQ job ${job.id} also failed! for appointmentId="${appointmentId}" at ${failedAt} Reason: ${error.message} with traceId=${traceId}`,
         );
 
         this.email.alertAdmin(
-            'CRITICAL: DLQ Processor Failure',
-            `DLQ failed for jobId=${job.id}, userId=${job.data.userId}, traceId=${job.data.traceId}. Reason: ${error.message}`
+            'Appointment Status Update Failure',
+            `Failed to update appointment status,<br>
+                 AppointmentId=${appointmentId},<br>
+                 Status=${status},<br>
+                 TraceId=${traceId},<br>
+                 Reason: ${error.message}`
         )
             .catch((error) => this.logger.error(
-                `❌ Failed to alert admin. Reason: ${error.message} with traceId=${job.data.traceId}`
+                `❌ Failed to alert admin. Reason: ${error.message} with traceId=${traceId}`
             ));
     }
 }
