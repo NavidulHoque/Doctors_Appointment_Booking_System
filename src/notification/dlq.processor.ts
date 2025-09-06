@@ -33,7 +33,12 @@ export class DLQProcessor {
 
         await this.email.alertAdmin(
             'Notification Delivery Failed',
-            `Failed to deliver notification to userId=${userId}, Reason: ${failedReason} with traceId=${traceId}`,
+            `Failed to send notification,<br>
+             Content: ${job.data.content},<br>
+             UserId: ${job.data.userId},<br>
+             metadata: ${JSON.stringify(job.data.metadata)},<br> 
+             Reason: ${failedReason},<br>
+             traceId=${job.data.traceId}`,
         );
     }
 
@@ -44,8 +49,13 @@ export class DLQProcessor {
         );
 
         this.email.alertAdmin(
-            'CRITICAL: DLQ Processor Failure',
-            `DLQ failed for jobId=${job.id}, userId=${job.data.userId}, traceId=${job.data.traceId}. Reason: ${error.message}`
+            'Notification Delivery Failed',
+            `Failed to send notification,<br>
+             Content: ${job.data.content},<br>
+             UserId: ${job.data.userId},<br>
+             metadata: ${JSON.stringify(job.data.metadata)},<br> 
+             Reason: ${job.data.failedReason},<br>
+             traceId=${job.data.traceId}`
         )
             .catch((error) => this.logger.error(
                 `❌ Failed to alert admin. Reason: ${error.message} with traceId=${job.data.traceId}`

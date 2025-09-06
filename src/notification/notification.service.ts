@@ -32,6 +32,8 @@ export class NotificationService {
 
       // send notification via WebSocket
       this.socketGateway.sendNotification(userId, notification);
+
+      this.logger.log(`✅ Notification sent to userId=${userId}, traceId=${traceId}`);
     }
 
     catch (error) {
@@ -76,11 +78,11 @@ export class NotificationService {
     }
   }
 
-  async sendNotifications(userId: string, content: string, traceId: string, delay: number = 0) {
+  async sendNotifications(userId: string, content: string, traceId: string, delay: number = 0, metadata: Record<string, any> = {}) {
 
     await this.notificationQueue.add(
       'send-notification',
-      { userId, content, traceId },
+      { userId, content, traceId, metadata },
       {
         delay,
         backoff: { type: 'exponential', delay: 5000 },

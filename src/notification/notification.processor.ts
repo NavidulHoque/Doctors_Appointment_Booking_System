@@ -49,8 +49,13 @@ export class NotificationProcessor {
             );
 
             this.email.alertAdmin(
-                'CRITICAL: DLQ Insertion Failure',
-                `DLQ insertion failed for jobId=${job.id}, userId=${job.data.userId}, Reason: ${error.message} with traceId=${job.data.traceId}`
+                'Notification Delivery Failed',
+                `Failed to send notification,<br>
+                Content: ${job.data.content},<br>
+                UserId: ${job.data.userId},<br>
+                metadata: ${JSON.stringify(job.data.metadata)},<br> 
+                Reason: ${error.message},<br>
+                traceId=${job.data.traceId}`
             )
                 .catch((error) => this.logger.error(
                     `❌ Failed to alert admin. Reason: ${error.message} with traceId=${job.data.traceId}`
