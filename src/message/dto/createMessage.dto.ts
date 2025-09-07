@@ -4,6 +4,6 @@ import { BaseMessageDto } from './baseMessage.dto';
 export class CreateMessageDto extends BaseMessageDto {
     @IsString()
     @IsNotEmpty()
-    idempotencyKey!: string; 
+    readonly idempotencyKey: string; 
 }
 

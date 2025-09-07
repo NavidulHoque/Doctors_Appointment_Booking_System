@@ -16,7 +16,7 @@ export class NotificationService {
 
   async createNotification(userId: string, content: string, traceId: string) {
     try {
-      this.logger.log(`Creating notification for userId=${userId} with traceId=${traceId}`);
+      this.logger.log(`📢 Creating notification for userId=${userId} with traceId=${traceId}`);
 
       const notification = await this.prisma.notification.create({
         data: {
@@ -30,10 +30,10 @@ export class NotificationService {
         }
       });
 
-      // send notification via WebSocket
-      this.socketGateway.sendNotification(userId, notification);
+      this.logger.log(`✅ Notification created for userId=${userId}, traceId=${traceId}`);
 
-      this.logger.log(`✅ Notification sent to userId=${userId}, traceId=${traceId}`);
+      // send notification via WebSocket
+      this.socketGateway.sendNotification(userId, traceId, notification);
     }
 
     catch (error) {

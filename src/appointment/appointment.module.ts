@@ -9,6 +9,10 @@ import { AppointmentProcessor } from './appointment.processor';
 import { BullModule } from '@nestjs/bull';
 import { EmailModule } from 'src/email/email.module';
 import { DLQProcessor } from './dlq.processor';
+import { AppointmentProducerService } from './appointment.producer.service';
+import { AppointmentConsumer } from './appointment.consumer';
+import { SocketModule } from 'src/socket/socket.module';
+import { KafkaModule } from 'src/kafka/kafka.module';
 
 @Module({
   imports: [
@@ -22,9 +26,11 @@ import { DLQProcessor } from './dlq.processor';
     DoctorModule,
     PrismaModule,
     NotificationModule,
-    EmailModule
+    EmailModule,
+    SocketModule,
+    KafkaModule
   ],
-  controllers: [AppointmentController],
-  providers: [AppointmentService, AppointmentProcessor, DLQProcessor]
+  controllers: [AppointmentController, AppointmentConsumer],
+  providers: [AppointmentService, AppointmentProcessor, DLQProcessor, AppointmentProducerService]
 })
 export class AppointmentModule { }

@@ -2,15 +2,13 @@ import { OnQueueFailed, Process, Processor } from "@nestjs/bull";
 import { Logger } from "@nestjs/common";
 import { Job } from "bull";
 import { EmailService } from "src/email/email.service";
-import { PrismaService } from "src/prisma/prisma.service";
 
 @Processor('failed-appointment')
 export class DLQProcessor {
     private readonly logger = new Logger(DLQProcessor.name);
 
     constructor(
-        private readonly email: EmailService,
-        private readonly prisma: PrismaService
+        private readonly email: EmailService
     ) { }
 
     @Process('failed-appointment')
@@ -24,10 +22,10 @@ export class DLQProcessor {
         await this.email.alertAdmin(
             'Appointment Status Update Failure',
             `Failed to update appointment status,<br>
-                 AppointmentId=${appointmentId},<br>
-                 Status=${status},<br>
-                 TraceId=${traceId},<br>
-                 Reason: ${failedReason}`
+             AppointmentId=${appointmentId},<br>
+             Status=${status},<br>
+             TraceId=${traceId},<br>
+             Reason: ${failedReason}`
         );
     }
 
@@ -42,10 +40,10 @@ export class DLQProcessor {
         this.email.alertAdmin(
             'Appointment Status Update Failure',
             `Failed to update appointment status,<br>
-                 AppointmentId=${appointmentId},<br>
-                 Status=${status},<br>
-                 TraceId=${traceId},<br>
-                 Reason: ${error.message}`
+             AppointmentId=${appointmentId},<br>
+             Status=${status},<br>
+             TraceId=${traceId},<br>
+             Reason: ${error.message}`
         )
             .catch((error) => this.logger.error(
                 `❌ Failed to alert admin. Reason: ${error.message} with traceId=${traceId}`

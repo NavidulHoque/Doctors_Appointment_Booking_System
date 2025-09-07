@@ -15,7 +15,7 @@ export class DLQProcessor {
 
     @Process('failed-notification')
     async handleDLQedNotification(job: Job) {
-        const { userId, failedReason, traceId, failedAt } = job.data;
+        const { userId, failedReason, traceId, failedAt, content, metadata } = job.data;
 
         this.logger.warn(
             `📥 DLQ job ${job.id} received for userId="${userId}" at "${failedAt.toLocaleString()}", reason="${failedReason}" with traceId="${traceId}"`,
@@ -35,11 +35,11 @@ export class DLQProcessor {
         await this.email.alertAdmin(
             'Notification Delivery Failed',
             `Failed to send notification,<br>
-             Content: ${job.data.content},<br>
-             UserId: ${job.data.userId},<br>
-             metadata: ${JSON.stringify(job.data.metadata)},<br> 
+             Content: ${content},<br>
+             UserId: ${userId},<br>
+             metadata: ${JSON.stringify(metadata)},<br> 
              Reason: ${failedReason},<br>
-             traceId=${job.data.traceId}`,
+             traceId=${traceId}`,
         );
     }
 

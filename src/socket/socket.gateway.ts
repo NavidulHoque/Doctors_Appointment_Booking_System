@@ -46,48 +46,78 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  sendNotification(userId: string, notification: any) {
+  sendNotification(userId: string, traceId: string, notification: Record<string, any>) {
     const socketId = this.clients.get(userId);
 
-    this.logger.log("Sending notification to userId:", userId, "with socketId:", socketId);
+    this.logger.log("📢 Sending notification to userId:", userId, "with socketId:", socketId, "with traceId:", traceId);
+
     if (socketId) {
       this.server.to(socketId).emit('notification', notification);
+      this.logger.log('✅ Notification sent to userId:', userId, "with traceId:", traceId);
+    }
+
+    else{
+      this.logger.error('❌ Notification not sent to userId:', userId, "with traceId:", traceId);
     }
   }
 
-  sendCreatedMessage(userId: string, data: any) {
+  sendCreatedMessage(userId: string, traceId: string, data: Record<string, any>) {
     const socketId = this.clients.get(userId);
 
-    this.logger.log('Sending created message to userId:', userId, "with socketId:", socketId);
+    this.logger.log('📢 Sending created message to userId:', userId, "with socketId:", socketId, "with traceId:", traceId);
+
     if (socketId) {
       this.server.to(socketId).emit('createMessage', data);
+      this.logger.log('✅ Message sent to userId:', userId, "with traceId:", traceId);
+    }
+
+    else{
+      this.logger.error('❌ Message not sent to userId:', userId, "with traceId:", traceId);
     }
   }
 
-  sendUpdatedMessage(userId: string, data: any) {
+  sendUpdatedMessage(userId: string, traceId: string, data: Record<string, any>) {
     const socketId = this.clients.get(userId);
 
-    this.logger.log('Sending updated message to userId:', userId, "with socketId:", socketId);
+    this.logger.log('📢 Sending updated message to userId:', userId, "with socketId:", socketId, "with traceId:", traceId);
+
     if (socketId) {
       this.server.to(socketId).emit('updateMessage', data);
+      this.logger.log('✅ Message sent to userId:', userId, "with traceId:", traceId);
+    }
+
+    else{
+      this.logger.error('❌ Message not sent to userId:', userId, "with traceId:", traceId);
     }
   }
 
-  sendDeletedMessage(userId: string, data: any) {
+  sendDeletedMessage(userId: string, traceId: string, data: Record<string, any>) {
     const socketId = this.clients.get(userId);
 
-    this.logger.log('Sending deleted message to userId:', userId, "with socketId:", socketId);
+    this.logger.log('📢 Sending deleted message to userId:', userId, "with socketId:", socketId, "with traceId:", traceId);
+
     if (socketId) {
       this.server.to(socketId).emit('deleteMessage', data);
+      this.logger.log('✅ Message sent to userId:', userId, "with traceId:", traceId);
+    }
+
+    else{
+      this.logger.error('❌ Message not sent to userId:', userId, "with traceId:", traceId);
     }
   }
 
-  sendResponse(userId: string, response: any) {
+  sendResponse(userId: string, response: Record<string, any>) {
     const socketId = this.clients.get(userId);
 
-    this.logger.log("Sending response to userId:", userId, "with socketId:", socketId);
+    this.logger.log("📢 Sending response to userId:", userId, "with socketId:", socketId, "with traceId:", response.traceId);
+
     if (socketId) {
       this.server.to(socketId).emit('response', response);
+      this.logger.log('✅ Response sent to userId:', userId, "with traceId:", response.traceId);
+    }
+
+    else{
+      this.logger.error('❌ Response not sent to userId:', userId, "with traceId:", response.traceId);
     }
   }
 }

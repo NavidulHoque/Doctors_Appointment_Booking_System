@@ -2,28 +2,37 @@ import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from
 import { AppointmentService } from './appointment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
-import { Roles } from 'src/auth/decorators';
+import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
+import { AppointmentProducerService } from './appointment.producer.service';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentController {
 
     constructor(
-        private appointmentService: AppointmentService
+        private readonly appointmentService: AppointmentService,
+        private readonly appointmentProducerService: AppointmentProducerService
+
     ) { }
 
     @Post("/create-appointment")
     @Roles(Role.ADMIN, Role.PATIENT)
     createAppointment(
         @Body() dto: CreateAppointmentDto,
-        @Req() request: RequestWithTrace
+        @Req() request: RequestWithTrace,
+        @User("id") userId: string
     ) {
         const traceId = request.traceId;
-        return this.appointmentService.createAppointment(dto, traceId)
+        const data = {
+            ...dto,
+            userId
+        }
+
+        return this.appointmentProducerService.sendCreateAppointment(data, traceId)
     }
 
     @Get("/get-all-appointments")
@@ -65,10 +74,17 @@ export class AppointmentController {
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     updateAppointment(
         @Body() dto: UpdateAppointmentDto, 
-        @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: any,
-        @Req() request: RequestWithTrace
+        @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: Record<string, any>,
+        @Req() request: RequestWithTrace,
+        @User("id") userId: string
     ) {
         const traceId = request.traceId;
-        return this.appointmentService.updateAppointment(dto, appointment, traceId)
+        const data = {
+            ...dto,
+            userId,
+            appointment
+        }
+        
+        return this.appointmentProducerService.sendUpdateAppointment(data, traceId)
     }
 }

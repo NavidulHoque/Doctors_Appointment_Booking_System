@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { EmailService } from 'src/email/email.service';
+import { SocketGateway } from 'src/socket/socket.gateway';
 
 @Injectable()
 export class AppointmentService {
@@ -15,31 +16,36 @@ export class AppointmentService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly notificationService: NotificationService,
-        private readonly config: ConfigService,
         private readonly email: EmailService,
+        private readonly socketGateway: SocketGateway,
+        private readonly config: ConfigService,
         @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
     ) { }
 
-    async createAppointment(dto: CreateAppointmentDto, traceId: string) {
+    async createAppointment(data: Record<string, any>, traceId: string) {
+        const { patientId, doctorId, date, userId } = data;
 
-        const { patientId, doctorId, date } = dto
+        const appointmentDate = new Date(date);
 
-        const patient = await this.prisma.user.findUnique({ 
-            where: { id: patientId },
-            select: { role: true } 
-        })
-
-        const doctor = await this.prisma.user.findUnique({ 
-            where: { id: doctorId },
-            select: { role: true }
-        })
+        const [patient, doctor] = await this.prisma.$transaction([
+            this.prisma.user.findUnique({
+                where: { id: patientId },
+                select: { role: true }
+            }),
+            this.prisma.user.findUnique({
+                where: { id: doctorId },
+                select: { role: true }
+            })
+        ]);
 
         if (patient!.role !== 'PATIENT' || doctor!.role !== 'DOCTOR') {
-            throw new BadRequestException("Requested patient is not patient or requested doctor is not doctor")
+            throw new BadRequestException(
+                'Requested patient is not patient or requested doctor is not doctor',
+            );
         }
 
-        else if (date.getTime() < Date.now()) {
-            throw new BadRequestException("Date must be in the future")
+        if (appointmentDate.getTime() < Date.now()) {
+            throw new BadRequestException('Date must be in the future');
         }
 
         const existingAppointment = await this.prisma.appointment.findFirst({
@@ -47,61 +53,69 @@ export class AppointmentService {
                 OR: [
                     {
                         patientId,
-                        date,
-                        status: {
-                            not: 'CANCELLED'
-                        }
+                        date: appointmentDate,
+                        status: { not: 'CANCELLED' },
                     },
                     {
                         doctorId,
-                        date,
-                        status: {
-                            not: 'CANCELLED'
-                        }
-                    }
-                ]
-            }
+                        date: appointmentDate,
+                        status: { not: 'CANCELLED' },
+                    },
+                ],
+            },
         });
 
         if (existingAppointment) {
-            throw new BadRequestException("Appointment already booked")
+            throw new BadRequestException('Appointment already booked');
         }
+
+        this.logger.log(`✉️ Creating appointment with traceId ${traceId}`);
 
         const appointment = await this.prisma.appointment.create({
-            data: { patientId, doctorId, date },
-            select: appointmentSelect
-        })
+            data: { patientId, doctorId, date: appointmentDate },
+            select: appointmentSelect,
+        });
 
-        const { patient: { fullName: patientName }, doctor: { fullName: doctorName } } = appointment
+        this.logger.log(`✅ Created Appointment with traceId ${traceId}`);
 
-        this.logger.log(`📢 Sending notification to admin about new appointment with traceId: ${traceId}`);
+        const {
+            patient: { fullName: patientName },
+            doctor: { fullName: doctorName },
+        } = appointment;
 
-        this.notificationService.sendNotifications(
-            this.config.get('ADMIN_ID') as string,
-            `${patientName}'s appointment with ${doctorName} is booked for ${date.toLocaleString()}.`,
-            traceId,
-            0,
-            { appointmentId: appointment.id }
-        )
+        this.logger.log(
+            `📢 Sending notification to admin about new appointment with traceId: ${traceId}`,
+        );
+
+        this.notificationService
+            .sendNotifications(
+                this.config.get('ADMIN_ID') as string,
+                `${patientName}'s appointment with ${doctorName} is booked for ${appointmentDate.toLocaleString()}.`,
+                traceId,
+                0,
+                { appointmentId: appointment.id },
+            )
             .catch((error) => {
-                // it will throw an error if the job fails to be added in the queue
-                this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
+                this.logger.error(this.generateNotificationErrorMessage(error.message, traceId));
 
-                this.email.alertAdmin(
-                    'Failed to send notification',
-                    `Failed to send notification about new appointment,<br>
-                    Reason: ${error.message} with traceId: ${traceId},<br>
-                    appointmentId: ${appointment.id}`
-                )
+                this.email
+                    .alertAdmin(
+                        'Failed to send notification',
+                        `Failed to send notification about new appointment,<br>
+                         Reason: ${error.message} with traceId: ${traceId},<br>
+                         appointmentId: ${appointment.id}`,
+                    )
                     .catch((error) => {
-                        this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
-                    })
-            })
+                        this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId));
+                    });
+            });
 
-        return {
+        this.socketGateway.sendResponse(userId, {
+            traceId,
+            status: 'success',
+            message: 'Appointment created successfully',
             data: appointment,
-            message: "Appointment created successfully"
-        }
+        });
     }
 
     async getAllAppointments(queryParam: GetAppointmentsDto) {
@@ -324,25 +338,27 @@ export class AppointmentService {
         };
     }
 
-    async updateAppointment(dto: UpdateAppointmentDto, appointment: Record<string, any>, traceId: string) {
+    async updateAppointment(data: Record<string, any>, traceId: string) {
 
-        const { status, isPaid, paymentMethod, cancellationReason } = dto
+        const { status, isPaid, paymentMethod, cancellationReason, userId, appointment } = data
 
         const { id: appointmentId, patient: { id: patientId, fullName: patientName }, doctor: { id: doctorId, fullName: doctorName }, date } = appointment
 
-        const data: any = status ? { status } : {}
+        const appointmentDate = new Date(date);
+        const formattedDate = appointmentDate.toLocaleString()
+        const body: Record<string, any> = status ? { status } : {}
 
         // patient paid the appointment online
         if (isPaid && paymentMethod) {
-            data.isPaid = isPaid
-            data.paymentMethod = paymentMethod
+            body.isPaid = isPaid
+            body.paymentMethod = paymentMethod
         }
 
         const now = new Date();
 
         if (status === "CONFIRMED") {
 
-            const oneHourBefore = new Date(date.getTime() as number - 60 * 60 * 1000)
+            const oneHourBefore = new Date(appointmentDate.getTime() - 60 * 60 * 1000)
 
             this.logger.log(`📢 Sending notification to patient and doctor for appointment confirmation with traceId: ${traceId}`);
 
@@ -351,7 +367,7 @@ export class AppointmentService {
 
                 this.notificationService.sendNotifications(
                     patientId,
-                    `Your appointment with ${doctorName} is confirmed for ${date.toLocaleString()}.`,
+                    `Your appointment with ${doctorName} is confirmed for ${formattedDate}.`,
                     traceId,
                     0,
                     { appointmentId }
@@ -362,7 +378,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to send notification',
                             `Failed to send notification about appointment confirmation to, <br>
-                             ${patientName} of appointmentId=${appointmentId} for ${date.toLocaleString()} of ${doctorName},<br>
+                             ${patientName} of appointmentId=${appointmentId} for ${formattedDate} of ${doctorName},<br>
                              Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -372,7 +388,7 @@ export class AppointmentService {
 
                 this.notificationService.sendNotifications(
                     doctorId,
-                    `Your appointment with ${patientName} is confirmed for ${date.toLocaleString()}.`,
+                    `Your appointment with ${patientName} is confirmed for ${formattedDate}.`,
                     traceId,
                     0,
                     { appointmentId }
@@ -383,7 +399,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to send notification',
                             `Failed to send notification about appointment confirmation to,<br>
-                             ${doctorName} of appointmentId=${appointmentId} for ${date.toLocaleString()} with ${patientName},<br>
+                             ${doctorName} of appointmentId=${appointmentId} for ${formattedDate} with ${patientName},<br>
                              Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -408,7 +424,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to send notification',
                             `Failed to send notification about appointment reminder to,<br>
-                             ${patientName} of appointmentId=${appointmentId} for ${date.toLocaleString()} of ${doctorName},<br>
+                             ${patientName} of appointmentId=${appointmentId} for ${formattedDate} of ${doctorName},<br>
                              Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -429,7 +445,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to send notification',
                             `Failed to send notification about appointment reminder to,<br>
-                             ${doctorName} of appointmentId=${appointmentId} for ${date.toLocaleString()} with ${patientName},<br>
+                             ${doctorName} of appointmentId=${appointmentId} for ${formattedDate} with ${patientName},<br>
                              Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -439,9 +455,9 @@ export class AppointmentService {
 
                 this.appointmentQueue.add(
                     "start-appointment",
-                    { status: 'RUNNING', appointmentId, traceId },
+                    { status: 'RUNNING', appointment, traceId },
                     {
-                        delay: date.getTime() - now.getTime(),
+                        delay: appointmentDate.getTime() - now.getTime(),
                         backoff: { type: 'exponential', delay: 5000 },
                         attempts: 5,
                         removeOnComplete: true,
@@ -456,7 +472,7 @@ export class AppointmentService {
                         this.email.alertAdmin(
                             'Failed to start appointment',
                             `Failed to start,
-                            "appointment: id=${appointmentId}, status=RUNNING for ${date.toLocaleString()}",
+                            "appointment: id=${appointmentId}, status=RUNNING for ${formattedDate}",
                             Reason: ${error.message} with traceId: ${traceId}`
                         )
                             .catch((error) => {
@@ -467,12 +483,12 @@ export class AppointmentService {
         }
 
         else if (status === 'CANCELLED') {
-            data.cancellationReason = cancellationReason
+            body.cancellationReason = cancellationReason
 
             // send notification to patient
             this.notificationService.sendNotifications(
                 patientId,
-                `Your appointment with ${doctorName} is cancelled for ${date.toLocaleString()}. Reason: ${cancellationReason}`,
+                `Your appointment with ${doctorName} is cancelled for ${formattedDate}. Reason: ${cancellationReason}`,
                 traceId,
                 0,
                 { appointmentId }
@@ -483,7 +499,7 @@ export class AppointmentService {
                     this.email.alertAdmin(
                         'Failed to send notification',
                         `Failed to send notification about appointment cancellation to,<br>
-                         ${patientName} of appointmentId=${appointmentId} for ${date.toLocaleString()},<br>
+                         ${patientName} of appointmentId=${appointmentId} for ${formattedDate},<br>
                          of ${doctorName},<br>
                          Cancellation reason: ${cancellationReason},<br>
                          Error reason: ${error.message} with traceId: ${traceId}`
@@ -494,22 +510,28 @@ export class AppointmentService {
                 })
         }
 
-        else if (status === 'COMPLETED' && !appointment?.isPaid) {
+        else if (status === 'COMPLETED' && !appointment.isPaid) {
 
-            data.isPaid = true
-            data.paymentMethod = 'CASH'
+            body.isPaid = true
+            body.paymentMethod = 'CASH'
         }
+
+        this.logger.log(`✉️ Updating appointment with traceId ${traceId}`);
 
         const updatedAppointment = await this.prisma.appointment.update({
             where: { id: appointmentId },
-            data,
+            data: body,
             select: appointmentSelect
         })
 
-        return {
-            appointment: updatedAppointment,
-            message: "Appointment updated successfully"
-        }
+        this.logger.log(`✅ Updated Appointment with traceId ${traceId}`);
+
+        this.socketGateway.sendResponse(userId, {
+            traceId,
+            status: 'success',
+            message: "Appointment updated successfully",
+            data: updatedAppointment
+        });
     }
 
     private generateNotificationErrorMessage(message: string, traceId: string) {

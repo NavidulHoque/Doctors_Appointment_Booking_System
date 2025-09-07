@@ -16,15 +16,16 @@ export class AppointmentProcessor {
 
     @Process('start-appointment')
     async handleStartAppointment(job: Job) {
-        const { status, appointmentId, traceId } = job.data;
-        const dto = { status }
-        await this.appointmentService.updateAppointment(dto, appointmentId, traceId);
+        const { status, appointment, traceId } = job.data;
+        await this.appointmentService.updateAppointment({ status, appointment }, traceId);
     }
 
     @OnQueueFailed()
     async handleFailedAppointment(job: Job, error: any) {
+        const { status, appointmentId, traceId } = job.data;
+
         this.logger.error(
-            `❌ Job ${job.id} failed after ${job.attemptsMade} attempts with traceId=${job.data.traceId}. Moving to DLQ...`,
+            `❌ Job ${job.id} failed after ${job.attemptsMade} attempts with traceId=${traceId}. Moving to DLQ...`,
         );
 
         try {
@@ -46,19 +47,19 @@ export class AppointmentProcessor {
 
         catch (error) {
             this.logger.error(
-                `❌ Job ${job.id} failed to move to DLQ. Reason: ${error.message} with traceId=${job.data.traceId}`
+                `❌ Job ${job.id} failed to move to DLQ. Reason: ${error.message} with traceId=${traceId}`
             );
 
             this.email.alertAdmin(
                 'Appointment Status Update Failure',
                 `Failed to update appointment status,<br>
-                 AppointmentId=${job.data.appointmentId},<br>
-                 Status=${job.data.status},<br>
-                 TraceId=${job.data.traceId},<br>
+                 AppointmentId=${appointmentId},<br>
+                 Status=${status},<br>
+                 TraceId=${traceId},<br>
                  Reason: ${error.message}`
             )
                 .catch((error) => this.logger.error(
-                    `❌ Failed to alert admin. Reason: ${error.message} with traceId=${job.data.traceId}`
+                    `❌ Failed to alert admin. Reason: ${error.message} with traceId=${traceId}`
                 ));
         }
     }

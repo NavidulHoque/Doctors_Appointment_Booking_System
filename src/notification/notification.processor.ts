@@ -22,8 +22,10 @@ export class NotificationProcessor {
 
     @OnQueueFailed()
     async handleFailedNotification(job: Job, error: any) {
+        const { userId, content, traceId, metadata } = job.data;
+
         this.logger.error(
-            `❌ Job ${job.id} failed after ${job.attemptsMade} attempts with traceId=${job.data.traceId}. Moving to DLQ...`,
+            `❌ Job ${job.id} failed after ${job.attemptsMade} attempts with traceId=${traceId}. Moving to DLQ...`,
         );
 
         try {
@@ -45,20 +47,20 @@ export class NotificationProcessor {
 
         catch (error) {
             this.logger.error(
-                `❌ Job ${job.id} failed to move to DLQ. Reason: ${error.message} with traceId=${job.data.traceId}`
+                `❌ Job ${job.id} failed to move to DLQ. Reason: ${error.message} with traceId=${traceId}`
             );
 
             this.email.alertAdmin(
                 'Notification Delivery Failed',
                 `Failed to send notification,<br>
-                Content: ${job.data.content},<br>
-                UserId: ${job.data.userId},<br>
-                metadata: ${JSON.stringify(job.data.metadata)},<br> 
+                Content: ${content},<br>
+                UserId: ${userId},<br>
+                metadata: ${JSON.stringify(metadata)},<br> 
                 Reason: ${error.message},<br>
-                traceId=${job.data.traceId}`
+                traceId=${traceId}`
             )
                 .catch((error) => this.logger.error(
-                    `❌ Failed to alert admin. Reason: ${error.message} with traceId=${job.data.traceId}`
+                    `❌ Failed to alert admin. Reason: ${error.message} with traceId=${traceId}`
                 ));
         }
     }

@@ -113,9 +113,9 @@ export class MessageService {
         response: any,
     ) {
         switch (action) {
-            case 'create': this.socketGateway.sendCreatedMessage(receiverId, message); break;
-            case 'update': this.socketGateway.sendUpdatedMessage(receiverId, message); break;
-            case 'delete': this.socketGateway.sendDeletedMessage(receiverId, message); break;
+            case 'create': this.socketGateway.sendCreatedMessage(receiverId, traceId, message); break;
+            case 'update': this.socketGateway.sendUpdatedMessage(receiverId, traceId, message); break;
+            case 'delete': this.socketGateway.sendDeletedMessage(receiverId, traceId, message); break;
         }
         this.socketGateway.sendResponse(senderId, { traceId, ...response });
     }

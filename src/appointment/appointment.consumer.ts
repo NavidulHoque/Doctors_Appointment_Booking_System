@@ -1,35 +1,32 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { MessageService } from './message.service';
 import { KafkaProducerService } from 'src/kafka/kafka.producer.service';
 import { SocketGateway } from 'src/socket/socket.gateway';
+import { AppointmentService } from './appointment.service';
 
 @Controller()
-export class MessageConsumer {
-  private readonly logger = new Logger(MessageConsumer.name);
+export class AppointmentConsumer {
+  private readonly logger = new Logger(AppointmentConsumer.name);
 
   private readonly MAX_RETRIES = 5;
 
   constructor(
-    private readonly messageService: MessageService,
+    private readonly appointmentService: AppointmentService,
     private readonly kafkaProducer: KafkaProducerService,
-    private readonly socketGateway: SocketGateway,
+    private readonly socketGateway: SocketGateway
   ) { }
 
-  @MessagePattern('message-topic')
+  @MessagePattern('appointment-topic')
   async handleMessage(@Payload() payload: Record<string, any>) {
     const { action, data, retryCount, traceId } = payload;
 
     try {
       switch (action) {
         case 'create':
-          return await this.messageService.createMessage(data, traceId);
+          return await this.appointmentService.createAppointment(data, traceId);
 
         case 'update':
-          return await this.messageService.updateMessage(data, traceId);
-
-        case 'delete':
-          return await this.messageService.deleteMessage(data, traceId);
+          return await this.appointmentService.updateAppointment(data, traceId);
 
         default:
           this.logger.warn(`⚠️ traceId=${traceId} Unknown action: ${action}`);
@@ -41,7 +38,7 @@ export class MessageConsumer {
 
       if (retryCount < this.MAX_RETRIES) {
         try {
-          await this.kafkaProducer.triggerEvent('message-topic', {
+          await this.kafkaProducer.triggerEvent('appointment-topic', {
             traceId,
             action,
             data,
@@ -54,21 +51,21 @@ export class MessageConsumer {
             `❌ Producer error trying to increase retryCount in consumer issue, Reason: ${error.message} with traceId=${traceId}`,
           );
 
-          this.socketGateway.sendResponse(data.senderId, {
+          this.socketGateway.sendResponse(data.userId, {
             traceId,
             status: 'failed',
-            message: `Message ${action} request failed. Reason: ${error.message}`,
+            message: `Appointment ${action} request failed. Reason: ${error.message}`,
           });
         }
       }
 
       else {
         try {
-          await this.kafkaProducer.triggerEvent('message-dlq', {
+          await this.kafkaProducer.triggerEvent('appointment-dlq', {
             traceId,
             action,
             data,
-            error: { // when Kafka serializes/deserializes payloads, the default error object gets lost as it is not enumerable property
+            error: { // when Kafka serializes/deserializes payloads, the error object gets lost as it is not enumerable property
                 message: error.message 
             },
             failedAt: new Date(),
@@ -80,26 +77,26 @@ export class MessageConsumer {
             `❌ Producer error trying to insert the corrupted message into DLQ, Reason: ${error.message} with traceId=${traceId}`,
           );
 
-          this.socketGateway.sendResponse(data.senderId, {
+          this.socketGateway.sendResponse(data.userId, {
             traceId,
             status: 'failed',
-            message: `Message ${action} request failed after ${this.MAX_RETRIES} retries. Reason: ${error.message}`,
+            message: `Appointment ${action} request failed after ${this.MAX_RETRIES} retries. Reason: ${error.message}`,
           });
         }
       }
     }
   }
 
-  @MessagePattern('message-dlq')
-  async handleFailedMessages(@Payload() payload: Record<string, any>) {
+  @MessagePattern('appointment-dlq')
+  async handleFailedAppointments(@Payload() payload: Record<string, any>) {
     const { action, data, error, traceId } = payload;
 
-    this.logger.warn(`⚠️ Message consumed by dlq: ${error.message} with traceId=${traceId}`);
+    this.logger.warn(`⚠️ Appointment consumed by dlq, Reason: ${error.message} with traceId=${traceId}`);
 
-    this.socketGateway.sendResponse(data.senderId, {
+    this.socketGateway.sendResponse(data.userId, {
       traceId,
       status: 'failed',
-      message: `Message ${action} request failed after ${this.MAX_RETRIES} retries. Error: ${error}`,
+      message: `Appointment ${action} request failed after ${this.MAX_RETRIES} retries. Reason: ${error.message}`
     });
   }
 }
