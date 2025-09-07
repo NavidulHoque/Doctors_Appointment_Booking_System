@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ForgetPasswordDto, LoginDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
 import { AuthGuard } from './guard';
@@ -67,8 +67,7 @@ export class AuthController {
         return this.authService.resetPassword(dto)
     }
 
-    @Post("/refreshAccessToken")
-    @HttpCode(200)
+    @Get("/refreshAccessToken")
     refreshAccessToken(
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response
