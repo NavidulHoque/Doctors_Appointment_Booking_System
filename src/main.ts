@@ -6,9 +6,12 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { RedisService } from './redis/redis.service';
 import { Reflector } from '@nestjs/core';
 import { Http_CacheInterceptor } from './interceptors/http-cache.interceptor';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
   const logger = new Logger('Bootstrap');
 
   const redisService = app.get(RedisService);

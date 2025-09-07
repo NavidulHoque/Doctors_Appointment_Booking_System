@@ -3,10 +3,11 @@ import * as argon from "argon2";
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ForgetPasswordDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
+import { ForgetPasswordDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
 import { EmailService } from 'src/email/email.service';
 import { SmsService } from 'src/sms/sms.service';
 import { Prisma } from '@prisma/client';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,7 @@ export class AuthService {
   private readonly ACCESS_TOKEN_SECRET: string;
   private readonly REFRESH_TOKEN_SECRET: string;
   private readonly OTP_Expires: number;
+  private readonly Node_Env: string;
 
   private readonly sessionSelect = {
     id: true,
@@ -43,6 +45,7 @@ export class AuthService {
     this.ACCESS_TOKEN_SECRET = this.config.get<string>('ACCESS_TOKEN_SECRET')!;
     this.REFRESH_TOKEN_SECRET = this.config.get<string>('REFRESH_TOKEN_SECRET')!;
     this.OTP_Expires = Number(this.config.get<string>('OTP_EXPIRES'))
+    this.Node_Env = this.config.get<string>('NODE_ENV')!
   }
 
   async register(dto: RegistrationDto) {
@@ -73,7 +76,7 @@ export class AuthService {
     }
   }
 
-  async login({ email, password: plainPassword, deviceName, role }: any) {
+  async login({ email, password: plainPassword, deviceName, role }: Record<string, string>, res: Response) {
 
     const user = await this.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
 
@@ -111,7 +114,7 @@ export class AuthService {
 
     const hashedRefreshToken = await argon.hash(refreshToken);
 
-    const refreshTokenExpires = this.generateParsedExpiry(this.REFRESH_TOKEN_EXPIRES)
+    const refreshTokenExpires = this.parseExpiry(this.REFRESH_TOKEN_EXPIRES)
 
     const [_, session] = await this.prisma.$transaction([
       this.prisma.user.update({
@@ -131,11 +134,23 @@ export class AuthService {
       })
     ]);
 
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: this.Node_Env === 'production',
+      sameSite: 'strict',
+      maxAge: this.convertExpiryToMs(this.ACCESS_TOKEN_EXPIRES),
+    });
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: this.Node_Env === 'production',
+      sameSite: 'strict',
+      maxAge: this.convertExpiryToMs(this.REFRESH_TOKEN_EXPIRES),
+    });
+
     return {
       message: 'Logged in successfully',
-      session,
-      accessToken,
-      refreshToken
+      session
     }
   }
 
@@ -261,9 +276,7 @@ export class AuthService {
     }
   }
 
-  async refreshAccessToken(dto: RefreshAccessTokenDto) {
-
-    const { refreshToken } = dto;
+  async refreshAccessToken(refreshToken: string, res: Response) {
 
     let payload: { sessionId: string, id: string, role: string, email: string }
 
@@ -339,20 +352,32 @@ export class AuthService {
       where: { id: sessionId },
       data: {
         refreshToken: hashedNewRefreshToken,
-        expiresAt: new Date(Date.now() + Number(this.generateParsedExpiry(this.REFRESH_TOKEN_EXPIRES)) * 24 * 60 * 60 * 1000)
+        expiresAt: new Date(Date.now() + Number(this.parseExpiry(this.REFRESH_TOKEN_EXPIRES)) * 24 * 60 * 60 * 1000)
       },
       select: this.sessionSelect
     })
 
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: this.Node_Env === 'production',
+      sameSite: 'strict',
+      maxAge: this.convertExpiryToMs(this.ACCESS_TOKEN_EXPIRES),
+    });
+
+    res.cookie('refresh_token', newRefreshToken, {
+      httpOnly: true,
+      secure: this.Node_Env === 'production',
+      sameSite: 'strict',
+      maxAge: this.convertExpiryToMs(this.REFRESH_TOKEN_EXPIRES),
+    });
+
     return {
       message: 'Token refreshed successfully',
-      accessToken,
-      refreshToken: newRefreshToken,
       session: updatedSession
     }
   }
 
-  async logout(dto: LogoutDto) {
+  async logout(dto: LogoutDto, res: Response) {
 
     const { sessionId } = dto
 
@@ -372,6 +397,9 @@ export class AuthService {
         }
       })
     ])
+
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
 
     return {
       message: 'Logged out successfully'
@@ -397,7 +425,25 @@ export class AuthService {
     })
   }
 
-  private generateParsedExpiry(expiresIn: string) {
+  private convertExpiryToMs(expiresIn: string): number {
+    const match = expiresIn.match(/(\d+)([smhd])/);
+    if (!match) {
+      throw new Error(`Invalid expiry format: ${expiresIn}`);
+    }
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+
+    switch (unit) {
+      case 's': return value * 1000;
+      case 'm': return value * 60 * 1000;
+      case 'h': return value * 60 * 60 * 1000;
+      case 'd': return value * 24 * 60 * 60 * 1000;
+      default: throw new Error(`Unsupported expiry unit: ${unit}`);
+    }
+  }
+
+  private parseExpiry(expiresIn: string) {
     return Number(expiresIn.replace(/\D/g, ''))
   }
 

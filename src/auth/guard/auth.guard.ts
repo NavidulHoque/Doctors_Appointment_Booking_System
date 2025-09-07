@@ -18,7 +18,7 @@ export class AuthGuard implements CanActivate {
     async canActivate(context: ExecutionContext): Promise<boolean> {
 
         const request = context.switchToHttp().getRequest();
-        const token = this.extractTokenFromHeader(request);
+        const token = this.extractToken(request);
 
         if (!token) {
             throw new UnauthorizedException("No token provided, please login")
@@ -44,7 +44,7 @@ export class AuthGuard implements CanActivate {
 
                 case "NotBeforeError":
                     throw new UnauthorizedException("Token not active yet, please login again");
-                    
+
                 default:
                     throw error;
             }
@@ -53,8 +53,18 @@ export class AuthGuard implements CanActivate {
         return true
     }
 
-    private extractTokenFromHeader(request: Request): string | undefined {
-        const [type, token] = request.headers.authorization?.split(' ') ?? [];
-        return type === 'Bearer' ? token : undefined;
+    private extractToken(request: Request){
+
+        const authHeader = request.headers.authorization;
+        if (authHeader) {
+            const [type, token] = authHeader.split(' ');
+            if (type === 'Bearer' && token) {
+                return token;
+            }
+        }
+
+        else if (request.cookies && request.cookies['access_token']) {
+            return request.cookies['access_token'];
+        }
     }
 }

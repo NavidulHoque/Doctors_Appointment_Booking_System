@@ -1,9 +1,10 @@
-import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ForgetPasswordDto, LoginDto, RefreshAccessTokenDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
+import { ForgetPasswordDto, LoginDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
 import { AuthGuard } from './guard';
 import { Role } from '@prisma/client';
 import { RequestWithTrace } from 'src/common/types';
+import { Request, Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -19,20 +20,29 @@ export class AuthController {
 
     @Post("/patientLogin")
     @HttpCode(200)
-    patientLogin(@Body() dto: LoginDto) {
-        return this.authService.login({ ...dto, role: Role.PATIENT })
+    patientLogin(
+        @Body() dto: LoginDto,
+        @Res({ passthrough: true }) res: Response
+    ) {
+        return this.authService.login({ ...dto, role: Role.PATIENT }, res)
     }
 
     @Post("/doctorLogin")
     @HttpCode(200)
-    doctorLogin(@Body() dto: LoginDto) {
-        return this.authService.login({ ...dto, role: Role.DOCTOR })
+    doctorLogin(
+        @Body() dto: LoginDto,
+        @Res({ passthrough: true }) res: Response
+    ) {
+        return this.authService.login({ ...dto, role: Role.DOCTOR }, res)
     }
 
     @Post("/adminLogin")
     @HttpCode(200)
-    adminLogin(@Body() dto: LoginDto) {
-        return this.authService.login({ ...dto, role: Role.ADMIN })
+    adminLogin(
+        @Body() dto: LoginDto,
+        @Res({ passthrough: true }) res: Response
+    ) {
+        return this.authService.login({ ...dto, role: Role.ADMIN }, res)
     }
 
     @Post("/forgetPassword")
@@ -60,17 +70,20 @@ export class AuthController {
     @Post("/refreshAccessToken")
     @HttpCode(200)
     refreshAccessToken(
-        @Body() dto: RefreshAccessTokenDto
+        @Req() req: Request,
+        @Res({ passthrough: true }) res: Response
     ){
-        return this.authService.refreshAccessToken(dto)
+        const refreshToken = req.cookies['refresh_token']
+        return this.authService.refreshAccessToken(refreshToken, res)
     }
 
     @UseGuards(AuthGuard)
     @Post("/logout")
     @HttpCode(200)
     logout(
-        @Body() dto: LogoutDto
+        @Body() dto: LogoutDto,
+        @Res({ passthrough: true }) res: Response
     ){
-        return this.authService.logout(dto)
+        return this.authService.logout(dto, res)
     }
 }
