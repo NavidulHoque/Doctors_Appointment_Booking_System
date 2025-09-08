@@ -21,7 +21,7 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
     const req = context.switchToHttp().getRequest<Request & { traceId?: string }>();
     const method = req.method;
     const url = req.url;
-    const traceId = req.traceId ?? 'N/A'; // already set in middleware
+    const traceId = req.traceId;
     const now = Date.now();
 
     const handler = context.getHandler();
