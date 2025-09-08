@@ -12,7 +12,6 @@ import { BullModule } from '@nestjs/bull';
 import { NotificationModule } from './notification/notification.module';
 import { PaymentModule } from './payment/payment.module';
 import { WebhookModule } from './webhook/webhook.module';
-import { InactiveUserCronService } from './cron/inactiveUserCron.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UploadsModule } from './uploads/uploads.module';
 import { SocketModule } from './socket/socket.module';
@@ -24,8 +23,9 @@ import { APP_GUARD } from '@nestjs/core';
 import { RedisService } from './redis/redis.service';
 import { RedisThrottlerStorage } from './redis/redis-throttler.storage';
 import { SmsModule } from './sms/sms.module';
-import { RemoveExpiredSessionsCronService } from './cron/removeExpiredSessionsCron.service';
 import { CronModule } from './cron/cron.module';
+import { JwtModule } from '@nestjs/jwt';
+
 @Module({
   imports: [
     BullModule.forRoot({
@@ -42,14 +42,19 @@ import { CronModule } from './cron/cron.module';
         storage: new RedisThrottlerStorage(redis),     // reuse your RedisService
       }),
     }),
-    ConfigModule.forRoot(),
+    JwtModule.register({
+      global: true,     // makes jwtService global
+    }),
+    ConfigModule.forRoot({
+      isGlobal: true,   // makes ConfigService global
+    }),
     ScheduleModule.forRoot(), // for cron jobs to run
-    AuthModule, 
-    UserModule, 
-    AppointmentModule, 
-    DoctorModule, 
-    PrismaModule, 
-    ReviewModule, 
+    AuthModule,
+    UserModule,
+    AppointmentModule,
+    DoctorModule,
+    PrismaModule,
+    ReviewModule,
     MessageModule,
     NotificationModule,
     PaymentModule,

@@ -1,12 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { PaymentController } from './payment.controller'; 
-import { PrismaModule } from 'src/prisma/prisma.module';
 import { StripeService } from './stripe.service';
-import { ConfigModule } from '@nestjs/config';
 
+@Global()
 @Module({
-  imports: [PrismaModule, ConfigModule],
   controllers: [PaymentController],
   providers: [PaymentService, StripeService],
   exports: [PaymentService],

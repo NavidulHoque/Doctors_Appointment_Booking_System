@@ -1,10 +1,9 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Global, Module } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { RedisThrottlerStorage } from './redis-throttler.storage';
 
+@Global()
 @Module({
-  imports: [ConfigModule],
   providers: [RedisService, RedisThrottlerStorage],
   exports: [RedisService, RedisThrottlerStorage],
 })

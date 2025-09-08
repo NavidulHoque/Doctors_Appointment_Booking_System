@@ -1,23 +1,27 @@
 import {
-  Injectable, NestInterceptor, ExecutionContext, CallHandler, HttpException,
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Observable, map, catchError, throwError, tap, from, switchMap, of } from 'rxjs';
-import { randomUUID } from 'crypto';
+import { Observable, map, tap, from, switchMap, of } from 'rxjs';
 import { RedisService } from '../redis/redis.service';
 import { CACHE_KEY, CacheOptions } from 'src/common/decorators/cache.decorator';
 import { Request } from 'express';
 
 @Injectable()
 export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
-  constructor(private redisService: RedisService, private reflector: Reflector) { }
+  constructor(
+    private readonly redisService: RedisService,
+    private readonly reflector: Reflector,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest<Request & { traceId?: string }>();
     const method = req.method;
     const url = req.url;
-    const traceId = randomUUID();
-    req.traceId = traceId;
+    const traceId = req.traceId ?? 'N/A'; // already set in middleware
     const now = Date.now();
 
     const handler = context.getHandler();
@@ -37,7 +41,7 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
           success: true,
           timestamp: new Date().toISOString(),
           traceId,
-          data
+          data,
         };
 
         // Cache only GETs
@@ -45,8 +49,11 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
           this.redisService.set(cachedKey, JSON.stringify(response), cacheOptions.ttl || 60);
         }
 
-        // Invalidate on writes
-        else if (cacheOptions.enabled && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        // Invalidate cache on writes
+        else if (
+          cacheOptions.enabled &&
+          ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+        ) {
           logSuffix = '(cache cleared)';
           this.redisService.del(cachedKey);
         }
@@ -63,31 +70,9 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
             `[❌] ${method} ${url} - ${Date.now() - now}ms | Error: ${err.message} | traceId=${traceId}`,
           ),
       }),
-      catchError((err) => {
-        let statusCode = 500;
-        let responseBody: any;
-
-        if ((err as any).getStatus) {
-          statusCode = (err as any).getStatus();
-          const res = (err as any).getResponse();
-          responseBody = typeof res === 'object' ? res : { message: res || err.message, error: err.name };
-        }
-
-        else {
-          responseBody = { message: err.message || 'Internal Server Error', error: 'Internal Error' };
-        }
-
-        const wrappedError = {
-          success: false,
-          timestamp: new Date().toISOString(),
-          traceId,
-          error: { statusCode, ...responseBody },
-        };
-
-        return throwError(() => new HttpException(wrappedError, statusCode));
-      }),
     );
 
+    // Handle GET with cache lookup
     if (cacheOptions.enabled && method === 'GET') {
       return from(this.redisService.get(cachedKey)).pipe(
         switchMap((cached) => {

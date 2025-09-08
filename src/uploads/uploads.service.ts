@@ -21,7 +21,7 @@ export class UploadsService {
     const publicId = path.parse(file.filename).name;
     const folder = `images`;
 
-    const upload = await this.cloudinary.uploadImage(file.path, publicId, folder);
+    const upload = await this.cloudinary.upload(file.path, publicId, folder);
 
     await this.prisma.user.update({
       where: { id: userId },
