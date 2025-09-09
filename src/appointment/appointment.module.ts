@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { AppointmentController } from './appointment.controller';
-import { AppointmentProcessor } from './appointment.processor';
+import { AppointmentProcessor } from './processors';
 import { BullModule } from '@nestjs/bull';
-import { DLQProcessor } from './dlq.processor';
+import { DLQProcessor } from './processors/dlq.processor';
 import { AppointmentProducerService } from './appointment.producer.service';
 import { AppointmentConsumer } from './appointment.consumer';
 

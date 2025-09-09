@@ -8,28 +8,25 @@ import {
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
-    const request = ctx.getRequest<{ traceId?: string }>();
+    const request = ctx.getRequest<{ traceId: string }>();
 
     const traceId = request.traceId;
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date();
 
-    let status =
+    const status =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    let responseBody: any =
+    const responseBody: any =
       exception instanceof HttpException
         ? exception.getResponse()
-        : { message: (exception as any).message || 'Internal server error' };
-
-    if (typeof responseBody === 'string') {
-      responseBody = { message: responseBody };
-    }
-
+        : (exception as any).message  // for raw errors
+        
     const wrappedError = {
       success: false,
       timestamp,

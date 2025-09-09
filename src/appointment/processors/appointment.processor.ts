@@ -1,8 +1,8 @@
 import { Processor, Process, OnQueueFailed, InjectQueue } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
-import { AppointmentService } from './appointment.service';
 import { Logger } from '@nestjs/common';
 import { EmailService } from 'src/email/email.service';
+import { AppointmentService } from '../appointment.service';
 
 @Processor('appointment-queue')
 export class AppointmentProcessor {

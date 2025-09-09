@@ -1,8 +1,8 @@
 import { Processor, Process, OnQueueFailed, InjectQueue } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
-import { NotificationService } from './notification.service';
 import { Logger } from '@nestjs/common';
 import { EmailService } from 'src/email/email.service';
+import { NotificationService } from '../notification.service';
 
 @Processor('notification-queue')
 export class NotificationProcessor {
