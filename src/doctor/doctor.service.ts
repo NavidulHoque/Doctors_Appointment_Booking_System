@@ -279,9 +279,11 @@ export class DoctorService {
         }
     }
 
-    async updateDoctor(dto: UpdateDoctorDto, doctorId: string) {
+    async updateDoctor(data: Record<string, any>, traceId: string) {
 
-        const { fullName, email, currentPassword, newPassword, phone, gender, birthDate, address, specialization, education, experience, aboutMe, fees, addAvailableTime, removeAvailableTime, isActive } = dto
+        const { fullName, email, currentPassword, newPassword, phone, gender, birthDate, address, specialization, education, experience, aboutMe, fees, addAvailableTime, removeAvailableTime, isActive } = data.doctor
+
+        const { userId: doctorId } = data
 
         let userData: any = null
         let doctorData: any = null
@@ -403,21 +405,9 @@ export class DoctorService {
         }
     }
 
-    async createStripeAccount(userId: string) {
+    async createStripeAccount(data: Record<string, any>, traceId: string) {
 
-        const doctor = await this.prisma.doctor.findUnique({
-            where: { userId },
-            select: {
-                user: {
-                    select: { email: true }
-                },
-                stripeAccountId: true
-            }
-        })
-
-        if (!doctor) {
-            throw new NotFoundException("Doctor not found")
-        }
+        const { doctor } = data
 
         if (doctor.stripeAccountId) {
             throw new BadRequestException("Stripe account already exists")
@@ -429,7 +419,7 @@ export class DoctorService {
         });
 
         await this.prisma.doctor.update({
-            where: { userId },
+            where: { userId: doctor.user.id },
             data: { stripeAccountId: account.id }
         });
 
@@ -446,7 +436,9 @@ export class DoctorService {
         };
     }
 
-    async activateStripeAccount(userId: string, stripeAccountId: string) {
+    async activateStripeAccount(data: Record<string, any>, traceId: string) {
+
+        const { userId: doctorId, stripeAccountId } = data
 
         const account = await this.stripe.accounts.retrieve(stripeAccountId);
 
@@ -459,7 +451,7 @@ export class DoctorService {
         if (charges_enabled && payouts_enabled && details_submitted) {
 
             await this.prisma.doctor.update({
-                where: { userId },
+                where: { userId: doctorId },
                 data: { isStripeAccountActive: true }
             })
         }
@@ -473,7 +465,9 @@ export class DoctorService {
         };
     }
 
-    async deleteDoctor(doctorId: string) {
+    async deleteDoctor(data: Record<string, any>, traceId: string) {
+
+        const { userId: doctorId } = data
 
         await this.prisma.doctor.delete({ where: { userId: doctorId } })
 

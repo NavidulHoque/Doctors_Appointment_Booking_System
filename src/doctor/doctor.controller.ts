@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
@@ -7,13 +7,16 @@ import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { doctorSelect } from 'src/prisma/prisma-selects';
+import { DoctorProducerService } from './doctor.producer.service';
+import { RequestWithTrace } from 'src/common/types';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('doctors')
 export class DoctorController {
 
     constructor(
-        private doctorService: DoctorService
+        private readonly doctorService: DoctorService,
+        private readonly doctorProducerService: DoctorProducerService
     ) { }
 
     @Post("/create-doctor")
@@ -52,34 +55,66 @@ export class DoctorController {
     @Patch("/update-doctor/:id")
     @Roles(Role.DOCTOR, Role.ADMIN)
     updateDoctor(
-        @Body() body: UpdateDoctorDto,
-        @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: any,
+        @Body() dto: UpdateDoctorDto,
+        @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: Record<string, string>,
+        @Req() request: RequestWithTrace,
     ) {
-        return this.doctorService.updateDoctor(body, doctorId)
+        const traceId = request.traceId
+        const data = {
+            ...dto,
+            userId: doctorId
+        }
+
+        return this.doctorProducerService.sendUpdateDoctor(data, traceId)
     }
 
-    @Patch("/stripe/create-account")
+    @Patch("/stripe/create-account/:id")
     @Roles(Role.DOCTOR)
     createStripeAccount(
-        @User("id") userId: string
+        @Param('id', EntityByIdPipe('doctor', {
+            user: {
+                select: {
+                    id: true,
+                    email: true 
+                }
+            },
+            stripeAccountId: true
+        })) doctor: Record<string, any>,
+        @Req() request: RequestWithTrace,
     ) {
-        return this.doctorService.createStripeAccount(userId)
+        const traceId = request.traceId
+        const data = {
+            userId: doctor.user.id,
+            doctor
+        }
+        return this.doctorProducerService.sendCreateStripeAccount(data, traceId)
     }
 
     @Patch("/stripe/activate-account")
     @Roles(Role.DOCTOR)
     activateStripeAccount(
         @User("id") userId: string,
-        @Body("stripeAccountId") stripeAccountId: string
+        @Body("stripeAccountId") stripeAccountId: string,
+        @Req() request: RequestWithTrace,
     ) {
-        return this.doctorService.activateStripeAccount(userId, stripeAccountId)
+        const traceId = request.traceId
+        const data = {
+            userId,
+            stripeAccountId
+        }
+        return this.doctorProducerService.sendActivateStripeAccount(data, traceId)
     }
 
     @Delete("/delete-doctor/:id")
     @Roles(Role.DOCTOR, Role.ADMIN)
     deleteDoctor(
-        @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: any,
+        @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: Record<string, string>,
+        @Req() request: RequestWithTrace
     ) {
-        return this.doctorService.deleteDoctor(doctorId)
+        const traceId = request.traceId
+        const data = {
+            userId: doctorId
+        }
+        return this.doctorProducerService.sendDeleteDoctor(data, traceId)
     }
 }

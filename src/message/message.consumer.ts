@@ -94,7 +94,7 @@ export class MessageConsumer {
   async handleFailedMessages(@Payload() payload: Record<string, any>) {
     const { action, data, error, traceId } = payload;
 
-    this.logger.warn(`⚠️ Message consumed by dlq: ${error.message} with traceId=${traceId}`);
+    this.logger.warn(`⚠️ Message ${action} consumed by dlq: ${error.message} with traceId=${traceId}`);
 
     this.socketGateway.sendResponse(data.senderId, {
       traceId,

@@ -23,7 +23,7 @@ const PRIMARY_KEYS: PrimaryKeys = {
 
 export function EntityByIdPipe(
   modelName: keyof PrismaService,
-  select: any | null = null,
+  select: Record<string, any> | null = null,
 ): Type<PipeTransform> {
   @Injectable()
   class MixinEntityByIdPipe implements PipeTransform {

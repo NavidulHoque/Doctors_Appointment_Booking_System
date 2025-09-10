@@ -17,7 +17,7 @@ export class AppointmentConsumer {
   ) { }
 
   @MessagePattern('appointment-topic')
-  async handleMessage(@Payload() payload: Record<string, any>) {
+  async handleAppointment(@Payload() payload: Record<string, any>) {
     const { action, data, retryCount, traceId } = payload;
 
     try {
@@ -91,7 +91,7 @@ export class AppointmentConsumer {
   async handleFailedAppointments(@Payload() payload: Record<string, any>) {
     const { action, data, error, traceId } = payload;
 
-    this.logger.warn(`⚠️ Appointment consumed by dlq, Reason: ${error.message} with traceId=${traceId}`);
+    this.logger.warn(`⚠️ Appointment ${action} consumed by dlq, Reason: ${error.message} with traceId=${traceId}`);
 
     this.socketGateway.sendResponse(data.userId, {
       traceId,
