@@ -94,12 +94,12 @@ export class MessageConsumer {
   async handleFailedMessages(@Payload() payload: Record<string, any>) {
     const { action, data, error, traceId } = payload;
 
-    this.logger.warn(`⚠️ Message ${action} consumed by dlq: ${error.message} with traceId=${traceId}`);
+    this.logger.warn(`⚠️ Message ${action} consumed by dlq worker, Reason: ${error.message} with traceId=${traceId}`);
 
     this.socketGateway.sendResponse(data.senderId, {
       traceId,
       status: 'failed',
-      message: `Message ${action} request failed after ${this.MAX_RETRIES} retries. Error: ${error}`,
+      message: `Message ${action} request failed after ${this.MAX_RETRIES} retries. Reason: ${error.message}`,
     });
   }
 }

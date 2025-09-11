@@ -7,7 +7,7 @@ export class MessageProducerService {
   
   constructor(private readonly kafkaProducer: KafkaProducerService) {}
 
-  async sendCreateMessage(data: any, traceId: string) {
+  async sendCreateMessage(data: Record<string, any>, traceId: string) {
     try {
       await this.kafkaProducer.triggerEvent('message-topic', {
         traceId,
@@ -25,7 +25,7 @@ export class MessageProducerService {
     }
   }
 
-  async sendUpdateMessage(data: any, traceId: string) {
+  async sendUpdateMessage(data: Record<string, any>, traceId: string) {
     try {
       await this.kafkaProducer.triggerEvent('message-topic', {
         traceId,
@@ -43,7 +43,7 @@ export class MessageProducerService {
     }
   }
 
-  async sendDeleteMessage(data: any, traceId: string) {
+  async sendDeleteMessage(data: Record<string, any>, traceId: string) {
     try {
       await this.kafkaProducer.triggerEvent('message-topic', {
         traceId,

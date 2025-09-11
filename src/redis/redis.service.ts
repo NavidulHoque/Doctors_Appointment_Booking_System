@@ -40,7 +40,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (this.client) {
       try {
         await this.client.quit();
-        console.log('[Redis] Connection closed gracefully');
+        console.log('Redis Connection closed gracefully');
       } catch {
         this.client.disconnect();
       }
@@ -62,6 +62,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.client.del(key);
   }
 
+  async delByPattern(pattern: string) {
+    // Find all keys matching the pattern
+    const keys = await this.client.keys(pattern);
+
+    // If there are matching keys, delete them all at once
+    if (keys.length) {
+      await this.client.del(...keys);
+    }
+  }
+
   getClient(): RedisClient {
     return this.client;
   }
@@ -71,7 +81,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async pttl(key: string) {
-    return this.client.pttl(key); 
+    return this.client.pttl(key);
   }
 
   async setNxPx(key: string, value: string, ttlMs: number) {

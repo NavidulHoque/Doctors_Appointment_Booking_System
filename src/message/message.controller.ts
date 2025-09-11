@@ -35,7 +35,7 @@ export class MessageController {
     @HttpCode(202)
     @Cache({
         enabled: true,
-        key: CacheKeyHelper.generateMessagesPairedKey
+        invalidate: CacheKeyHelper.generateMessagesKey
     })
     createMessage(
         @Body() dto: CreateMessageDto,
@@ -56,7 +56,7 @@ export class MessageController {
     @Cache({
         enabled: true,
         ttl: 60,
-        key: CacheKeyHelper.generateMessagesPairedKey
+        key: CacheKeyHelper.generateMessagesKey
     })
     getMessages(
         @User('id') userId: string,
@@ -70,11 +70,11 @@ export class MessageController {
     @HttpCode(202)
     @Cache({
         enabled: true,
-        key: CacheKeyHelper.generateMessagesPairedKey
+        invalidate: CacheKeyHelper.generateMessagesKey
     })
     updateMessage(
         @Param('id', EntityByIdPipe('message', { senderId: true, id: true }))
-        message: any,
+        message: Record<string, any>,
         @Body() dto: UpdateMessageDto,
         @User('id') userId: string,
         @Req() request: RequestWithTrace,
@@ -94,11 +94,11 @@ export class MessageController {
     @HttpCode(202)
     @Cache({
         enabled: true,
-        key: CacheKeyHelper.generateMessagesPairedKey
+        invalidate: CacheKeyHelper.generateMessagesKey
     })
     deleteMessage(
         @Param('id', EntityByIdPipe('message', { senderId: true, id: true }))
-        message: any,
+        message: Record<string, any>,
         @Query('receiverId') receiverId: string,
         @User('id') userId: string,
         @Req() request: RequestWithTrace,

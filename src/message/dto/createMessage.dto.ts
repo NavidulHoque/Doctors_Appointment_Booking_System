@@ -1,9 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
 import { BaseMessageDto } from './baseMessage.dto';
 
-export class CreateMessageDto extends BaseMessageDto {
-    @IsString()
-    @IsNotEmpty()
-    readonly idempotencyKey: string; 
-}
+export class CreateMessageDto extends BaseMessageDto {}
 

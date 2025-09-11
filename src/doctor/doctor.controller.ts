@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
@@ -9,6 +9,7 @@ import { EntityByIdPipe } from 'src/common/pipes';
 import { doctorSelect } from 'src/prisma/prisma-selects';
 import { DoctorProducerService } from './doctor.producer.service';
 import { RequestWithTrace } from 'src/common/types';
+import { Cache } from 'src/common/decorators';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('doctors')
@@ -21,6 +22,10 @@ export class DoctorController {
 
     @Post("/create-doctor")
     @Roles(Role.ADMIN)
+    @Cache({
+        enabled: true,
+        invalidate: "cache:GET:/doctors:*"
+    })
     createDoctor(
         @Body() dto: CreateDoctorDto,
     ) {
@@ -54,6 +59,11 @@ export class DoctorController {
 
     @Patch("/update-doctor/:id")
     @Roles(Role.DOCTOR, Role.ADMIN)
+    @HttpCode(202)
+    @Cache({
+        enabled: true,
+        invalidate: "cache:GET:/doctors:*"
+    })
     updateDoctor(
         @Body() dto: UpdateDoctorDto,
         @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: Record<string, string>,
@@ -70,12 +80,13 @@ export class DoctorController {
 
     @Patch("/stripe/create-account/:id")
     @Roles(Role.DOCTOR)
+    @HttpCode(202)
     createStripeAccount(
         @Param('id', EntityByIdPipe('doctor', {
             user: {
                 select: {
                     id: true,
-                    email: true 
+                    email: true
                 }
             },
             stripeAccountId: true
@@ -92,6 +103,7 @@ export class DoctorController {
 
     @Patch("/stripe/activate-account")
     @Roles(Role.DOCTOR)
+    @HttpCode(202)
     activateStripeAccount(
         @User("id") userId: string,
         @Body("stripeAccountId") stripeAccountId: string,
@@ -107,6 +119,11 @@ export class DoctorController {
 
     @Delete("/delete-doctor/:id")
     @Roles(Role.DOCTOR, Role.ADMIN)
+    @HttpCode(202)
+    @Cache({
+        enabled: true,
+        invalidate: "cache:GET:/doctors:*"
+    })
     deleteDoctor(
         @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: Record<string, string>,
         @Req() request: RequestWithTrace

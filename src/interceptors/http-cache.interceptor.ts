@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable, map, tap, from, switchMap, of } from 'rxjs';
@@ -12,10 +13,12 @@ import { Request } from 'express';
 
 @Injectable()
 export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
+  private readonly logger = new Logger(Http_CacheInterceptor.name);
+
   constructor(
     private readonly redisService: RedisService,
     private readonly reflector: Reflector,
-  ) {}
+  ) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest<Request & { traceId?: string }>();
@@ -25,13 +28,15 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
     const now = Date.now();
 
     const handler = context.getHandler();
+
+    // reading cache decorator metadata
     const cacheOptions: CacheOptions =
       this.reflector.get(CACHE_KEY, handler) || { enabled: false };
 
     const cachedKey =
       ((cacheOptions.key && typeof cacheOptions.key === 'function')
         ? cacheOptions.key(req)
-        : cacheOptions.key) || `cache:${method}:${url}`;
+        : cacheOptions.key);
 
     let logSuffix = '';
 
@@ -45,7 +50,12 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
         };
 
         // Cache only GETs
-        if (cacheOptions.enabled && method === 'GET') {
+        if (
+          cacheOptions.enabled &&
+          method === 'GET' &&
+          cachedKey
+        ) {
+          logSuffix = '(DB hit)';
           this.redisService.set(cachedKey, JSON.stringify(response), cacheOptions.ttl || 60);
         }
 
@@ -54,31 +64,42 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
           cacheOptions.enabled &&
           ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
         ) {
+
+          const pattern = (
+            (cacheOptions.invalidate && typeof cacheOptions.invalidate === 'function')
+              ? cacheOptions.invalidate(req)
+              : cacheOptions.invalidate
+          );
+
           logSuffix = '(cache cleared)';
-          this.redisService.del(cachedKey);
+          this.redisService.delByPattern(pattern!);
         }
 
         return response;
       }),
       tap({
         next: () =>
-          console.log(
-            `[✅] ${method} ${url} - ${Date.now() - now}ms ${logSuffix} | traceId=${traceId}`,
+          this.logger.log(
+            `✅ ${method} ${url} - ${Date.now() - now}ms ${logSuffix} | traceId=${traceId}`,
           ),
         error: (err) =>
-          console.error(
-            `[❌] ${method} ${url} - ${Date.now() - now}ms | Error: ${err.message} | traceId=${traceId}`,
+          this.logger.error(
+            `❌ ${method} ${url} - ${Date.now() - now}ms | Error: ${err.message} | traceId=${traceId}`,
           ),
       }),
     );
 
     // Handle GET with cache lookup
-    if (cacheOptions.enabled && method === 'GET') {
+    if (
+      cacheOptions.enabled &&
+      method === 'GET' &&
+      cachedKey
+    ) {
       return from(this.redisService.get(cachedKey)).pipe(
         switchMap((cached) => {
           if (cached) {
-            console.log(
-              `[✅] ${method} ${url} - ${Date.now() - now}ms (cache hit) | traceId=${traceId}`,
+            this.logger.log(
+              `✅ ${method} ${url} - ${Date.now() - now}ms (cache hit) | traceId=${traceId}`,
             );
             return of(JSON.parse(cached));
           }
@@ -86,7 +107,7 @@ export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {
         }),
       );
     }
-
+    
     return handleResponse;
   }
 }

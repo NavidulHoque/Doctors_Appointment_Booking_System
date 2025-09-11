@@ -6,6 +6,7 @@ import { UserDto } from 'src/user/dto';
 import * as argon from "argon2";
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
+import { SocketGateway } from 'src/socket/socket.gateway';
 
 @Injectable()
 export class DoctorService {
@@ -13,7 +14,8 @@ export class DoctorService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        private readonly socketGateway: SocketGateway
     ) {
         this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY') as string, {
             apiVersion: '2025-07-30.basil',
@@ -407,7 +409,7 @@ export class DoctorService {
 
     async createStripeAccount(data: Record<string, any>, traceId: string) {
 
-        const { doctor } = data
+        const { doctor, userId } = data
 
         if (doctor.stripeAccountId) {
             throw new BadRequestException("Stripe account already exists")
@@ -430,10 +432,12 @@ export class DoctorService {
             type: 'account_onboarding',
         });
 
-        return {
+        this.socketGateway.sendResponse(userId, {
+            traceId,
+            status: 'success',
+            message: 'Stripe account created successfully',
             url: link.url,
-            message: "Stripe account created successfully"
-        };
+        })
     }
 
     async activateStripeAccount(data: Record<string, any>, traceId: string) {
@@ -460,9 +464,11 @@ export class DoctorService {
             throw new BadRequestException("Stripe account not activated yet")
         }
 
-        return {
+        this.socketGateway.sendResponse(doctorId, {
+            traceId,
+            status: 'success',
             message: "Stripe account activated successfully"
-        };
+        })
     }
 
     async deleteDoctor(data: Record<string, any>, traceId: string) {
@@ -471,8 +477,10 @@ export class DoctorService {
 
         await this.prisma.doctor.delete({ where: { userId: doctorId } })
 
-        return {
+        this.socketGateway.sendResponse(doctorId, {
+            traceId,
+            status: 'success',
             message: "Doctor deleted successfully"
-        }
+        })
     }
 }

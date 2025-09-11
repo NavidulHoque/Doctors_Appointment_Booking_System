@@ -1,7 +1,7 @@
-import { RequestWithUser } from "../../common/types";
+import { RequestWithUser } from "src/common/types";
 
 export class CacheKeyHelper {
-  static generateMessagesPairedKey(req: RequestWithUser) {
+  static generateMessagesKey(req: RequestWithUser) {
     const sid = String(req.user?.id);
     const rid = String(req.query.receiverId || req.body.receiverId);
     const [a, b] = [sid, rid].sort();

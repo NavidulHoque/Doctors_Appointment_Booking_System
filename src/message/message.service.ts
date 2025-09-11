@@ -14,25 +14,13 @@ export class MessageService {
     ) { }
 
     async createMessage(data: any, traceId: string) {
-        const { idempotencyKey, receiverId, senderId } = data;
+        const { receiverId, senderId } = data;
 
-        this.logger.log(`✉️ Creating message with traceId ${traceId} and idempotencyKey ${idempotencyKey}`);
-
-        const existingMessage = await this.prisma.message.findUnique({
-            where: { idempotencyKey },
-            select: this.messageSelect,
-        });
-
-        if (existingMessage) {
-            this.useSocketService('create', receiverId, existingMessage, senderId, traceId, {
-                status: 'success',
-                message: 'Message created successfully',
-                data: existingMessage,
-            });
-            return;
-        }
+        this.logger.log(`✉️ Creating message with traceId ${traceId}`);
 
         const message = await this.prisma.message.create({ data, select: this.messageSelect });
+
+        this.logger.log(`✅ Message created with traceId ${traceId}`);
 
         this.useSocketService('create', receiverId, message, senderId, traceId, {
             status: 'success',
@@ -55,10 +43,8 @@ export class MessageService {
         return { data: messages, message: 'Messages fetched successfully' };
     }
 
-    async updateMessage(data: any, traceId: string) {
+    async updateMessage(data: Record<string, any>, traceId: string) {
         const { senderId, message, receiverId, content } = data;
-
-        this.logger.log(`✉️ Updating message with traceId ${traceId}`);
 
         if (message.senderId !== senderId) {
             this.socketGateway.sendResponse(senderId, {
@@ -67,11 +53,15 @@ export class MessageService {
             return;
         }
 
+        this.logger.log(`✉️ Updating message with traceId ${traceId}`);
+
         const updatedMessage = await this.prisma.message.update({
             where: { id: message.id },
             data: { content },
-            select: this.messageSelect,
+            select: this.messageSelect
         });
+
+        this.logger.log(`✅ Message updated with traceId ${traceId}`);
 
         this.useSocketService('update', receiverId, updatedMessage, senderId, traceId, {
             status: 'success',
@@ -80,10 +70,8 @@ export class MessageService {
         });
     }
 
-    async deleteMessage(data: any, traceId: string) {
+    async deleteMessage(data: Record<string, any>, traceId: string) {
         const { message, senderId, receiverId } = data;
-
-        this.logger.log(`✉️ Deleting message with traceId ${traceId}`);
 
         if (message.senderId !== senderId) {
             this.socketGateway.sendResponse(senderId, {
@@ -92,10 +80,14 @@ export class MessageService {
             return;
         }
 
+        this.logger.log(`✉️ Deleting message with traceId ${traceId}`);
+
         const deletedMessage = await this.prisma.message.delete({
             where: { id: message.id },
             select: this.messageSelect,
         });
+
+        this.logger.log(`✅ Message deleted with traceId ${traceId}`);
 
         this.useSocketService('delete', receiverId, deletedMessage, senderId, traceId, {
             status: 'success',

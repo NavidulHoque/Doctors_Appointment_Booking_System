@@ -130,7 +130,6 @@ model Message {
   senderId        String
   receiver        User       @relation("ReceivedMessages", fields: [receiverId], references: [id])
   receiverId      String
-  idempotencyKey  String     @unique
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }
