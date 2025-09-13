@@ -2,6 +2,7 @@ import { InjectQueue } from "@nestjs/bull";
 import { Injectable, Logger } from "@nestjs/common";
 import { Queue } from "bull";
 import { PrismaService } from "src/prisma/prisma.service";
+import { RedisService } from "src/redis/redis.service";
 import { SocketGateway } from "src/socket/socket.gateway";
 
 @Injectable()
@@ -11,6 +12,7 @@ export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly socketGateway: SocketGateway,
+    private readonly redis: RedisService,
     @InjectQueue("notification-queue") private readonly notificationQueue: Queue
   ) { }
 
@@ -29,6 +31,12 @@ export class NotificationService {
           createdAt: true
         }
       });
+
+      // disable cache
+      this.redis.del(`cache:GET:/notifications:user:${userId}`)
+        .catch(error => {
+          this.logger.error(`❌ Failed to disable cache for userId=${userId}. Reason: ${error.message}`);
+        });
 
       this.logger.log(`✅ Notification created for userId=${userId}, traceId=${traceId}`);
 
@@ -67,7 +75,7 @@ export class NotificationService {
     ]);
 
     return {
-      data: notifications,
+      notifications,
       pagination: {
         totalItems,
         totalPages: Math.ceil(totalItems / limit),
