@@ -1,8 +1,7 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { doctorSelect } from 'src/prisma/prisma-selects';
-import { UserDto } from 'src/user/dto';
 import * as argon from "argon2";
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +10,7 @@ import { SocketGateway } from 'src/socket/socket.gateway';
 @Injectable()
 export class DoctorService {
     private stripe: Stripe;
+    private readonly logger = new Logger(DoctorService.name)
 
     constructor(
         private readonly prisma: PrismaService,
@@ -24,9 +24,8 @@ export class DoctorService {
 
     async createDoctor(dto: CreateDoctorDto) {
 
+        const { fullName, email, password, specialization, education, experience, aboutMe, fees, availableTimes } = dto
         try {
-            const { fullName, email, password, specialization, education, experience, aboutMe, fees, availableTimes } = dto
-
             const hashedPassword = await argon.hash(password);
 
             const { id, fullName: newFullName, email: newEmail } = await this.prisma.user.create({ data: { fullName, email, password: hashedPassword, role: 'DOCTOR' } })
@@ -54,7 +53,6 @@ export class DoctorService {
                     throw new ConflictException("Email already exists");
                 }
             }
-
             throw error;
         }
     }
@@ -65,7 +63,7 @@ export class DoctorService {
 
         const skip = (page - 1) * limit
 
-        const query: any = specialization ? { specialization: { contains: specialization, mode: 'insensitive' as const } } : {} // will filter case-insensitive
+        const query: Record<string, any> = specialization ? { specialization: { contains: specialization, mode: 'insensitive' } } : {} // will filter case-insensitive
 
         if (experience?.length === 1) {
             const [min] = experience;
@@ -131,7 +129,7 @@ export class DoctorService {
         const paginatedDoctors = sortedDoctors.slice(skip, skip + limit)
 
         return {
-            data: paginatedDoctors,
+            doctors: paginatedDoctors,
             pagination: {
                 totalItems,
                 totalPages: Math.ceil(totalItems / limit),
@@ -209,16 +207,14 @@ export class DoctorService {
         const sortedRelatedDoctors = await this.modifyDoctors(relatedDoctors)
 
         return {
-            data: {
-                doctor: {
-                    ...doctor,
-                    averageRating: averageRating._avg.rating,
-                    totalReviews,
-                    reviews
-                },
-                relatedDoctors: sortedRelatedDoctors,
-                bookedAppointmentDates
+            doctor: {
+                ...doctor,
+                averageRating: averageRating._avg.rating,
+                totalReviews,
+                reviews
             },
+            relatedDoctors: sortedRelatedDoctors,
+            bookedAppointmentDates,
             pagination: {
                 totalItems: totalReviews,
                 totalPages: Math.ceil(totalReviews / limit),
@@ -262,7 +258,7 @@ export class DoctorService {
         return sortedDoctors
     }
 
-    async getTotalRevenue(user: UserDto) {
+    async getTotalRevenue(user: Record<string, any>) {
 
         const { id } = user
 
@@ -285,10 +281,12 @@ export class DoctorService {
 
         const { fullName, email, currentPassword, newPassword, phone, gender, birthDate, address, specialization, education, experience, aboutMe, fees, addAvailableTime, removeAvailableTime, isActive } = data.doctor
 
-        const { userId: doctorId } = data
+        const { userId, doctorId } = data
 
         let userData: any = null
         let doctorData: any = null
+
+        this.logger.log(`✉️ Updating doctor with traceId ${traceId}`);
 
         if (fullName && email && phone && gender && birthDate && address && specialization && education && experience && aboutMe && fees) {
             userData = {
@@ -309,7 +307,7 @@ export class DoctorService {
             }
         }
 
-        else if (addAvailableTime) {
+        if (addAvailableTime) {
             doctorData = {
                 availableTimes: {
                     push: addAvailableTime
@@ -317,7 +315,7 @@ export class DoctorService {
             }
         }
 
-        else if (isActive !== undefined) doctorData = { isActive }
+        if (isActive !== undefined) doctorData = { isActive }
 
         if (currentPassword && newPassword) {
 
@@ -347,7 +345,7 @@ export class DoctorService {
             }
         }
 
-        else if (removeAvailableTime) {
+        if (removeAvailableTime) {
 
             const doctorRecord = await this.prisma.doctor.findUnique({ where: { userId: doctorId } })
 
@@ -364,13 +362,15 @@ export class DoctorService {
             }
         }
 
-        else if (userData) {
+        if (userData) {
 
-            // const existingUser = await this.fetchUserService.fetchUser(email)
+            const existingUser = await this.prisma.user.findUnique({
+                where: { email }
+            })
 
-            // if (existingUser && id !== existingUser.id) {
-            //     this.handleErrorsService.throwBadRequestError("Email already exists")
-            // }
+            if (existingUser && doctorId !== existingUser.id) {
+                throw new BadRequestException("Email already exists")
+            }
 
             await this.prisma.user.update({
                 where: { id: doctorId },
@@ -393,7 +393,12 @@ export class DoctorService {
             }
         })
 
-        return {
+        this.logger.log(`✅ Doctor updated with traceId ${traceId}`);
+
+        this.socketGateway.sendResponse(userId, {
+            traceId,
+            status: 'success',
+            message: "Doctor updated successfully",
             data: {
                 fullName,
                 email,
@@ -403,8 +408,7 @@ export class DoctorService {
                 address,
                 ...updatedDoctor
             },
-            message: "Doctor updated successfully"
-        }
+        });
     }
 
     async createStripeAccount(data: Record<string, any>, traceId: string) {
@@ -414,6 +418,8 @@ export class DoctorService {
         if (doctor.stripeAccountId) {
             throw new BadRequestException("Stripe account already exists")
         }
+
+        this.logger.log(`✉️ Creating stripe account with traceId ${traceId}`);
 
         const account = await this.stripe.accounts.create({
             type: 'express',
@@ -431,6 +437,8 @@ export class DoctorService {
             return_url: `${this.configService.get('FRONTEND_URL')}/stripe/onboarding/return?accountId=${account.id}`,
             type: 'account_onboarding',
         });
+
+        this.logger.log(`✅ Stripe account created with traceId ${traceId}`);
 
         this.socketGateway.sendResponse(userId, {
             traceId,
@@ -454,10 +462,14 @@ export class DoctorService {
 
         if (charges_enabled && payouts_enabled && details_submitted) {
 
+            this.logger.log(`✉️ Activating stripe account with traceId ${traceId}`);
+
             await this.prisma.doctor.update({
                 where: { userId: doctorId },
                 data: { isStripeAccountActive: true }
             })
+
+            this.logger.log(`✅ Stripe account activated with traceId ${traceId}`);
         }
 
         else {
@@ -473,11 +485,15 @@ export class DoctorService {
 
     async deleteDoctor(data: Record<string, any>, traceId: string) {
 
-        const { userId: doctorId } = data
+        const { userId: adminId, doctorId } = data
+
+        this.logger.log(`✉️ Deleting doctor with traceId ${traceId}`);
 
         await this.prisma.doctor.delete({ where: { userId: doctorId } })
 
-        this.socketGateway.sendResponse(doctorId, {
+        this.logger.log(`✅ Doctor deleted with traceId ${traceId}`);
+
+        this.socketGateway.sendResponse(adminId, {
             traceId,
             status: 'success',
             message: "Doctor deleted successfully"

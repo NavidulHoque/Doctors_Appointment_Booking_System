@@ -37,7 +37,6 @@ export class AppointmentController {
             ...dto,
             userId
         }
-
         return this.appointmentProducerService.sendCreateAppointment(data, traceId)
     }
 
@@ -65,7 +64,7 @@ export class AppointmentController {
     @Get("/get-an-appointment/:id")
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     getAnAppointment(
-        @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: any,
+        @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: Record<string, any>
     ) {
         return {
             data: appointment,
@@ -100,7 +99,6 @@ export class AppointmentController {
             userId,
             appointment
         }
-
         return this.appointmentProducerService.sendUpdateAppointment(data, traceId)
     }
 }
