@@ -140,7 +140,7 @@ export class DoctorService {
         }
     }
 
-    async getADoctor(doctor: any, queryParams: GetDoctorsDto) {
+    async getADoctor(doctor: Record<string, any>, queryParams: GetDoctorsDto) {
 
         const { page, limit } = queryParams
 

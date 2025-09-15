@@ -25,6 +25,8 @@ import { RedisThrottlerStorage } from './redis/redis-throttler.storage';
 import { SmsModule } from './sms/sms.module';
 import { CronModule } from './cron/cron.module';
 import { JwtModule } from '@nestjs/jwt';
+import { McpModule } from './mcp/mcp.module';
+import { OpenAiModule } from './open-ai/open-ai.module';
 
 @Module({
   imports: [
@@ -65,7 +67,9 @@ import { JwtModule } from '@nestjs/jwt';
     RedisModule,
     EmailModule,
     SmsModule,
-    CronModule
+    CronModule,
+    McpModule,
+    OpenAiModule
   ],
   controllers: [AppController],
   providers: [
