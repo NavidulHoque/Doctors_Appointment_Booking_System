@@ -14,21 +14,21 @@ export class McpService {
   ){}
 
   async bookAppointment(dto: CreateAppointmentDto, traceId: string) {
-    this.logger.log(`Booking appointment: ${JSON.stringify(dto)}`);
+    this.logger.log(`Booking appointment using AI: traceId=${traceId}`);
     
-    this.appointment.createAppointment(dto, traceId);
+    await this.appointment.createAppointment(dto, traceId);
     return { success: true, message: 'Appointment booked', data: dto };
   }
 
   async cancelAppointment(dto: UpdateAppointmentDto, traceId: string) {
-    this.logger.log(`Cancelling appointment: ${JSON.stringify(dto)}`);
+    this.logger.log(`Cancelling appointment using AI: traceId=${traceId}`);
     
     this.appointment.updateAppointment(dto, traceId);
     return { success: true, message: 'Appointment cancelled', data: dto };
   }
 
-  async getDoctorSchedule(dto: GetScheduleDto) {
-    this.logger.log(`Fetching schedule for doctorId=${dto.doctorId}`);
+  async getDoctorSchedule(dto: GetScheduleDto, traceId: string) {
+    this.logger.log(`Fetching schedule for doctorId=${dto.doctorId} using AI: traceId=${traceId}`);
     
     const doctor = await this.prisma.doctor.findUnique({ 
       where: { userId: dto.doctorId },

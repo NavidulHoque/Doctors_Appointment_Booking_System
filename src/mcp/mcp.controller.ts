@@ -27,7 +27,11 @@ export class McpController {
   }
 
   @Post('get-schedule')
-  async schedule(@Body() dto: GetScheduleDto) {
-    return this.mcpService.getDoctorSchedule(dto);
+  async schedule(
+    @Body() dto: GetScheduleDto,
+    @Req() req: RequestWithTrace
+  ) {
+    const traceId = req.traceId
+    return this.mcpService.getDoctorSchedule(dto, traceId);
   }
 }

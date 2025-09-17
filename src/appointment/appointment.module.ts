@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { AppointmentController } from './appointment.controller';
 import { AppointmentProcessor } from './processors';
@@ -7,6 +7,7 @@ import { DLQProcessor } from './processors/dlq.processor';
 import { AppointmentProducerService } from './appointment.producer.service';
 import { AppointmentConsumer } from './appointment.consumer';
 
+@Global()
 @Module({
   imports: [
     BullModule.registerQueue({
@@ -17,6 +18,7 @@ import { AppointmentConsumer } from './appointment.consumer';
     }),
   ],
   controllers: [AppointmentController, AppointmentConsumer],
-  providers: [AppointmentService, AppointmentProcessor, DLQProcessor, AppointmentProducerService]
+  providers: [AppointmentService, AppointmentProcessor, DLQProcessor, AppointmentProducerService],
+  exports: [AppointmentService],
 })
 export class AppointmentModule { }
