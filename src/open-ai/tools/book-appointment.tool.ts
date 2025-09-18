@@ -10,9 +10,9 @@ export const bookAppointmentTool: ChatCompletionTool = {
       properties: {
         patientId: { type: 'string' },
         doctorId: { type: 'string' },
-        datetime: { type: 'string', format: 'date-time' },
+        date: { type: 'string', format: 'date-time' },
       },
-      required: ['patientId', 'doctorId', 'datetime'],
+      required: ['patientId', 'doctorId', 'date'],
     },
   },
 };

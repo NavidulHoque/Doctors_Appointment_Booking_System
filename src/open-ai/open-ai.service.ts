@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { tools } from './tools';
@@ -16,11 +16,11 @@ export class OpenAiService {
     });
   }
 
-  async processQuery(userPrompt: string) {
+  async processQuery(prompt: string) {
     try {
       const response = await this.client.chat.completions.create({
         model: 'gpt-5-mini',
-        messages: [{ role: 'user', content: userPrompt }],
+        messages: [{ role: 'user', content: prompt }],
         tools,
       });
 
@@ -43,8 +43,16 @@ export class OpenAiService {
     }
 
     catch (error) {
-      this.logger.error('AI query failed', error);
-      throw new Error('AI query failed: ' + error.message);
+      this.logger.error('❌ AI query failed, Reason:', error.message);
+
+      if (error.status === 429) {
+        throw new HttpException(
+          'Quota exceeded or too many requests. Please try again later.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      throw new InternalServerErrorException('You requested query failed to process. Try again later.');
     }
   }
 }

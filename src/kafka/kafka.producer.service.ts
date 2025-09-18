@@ -25,7 +25,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
     await this.producer.disconnect();
   }
 
-  async triggerEvent(topic: string, data: any) {
+  async triggerEvent(topic: string, data: Record<string, any>) {
     await this.producer.send({
       topic,
       messages: [{ value: JSON.stringify(data) }],

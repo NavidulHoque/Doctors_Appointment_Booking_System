@@ -9,6 +9,7 @@ export const cancelAppointmentTool: ChatCompletionTool = {
             type: 'object',
             properties: {
                 appointmentId: { type: 'string' },
+                cancellationReason: { type: 'string' },
             },
             required: ['appointmentId'],
         },

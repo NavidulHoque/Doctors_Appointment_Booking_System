@@ -22,11 +22,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const responseBody: any =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : (exception as any).message  // for raw errors
-        
+    let responseBody: Record<string, any> = {};
+
+    if (exception instanceof HttpException) {
+      const res = exception.getResponse();
+
+      if (typeof res === 'string') {
+        responseBody = { message: res };
+      } 
+      
+      else if (typeof res === 'object') {
+        responseBody = { ...res };
+      }
+    }
+
     const wrappedError = {
       success: false,
       timestamp,
