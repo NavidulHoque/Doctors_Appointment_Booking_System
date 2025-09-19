@@ -26,7 +26,7 @@ import { SmsModule } from './sms/sms.module';
 import { CronModule } from './cron/cron.module';
 import { JwtModule } from '@nestjs/jwt';
 import { McpModule } from './mcp/mcp.module';
-import { OpenAiModule } from './open-ai/open-ai.module';
+import { OpenAiModule } from './gemini/gemini.module';
 
 @Module({
   imports: [
