@@ -17,7 +17,7 @@ export class AppointmentProcessor {
     @Process('start-appointment')
     async handleStartAppointment(job: Job) {
         const { status, appointment, traceId } = job.data;
-        await this.appointmentService.updateAppointment({ status, appointment }, traceId);
+        await this.appointmentService.updateAppointment({ status }, traceId, appointment);
     }
 
     @OnQueueFailed()

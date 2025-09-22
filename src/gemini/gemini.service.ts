@@ -57,7 +57,7 @@ export class GeminiService {
             }
             case 'cancelAppointment': {
               const dto = args as UpdateAppointmentDto;
-              return this.mcpService.cancelAppointment(dto, traceId!);
+              // return this.mcpService.cancelAppointment(dto, traceId!);
             }
             case 'getDoctorSchedule': {
               const dto = args as GetScheduleDto;

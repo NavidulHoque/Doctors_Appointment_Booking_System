@@ -7,7 +7,6 @@ import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
-import { AppointmentProducerService } from './appointment.producer.service';
 import { Cache } from 'src/common/decorators';
 import { CacheKeyHelper } from './helper';
 
@@ -17,7 +16,6 @@ export class AppointmentController {
 
     constructor(
         private readonly appointmentService: AppointmentService,
-        private readonly appointmentProducerService: AppointmentProducerService
     ) { }
 
     @Post("/create-appointment")
@@ -29,15 +27,10 @@ export class AppointmentController {
     })
     createAppointment(
         @Body() dto: CreateAppointmentDto,
-        @Req() request: RequestWithTrace,
-        @User("id") userId: string
+        @Req() request: RequestWithTrace
     ) {
         const traceId = request.traceId;
-        const data = {
-            ...dto,
-            userId
-        }
-        return this.appointmentProducerService.sendCreateAppointment(data, traceId)
+        return this.appointmentService.createAppointment(dto, traceId)
     }
 
     @Get("/get-all-appointments")
@@ -90,15 +83,9 @@ export class AppointmentController {
     updateAppointment(
         @Body() dto: UpdateAppointmentDto,
         @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: Record<string, any>,
-        @Req() request: RequestWithTrace,
-        @User("id") userId: string
+        @Req() request: RequestWithTrace
     ) {
         const traceId = request.traceId;
-        const data = {
-            ...dto,
-            userId,
-            appointment
-        }
-        return this.appointmentProducerService.sendUpdateAppointment(data, traceId)
+        return this.appointmentService.updateAppointment(dto, traceId, appointment)
     }
 }

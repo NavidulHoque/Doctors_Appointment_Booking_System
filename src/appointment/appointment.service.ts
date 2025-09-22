@@ -1,13 +1,12 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { GetAppointmentsDto } from './dto';
+import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { EmailService } from 'src/email/email.service';
-import { SocketGateway } from 'src/socket/socket.gateway';
 
 @Injectable()
 export class AppointmentService {
@@ -17,13 +16,12 @@ export class AppointmentService {
         private readonly prisma: PrismaService,
         private readonly notificationService: NotificationService,
         private readonly email: EmailService,
-        private readonly socketGateway: SocketGateway,
         private readonly config: ConfigService,
         @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
     ) { }
 
-    async createAppointment(data: Record<string, any>, traceId: string) {
-        const { patientId, doctorId, date, userId } = data;
+    async createAppointment(dto: CreateAppointmentDto, traceId: string) {
+        const { patientId, doctorId, date } = dto;
 
         const appointmentDate = new Date(date);
 
@@ -69,14 +67,10 @@ export class AppointmentService {
             throw new BadRequestException('Appointment already booked');
         }
 
-        this.logger.log(`✉️ Creating appointment with traceId ${traceId}`);
-
         const appointment = await this.prisma.appointment.create({
             data: { patientId, doctorId, date: appointmentDate },
             select: appointmentSelect,
         });
-
-        this.logger.log(`✅ Created Appointment with traceId ${traceId}`);
 
         const {
             patient: { fullName: patientName },
@@ -110,12 +104,10 @@ export class AppointmentService {
                     });
             });
 
-        this.socketGateway.sendResponse(userId, {
-            traceId,
-            status: 'success',
+        return {
+            appointment,
             message: 'Appointment created successfully',
-            data: appointment,
-        });
+        };
     }
 
     async getAllAppointments(queryParam: GetAppointmentsDto) {
@@ -338,9 +330,9 @@ export class AppointmentService {
         };
     }
 
-    async updateAppointment(data: Record<string, any>, traceId: string) {
+    async updateAppointment(dto: UpdateAppointmentDto, traceId: string, appointment: Record<string, any>) {
 
-        const { status, isPaid, paymentMethod, cancellationReason, userId, appointment } = data
+        const { status, isPaid, paymentMethod, cancellationReason } = dto
 
         const { id: appointmentId, patient: { id: patientId, fullName: patientName }, doctor: { id: doctorId, fullName: doctorName }, date } = appointment
 
@@ -516,22 +508,16 @@ export class AppointmentService {
             body.paymentMethod = 'CASH'
         }
 
-        this.logger.log(`✉️ Updating appointment with traceId ${traceId}`);
-
         const updatedAppointment = await this.prisma.appointment.update({
             where: { id: appointmentId },
             data: body,
             select: appointmentSelect
         })
 
-        this.logger.log(`✅ Updated Appointment with traceId ${traceId}`);
-
-        this.socketGateway.sendResponse(userId, {
-            traceId,
-            status: 'success',
-            message: "Appointment updated successfully",
-            data: updatedAppointment
-        });
+        return { 
+            message: 'Appointment updated', 
+            appointment: updatedAppointment 
+        }
     }
 
     private generateNotificationErrorMessage(message: string, traceId: string) {

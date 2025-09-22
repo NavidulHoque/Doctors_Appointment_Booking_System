@@ -4,9 +4,11 @@ import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { Role } from '@prisma/client';
 import { Roles } from 'src/auth/decorators';
 import { RequestWithTrace } from 'src/common/types';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @Controller('open-ai')
 @UseGuards(AuthGuard, RolesGuard)
+@SkipThrottle()
 export class OpenAiController {
   constructor(private readonly gemini: GeminiService) {}
 

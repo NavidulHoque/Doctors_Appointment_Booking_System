@@ -11,21 +11,28 @@ export class McpService {
   constructor(
     private readonly appointment: AppointmentService,
     private readonly prisma: PrismaService
-  ) {}
+  ) { }
 
   async bookAppointment(dto: CreateAppointmentDto, traceId: string) {
     this.logger.log(`Booking appointment using AI: traceId=${traceId}`);
-    const appointment = await this.appointment.createAppointment(dto, traceId);
 
-    return { success: true, message: 'Appointment booked', data: appointment };
+    try {
+      const appointment = await this.appointment.createAppointment(dto, traceId);
+      return { success: true, message: 'Appointment booked', data: appointment.appointment };
+    } 
+    
+    catch (error) {
+      this.logger.error(`❌ Failed to book appointment using AI, Reason: ${error.message}, traceId=${traceId}`);
+      return { success: false, message: error.message };
+    }
   }
 
-  async cancelAppointment(dto: UpdateAppointmentDto, traceId: string) {
-    this.logger.log(`Cancelling appointment using AI: traceId=${traceId}`);
-    const updated = await this.appointment.updateAppointment(dto, traceId);
+  // async cancelAppointment(dto: UpdateAppointmentDto, traceId: string) {
+  //   this.logger.log(`Cancelling appointment using AI: traceId=${traceId}`);
+  //   const updated = await this.appointment.updateAppointment(dto, traceId);
 
-    return { success: true, message: 'Appointment cancelled', data: updated };
-  }
+  //   return { success: true, message: 'Appointment cancelled', data: updated };
+  // }
 
   async getDoctorSchedule(dto: GetScheduleDto, traceId: string) {
     this.logger.log(
