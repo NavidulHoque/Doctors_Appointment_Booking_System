@@ -1,7 +1,22 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    HttpCode,
+    Param,
+    Patch,
+    Post,
+    Query,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
-import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
+import {
+    CreateAppointmentDto,
+    GetAppointmentsDto,
+    UpdateAppointmentDto,
+} from './dto';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
@@ -9,83 +24,79 @@ import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
 import { Cache } from 'src/common/decorators';
 import { CacheKeyHelper } from './helper';
+import { UserDto } from 'src/user/dto';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentController {
+    constructor(private readonly appointmentService: AppointmentService) { }
 
-    constructor(
-        private readonly appointmentService: AppointmentService,
-    ) { }
-
-    @Post("/create-appointment")
+    @Post()
     @Roles(Role.ADMIN, Role.PATIENT)
-    @HttpCode(202)
     @Cache({
         enabled: true,
-        invalidate: "cache:GET:/appointments:*"
+        invalidate: 'cache:GET:/appointments:*',
     })
     createAppointment(
         @Body() dto: CreateAppointmentDto,
-        @Req() request: RequestWithTrace
+        @Req() request: RequestWithTrace,
+        @User() user: UserDto
     ) {
-        const traceId = request.traceId;
-        return this.appointmentService.createAppointment(dto, traceId)
+        dto.patientId = user.role === Role.PATIENT ? user.id : dto.patientId
+        return this.appointmentService.createAppointment(dto, request.traceId);
     }
 
-    @Get("/get-all-appointments")
+    @Get()
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     @Cache({
         enabled: true,
         ttl: 60,
-        key: CacheKeyHelper.generateAppointmentsKey
+        key: CacheKeyHelper.generateAppointmentsKey,
     })
-    getAllAppointments(
-        @Query() query: GetAppointmentsDto
-    ) {
-        return this.appointmentService.getAllAppointments(query)
+    getAllAppointments(@Query() query: GetAppointmentsDto) {
+        return this.appointmentService.getAllAppointments(query);
     }
 
-    @Get("/get-all-appointments-count")
+    @Get('count')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getAllAppointmentCount(
-        @Query() query: GetAppointmentsDto
-    ) {
-        return this.appointmentService.getAllAppointmentCount(query)
+    getAllAppointmentCount(@Query() query: GetAppointmentsDto) {
+        return this.appointmentService.getAllAppointmentCount(query);
     }
 
-    @Get("/get-an-appointment/:id")
+    @Get(':id')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getAnAppointment(
-        @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: Record<string, any>
+    getAppointmentById(
+        @Param('id', EntityByIdPipe('appointment', appointmentSelect))
+        appointment: Record<string, any>,
     ) {
         return {
             data: appointment,
-            message: "Appointment fetched successfully"
-        }
+            message: 'Appointment fetched successfully',
+        };
     }
 
-    @Get("/get-total-appointments-graph")
+    @Get('graph/total')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getTotalAppointmentsGraph(
-        @Query() query: GetAppointmentsDto
-    ) {
-        return this.appointmentService.getTotalAppointmentsGraph(query)
+    getTotalAppointmentsGraph(@Query() query: GetAppointmentsDto) {
+        return this.appointmentService.getTotalAppointmentsGraph(query);
     }
 
-    @Patch("/update-appointment/:id")
+    @Patch(':id')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    @HttpCode(202)
     @Cache({
         enabled: true,
-        invalidate: "cache:GET:/appointments:*"
+        invalidate: 'cache:GET:/appointments:*',
     })
     updateAppointment(
         @Body() dto: UpdateAppointmentDto,
-        @Param('id', EntityByIdPipe('appointment', appointmentSelect)) appointment: Record<string, any>,
-        @Req() request: RequestWithTrace
+        @Param('id', EntityByIdPipe('appointment', appointmentSelect))
+        appointment: Record<string, any>,
+        @Req() request: RequestWithTrace,
     ) {
-        const traceId = request.traceId;
-        return this.appointmentService.updateAppointment(dto, traceId, appointment)
+        return this.appointmentService.updateAppointment(
+            dto,
+            request.traceId,
+            appointment,
+        );
     }
 }

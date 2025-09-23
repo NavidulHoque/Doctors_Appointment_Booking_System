@@ -96,7 +96,10 @@ model Appointment {
   cancellationReason    String     @default("")
   isPaid                Boolean    @default(false)
   paymentMethod         Method? 
-  onlinePayment         Payment?
+  onlinePayment         Payment? 
+
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
 }
 
 enum Status{

@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { EmailService } from 'src/email/email.service';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AppointmentService {
@@ -20,56 +21,45 @@ export class AppointmentService {
         @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
     ) { }
 
+    /** ----------------------
+    * CREATE
+    * ---------------------- */
     async createAppointment(dto: CreateAppointmentDto, traceId: string) {
         const { patientId, doctorId, date } = dto;
-
         const appointmentDate = new Date(date);
+        appointmentDate.setSeconds(0, 0); // normalize seconds
 
-        const [patient, doctor] = await this.prisma.$transaction([
-            this.prisma.user.findUnique({
-                where: { id: patientId },
-                select: { role: true }
-            }),
-            this.prisma.user.findUnique({
-                where: { id: doctorId },
-                select: { role: true }
-            })
-        ]);
-
-        if (patient!.role !== 'PATIENT' || doctor!.role !== 'DOCTOR') {
-            throw new BadRequestException(
-                'Requested patient is not patient or requested doctor is not doctor',
-            );
-        }
-
-        if (appointmentDate.getTime() < Date.now()) {
-            throw new BadRequestException('Date must be in the future');
-        }
-
-        const existingAppointment = await this.prisma.appointment.findFirst({
-            where: {
-                OR: [
-                    {
-                        patientId,
-                        date: appointmentDate,
-                        status: { not: 'CANCELLED' },
+        // ensures consistency and atomicity
+        const appointment = await this.prisma.$transaction(async (tx) => {
+            const [patient, doctor, existingAppointment] = await Promise.all([
+                tx.user.findUnique({ where: { id: patientId }, select: { role: true } }),
+                tx.user.findUnique({ where: { id: doctorId }, select: { role: true } }),
+                tx.appointment.findFirst({
+                    where: {
+                        OR: [
+                            { patientId, date: appointmentDate, status: { not: 'CANCELLED' } },
+                            { doctorId, date: appointmentDate, status: { not: 'CANCELLED' } },
+                        ],
                     },
-                    {
-                        doctorId,
-                        date: appointmentDate,
-                        status: { not: 'CANCELLED' },
-                    },
-                ],
-            },
-        });
+                }),
+            ]);
 
-        if (existingAppointment) {
-            throw new BadRequestException('Appointment already booked');
-        }
+            if (!patient || !doctor) {
+                throw new BadRequestException('Patient or Doctor not found');
+            }
 
-        const appointment = await this.prisma.appointment.create({
-            data: { patientId, doctorId, date: appointmentDate },
-            select: appointmentSelect,
+            else if (patient.role !== Role.PATIENT || doctor.role !== Role.DOCTOR){
+                throw new BadRequestException('Invalid roles: ensure patient is a PATIENT and doctor is a DOCTOR');
+            }
+                
+            else if (existingAppointment){
+                throw new BadRequestException('Appointment already booked');
+            } 
+                
+            return tx.appointment.create({
+                data: { patientId: patientId!, doctorId, date: appointmentDate },
+                select: appointmentSelect,
+            });
         });
 
         const {
@@ -81,28 +71,13 @@ export class AppointmentService {
             `📢 Sending notification to admin about new appointment with traceId: ${traceId}`,
         );
 
-        this.notificationService
-            .sendNotifications(
-                this.config.get('ADMIN_ID') as string,
-                `${patientName}'s appointment with ${doctorName} is booked for ${appointmentDate.toLocaleString()}.`,
-                traceId,
-                0,
-                { appointmentId: appointment.id },
-            )
-            .catch((error) => {
-                this.logger.error(this.generateNotificationErrorMessage(error.message, traceId));
-
-                this.email
-                    .alertAdmin(
-                        'Failed to send notification',
-                        `Failed to send notification about new appointment,<br>
-                         Reason: ${error.message} with traceId: ${traceId},<br>
-                         appointmentId: ${appointment.id}`,
-                    )
-                    .catch((error) => {
-                        this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId));
-                    });
-            });
+        this.sendNotificationWithFallback(
+            this.config.get('ADMIN_ID') as string,
+            `${patientName}'s appointment with ${doctorName} is booked for ${appointmentDate.toISOString()}.`,
+            traceId,
+            { appointmentId: appointment.id },
+            'Failed to send notification about new appointment',
+        );
 
         return {
             appointment,
@@ -110,67 +85,51 @@ export class AppointmentService {
         };
     }
 
+    /** ----------------------
+    * GET ALL
+    * ---------------------- */
     async getAllAppointments(queryParam: GetAppointmentsDto) {
-        const { page = 1, limit = 10, search, doctorId, patientId, status, isPaid, paymentMethod, isToday, isPast, isFuture } = queryParam
+        const {
+            page = 1,
+            limit = 10,
+            search,
+            doctorId,
+            patientId,
+            status,
+            isPaid,
+            paymentMethod,
+            isToday,
+            isPast,
+            isFuture,
+        } = queryParam;
 
         const skip = (page - 1) * limit;
-        let orderBy: any = { date: 'desc' }
+        let orderBy: any = { date: 'desc' };
 
-        const query: any = doctorId ? { doctorId } : {}
-
-        if (patientId) query.patientId = patientId
+        const query: any = {};
+        if (doctorId) query.doctorId = doctorId;
+        if (patientId) query.patientId = patientId;
+        if (isPaid !== undefined) query.isPaid = isPaid;
+        if (paymentMethod) query.paymentMethod = paymentMethod;
 
         if (status) {
-            query.status = status
-
-            if (status.toLowerCase() === 'confirmed' || status.toLowerCase() === 'pending' || status.toLowerCase() === 'running') {
-                orderBy = { date: 'asc' }
+            query.status = status;
+            if (['CONFIRMED', 'PENDING', 'RUNNING'].includes(status)) {
+                orderBy = { date: 'asc' };
             }
         }
 
-        if (isPaid !== undefined) query.isPaid = isPaid
-
-        if (paymentMethod) query.paymentMethod = paymentMethod
-
+        const now = new Date();
         if (isToday) {
-            const now = new Date();
-
-            const start = new Date(Date.UTC( // converting to UTC time zone
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                0, 0, 0
-            ));
-
-            const end = new Date(Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                23, 59, 59
-            ));
-
-            query.date = {
-                gte: start,
-                lte: end
-            }
-
-            orderBy = { date: 'asc' }
+            const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+            const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
+            query.date = { gte: start, lte: end };
+            orderBy = { date: 'asc' };
         }
-
-        if (isPast) {
-            const now = new Date()
-            query.date = {
-                lte: now
-            }
-        }
-
+        if (isPast) query.date = { lte: now };
         if (isFuture) {
-            const now = new Date()
-            query.date = {
-                gte: now
-            }
-
-            orderBy = { date: 'asc' }
+            query.date = { gte: now };
+            orderBy = { date: 'asc' };
         }
 
         if (search) {
@@ -180,19 +139,19 @@ export class AppointmentService {
                     doctor: {
                         OR: [
                             { fullName: { contains: search, mode: 'insensitive' } },
-                            { email: { contains: search, mode: 'insensitive' } }
-                        ]
-                    }
+                            { email: { contains: search, mode: 'insensitive' } },
+                        ],
+                    },
                 },
                 {
                     patient: {
                         OR: [
                             { fullName: { contains: search, mode: 'insensitive' } },
-                            { email: { contains: search, mode: 'insensitive' } }
-                        ]
-                    }
+                            { email: { contains: search, mode: 'insensitive' } },
+                        ],
+                    },
                 },
-            ]
+            ];
         }
 
         const [appointments, totalAppointments] = await this.prisma.$transaction([
@@ -201,11 +160,10 @@ export class AppointmentService {
                 orderBy,
                 select: appointmentSelect,
                 take: limit,
-                skip
+                skip,
             }),
-
-            this.prisma.appointment.count({ where: query })
-        ])
+            this.prisma.appointment.count({ where: query }),
+        ]);
 
         return {
             data: appointments,
@@ -213,18 +171,19 @@ export class AppointmentService {
                 totalItems: totalAppointments,
                 totalPages: Math.ceil(totalAppointments / limit),
                 currentPage: page,
-                itemsPerPage: limit
+                itemsPerPage: limit,
             },
-        }
+        };
     }
 
+    /** ----------------------
+    * GET COUNTS
+    * ---------------------- */
     async getAllAppointmentCount(queryParam: GetAppointmentsDto) {
-
-        const { doctorId, patientId } = queryParam
-
-        const query: any = doctorId ? { doctorId } : {}
-
-        if (patientId) query.patientId = patientId
+        const { doctorId, patientId } = queryParam;
+        const query: any = {};
+        if (doctorId) query.doctorId = doctorId;
+        if (patientId) query.patientId = patientId;
 
         const [
             totalAppointments,
@@ -238,19 +197,18 @@ export class AppointmentService {
             totalPaidAppointments,
             totalUnPaidAppointments,
             totalCashPaidAppointments,
-            totalOnlinePaidAppointments
+            totalOnlinePaidAppointments,
         ] = await this.prisma.$transaction([
-
-            this.prisma.appointment.count({ where: { ...query } }),
+            this.prisma.appointment.count({ where: query }),
             this.prisma.appointment.findMany({
-                where: { ...query },
+                where: query,
                 distinct: 'patientId',
-                select: { patientId: true }
+                select: { patientId: true },
             }),
             this.prisma.appointment.findMany({
-                where: { ...query },
-                distinct: "doctorId",
-                select: { doctorId: true }
+                where: query,
+                distinct: 'doctorId',
+                select: { doctorId: true },
             }),
             this.prisma.appointment.count({ where: { ...query, status: 'PENDING' } }),
             this.prisma.appointment.count({ where: { ...query, status: 'CONFIRMED' } }),
@@ -261,7 +219,7 @@ export class AppointmentService {
             this.prisma.appointment.count({ where: { ...query, isPaid: false } }),
             this.prisma.appointment.count({ where: { ...query, paymentMethod: 'CASH' } }),
             this.prisma.appointment.count({ where: { ...query, paymentMethod: 'ONLINE' } }),
-        ])
+        ]);
 
         return {
             data: {
@@ -276,12 +234,15 @@ export class AppointmentService {
                 totalPaidAppointments,
                 totalUnPaidAppointments,
                 totalCashPaidAppointments,
-                totalOnlinePaidAppointments
+                totalOnlinePaidAppointments,
             },
-            message: "Appointments count fetched successfully"
-        }
+            message: 'Appointments count fetched successfully',
+        };
     }
 
+    /** ----------------------
+    * GET GRAPH
+    * ---------------------- */
     async getTotalAppointmentsGraph(queryParam: GetAppointmentsDto) {
 
         const { doctorId, patientId } = queryParam;
@@ -330,201 +291,157 @@ export class AppointmentService {
         };
     }
 
-    async updateAppointment(dto: UpdateAppointmentDto, traceId: string, appointment: Record<string, any>) {
-
-        const { status, isPaid, paymentMethod, cancellationReason } = dto
-
-        const { id: appointmentId, patient: { id: patientId, fullName: patientName }, doctor: { id: doctorId, fullName: doctorName }, date } = appointment
+    /** ----------------------
+    * UPDATE
+    * ---------------------- */
+    async updateAppointment(
+        dto: UpdateAppointmentDto,
+        traceId: string,
+        appointment: Record<string, any>,
+    ) {
+        const { status, isPaid, paymentMethod, cancellationReason } = dto;
+        const {
+            id: appointmentId,
+            patient: { id: patientId, fullName: patientName },
+            doctor: { id: doctorId, fullName: doctorName },
+            date,
+        } = appointment;
 
         const appointmentDate = new Date(date);
-        const formattedDate = appointmentDate.toLocaleString()
-        const body: Record<string, any> = status ? { status } : {}
+        const formattedDate = appointmentDate.toISOString();
 
-        // patient paid the appointment online
+        const body: Record<string, any> = {};
+        if (status) body.status = status;
         if (isPaid && paymentMethod) {
-            body.isPaid = isPaid
-            body.paymentMethod = paymentMethod
+            body.isPaid = isPaid;
+            body.paymentMethod = paymentMethod;
         }
 
         const now = new Date();
 
-        if (status === "CONFIRMED") {
+        /** CONFIRM */
+        if (status === 'CONFIRMED') {
+            const oneHourBefore = new Date(appointmentDate.getTime() - 60 * 60 * 1000);
 
-            const oneHourBefore = new Date(appointmentDate.getTime() - 60 * 60 * 1000)
-
-            this.logger.log(`📢 Sending notification to patient and doctor for appointment confirmation with traceId: ${traceId}`);
-
-            // Send confirmation first (await to guarantee order)
             await Promise.all([
-
-                this.notificationService.sendNotifications(
+                this.sendNotificationWithFallback(
                     patientId,
                     `Your appointment with ${doctorName} is confirmed for ${formattedDate}.`,
                     traceId,
-                    0,
-                    { appointmentId }
-                )
-                    .catch((error) => {
-                        this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
-
-                        this.email.alertAdmin(
-                            'Failed to send notification',
-                            `Failed to send notification about appointment confirmation to, <br>
-                             ${patientName} of appointmentId=${appointmentId} for ${formattedDate} of ${doctorName},<br>
-                             Reason: ${error.message} with traceId: ${traceId}`
-                        )
-                            .catch((error) => {
-                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
-                            })
-                    }),
-
-                this.notificationService.sendNotifications(
+                    { appointmentId },
+                    'Failed to send appointment confirmation',
+                ),
+                this.sendNotificationWithFallback(
                     doctorId,
                     `Your appointment with ${patientName} is confirmed for ${formattedDate}.`,
                     traceId,
-                    0,
-                    { appointmentId }
-                )
-                    .catch((error) => {
-                        this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
-
-                        this.email.alertAdmin(
-                            'Failed to send notification',
-                            `Failed to send notification about appointment confirmation to,<br>
-                             ${doctorName} of appointmentId=${appointmentId} for ${formattedDate} with ${patientName},<br>
-                             Reason: ${error.message} with traceId: ${traceId}`
-                        )
-                            .catch((error) => {
-                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
-                            })
-                    })
+                    { appointmentId },
+                    'Failed to send appointment confirmation',
+                ),
             ]);
 
-            // Queue the delayed "1 hour before" notifications and appointment start in parallel
             await Promise.all([
-
-                this.notificationService.sendNotifications(
+                this.sendNotificationWithFallback(
                     patientId,
                     `Your appointment with ${doctorName} starts in 1 hour.`,
                     traceId,
+                    { appointmentId },
+                    'Failed to send appointment reminder',
                     oneHourBefore.getTime() - now.getTime(),
-                    { appointmentId }
-                )
-                    .catch((error) => {
-                        this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
-
-                        this.email.alertAdmin(
-                            'Failed to send notification',
-                            `Failed to send notification about appointment reminder to,<br>
-                             ${patientName} of appointmentId=${appointmentId} for ${formattedDate} of ${doctorName},<br>
-                             Reason: ${error.message} with traceId: ${traceId}`
-                        )
-                            .catch((error) => {
-                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
-                            })
-                    }),
-
-                this.notificationService.sendNotifications(
+                ),
+                this.sendNotificationWithFallback(
                     doctorId,
                     `Your appointment with ${patientName} starts in 1 hour.`,
                     traceId,
-                    (oneHourBefore.getTime() - now.getTime()),
-                    { appointmentId }
-                )
-                    .catch((error) => {
-                        this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
-
-                        this.email.alertAdmin(
-                            'Failed to send notification',
-                            `Failed to send notification about appointment reminder to,<br>
-                             ${doctorName} of appointmentId=${appointmentId} for ${formattedDate} with ${patientName},<br>
-                             Reason: ${error.message} with traceId: ${traceId}`
-                        )
-                            .catch((error) => {
-                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
-                            })
-                    }),
-
+                    { appointmentId },
+                    'Failed to send appointment reminder',
+                    oneHourBefore.getTime() - now.getTime(),
+                ),
                 this.appointmentQueue.add(
-                    "start-appointment",
+                    'start-appointment',
                     { status: 'RUNNING', appointment, traceId },
                     {
                         delay: appointmentDate.getTime() - now.getTime(),
                         backoff: { type: 'exponential', delay: 5000 },
                         attempts: 5,
                         removeOnComplete: true,
-                        removeOnFail: false
-                    }
-                )
-                    .catch((error) => {
-                        this.logger.error(
-                            `❌ Failed to insert start-appointment job into queue, Reason: ${error.message} with traceId: ${traceId}`
-                        )
-
-                        this.email.alertAdmin(
-                            'Failed to start appointment',
-                            `Failed to start,
-                            "appointment: id=${appointmentId}, status=RUNNING for ${formattedDate}",
-                            Reason: ${error.message} with traceId: ${traceId}`
-                        )
-                            .catch((error) => {
-                                this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
-                            })
-                    })
+                        removeOnFail: false,
+                    },
+                ),
             ]);
         }
 
-        else if (status === 'CANCELLED') {
-            body.cancellationReason = cancellationReason
-
-            // send notification to patient
-            this.notificationService.sendNotifications(
+        /** CANCEL */
+        if (status === 'CANCELLED') {
+            body.cancellationReason = cancellationReason;
+            this.sendNotificationWithFallback(
                 patientId,
-                `Your appointment with ${doctorName} is cancelled for ${formattedDate}. Reason: ${cancellationReason}`,
+                `Your appointment with ${doctorName} was cancelled for ${formattedDate}. Reason: ${cancellationReason}`,
                 traceId,
-                0,
-                { appointmentId }
-            )
-                .catch((error) => {
-                    this.logger.error(this.generateNotificationErrorMessage(error.message, traceId))
-
-                    this.email.alertAdmin(
-                        'Failed to send notification',
-                        `Failed to send notification about appointment cancellation to,<br>
-                         ${patientName} of appointmentId=${appointmentId} for ${formattedDate},<br>
-                         of ${doctorName},<br>
-                         Cancellation reason: ${cancellationReason},<br>
-                         Error reason: ${error.message} with traceId: ${traceId}`
-                    )
-                        .catch((error) => {
-                            this.logger.error(this.generateAdminAlertErrorMessage(error.message, traceId))
-                        })
-                })
+                { appointmentId },
+                'Failed to send appointment cancellation',
+            );
         }
 
-        else if (status === 'COMPLETED' && !appointment.isPaid) {
-
-            body.isPaid = true
-            body.paymentMethod = 'CASH'
+        /** COMPLETE → auto mark paid */
+        if (status === 'COMPLETED' && !appointment.isPaid) {
+            body.isPaid = true;
+            body.paymentMethod = 'CASH';
         }
 
         const updatedAppointment = await this.prisma.appointment.update({
             where: { id: appointmentId },
             data: body,
-            select: appointmentSelect
-        })
+            select: appointmentSelect,
+        });
 
-        return { 
-            message: 'Appointment updated', 
-            appointment: updatedAppointment 
+        return {
+            message: 'Appointment updated successfully',
+            appointment: updatedAppointment,
+        };
+    }
+
+    /** ----------------------
+     * HELPERS
+     * ---------------------- */
+    private async sendNotificationWithFallback(
+        userId: string,
+        message: string,
+        traceId: string,
+        meta: Record<string, any>,
+        alertSubject: string,
+        delay = 0,
+    ) {
+        try {
+            await this.notificationService.sendNotifications(
+                userId,
+                message,
+                traceId,
+                delay,
+                meta,
+            );
+        }
+
+        catch (error) {
+            this.logger.error(
+                `❌ Failed to insert notification into queue, Reason: ${error.message}, traceId=${traceId}`,
+            );
+
+            try {
+                await this.email.alertAdmin(
+                    alertSubject,
+                    `${alertSubject}<br>
+                     Reason: ${error.message}<br>
+                     traceId: ${traceId}`,
+                );
+            }
+
+            catch (emailError) {
+                this.logger.error(
+                    `❌ Failed to send alert email, Reason: ${emailError.message}, traceId=${traceId}`,
+                );
+            }
         }
     }
-
-    private generateNotificationErrorMessage(message: string, traceId: string) {
-        return `❌ Failed to insert notification into queue, Reason: ${message} with traceId: ${traceId}`
-    }
-
-    private generateAdminAlertErrorMessage(message: string, traceId: string) {
-        return `❌ Failed to send alert email to admin, Reason: ${message} with traceId: ${traceId}`
-    }
 }
+
