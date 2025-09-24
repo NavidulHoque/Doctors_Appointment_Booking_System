@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { EmailService } from 'src/email/email.service';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 
 @Injectable()
 export class AppointmentService {
@@ -25,64 +25,63 @@ export class AppointmentService {
     * CREATE
     * ---------------------- */
     async createAppointment(dto: CreateAppointmentDto, traceId: string) {
-        const { patientId, doctorId, date } = dto;
-        const appointmentDate = new Date(date);
-        appointmentDate.setSeconds(0, 0); // normalize seconds
+        try {
+            const { patientId, doctorId, date } = dto;
 
-        // ensures consistency and atomicity
-        const appointment = await this.prisma.$transaction(async (tx) => {
-            const [patient, doctor, existingAppointment] = await Promise.all([
-                tx.user.findUnique({ where: { id: patientId }, select: { role: true } }),
-                tx.user.findUnique({ where: { id: doctorId }, select: { role: true } }),
-                tx.appointment.findFirst({
-                    where: {
-                        OR: [
-                            { patientId, date: appointmentDate, status: { not: 'CANCELLED' } },
-                            { doctorId, date: appointmentDate, status: { not: 'CANCELLED' } },
-                        ],
-                    },
-                }),
+            if (!patientId) {
+                throw new BadRequestException('Patient ID is required');
+            }
+
+            // Normalize date to UTC, that will solve timezone related issues
+            const normalizedDate = new Date(date.toISOString());
+
+            const [patient, doctor] = await Promise.all([
+                this.prisma.user.findUnique({ where: { id: patientId }, select: { role: true } }),
+                this.prisma.user.findUnique({ where: { id: doctorId }, select: { role: true } })
             ]);
 
             if (!patient || !doctor) {
                 throw new BadRequestException('Patient or Doctor not found');
             }
 
-            else if (patient.role !== Role.PATIENT || doctor.role !== Role.DOCTOR){
+            else if (patient.role !== Role.PATIENT || doctor.role !== Role.DOCTOR) {
                 throw new BadRequestException('Invalid roles: ensure patient is a PATIENT and doctor is a DOCTOR');
             }
-                
-            else if (existingAppointment){
-                throw new BadRequestException('Appointment already booked');
-            } 
-                
-            return tx.appointment.create({
-                data: { patientId: patientId!, doctorId, date: appointmentDate },
+
+            const appointment = await this.prisma.appointment.create({
+                data: { patientId: patientId!, doctorId, date: normalizedDate },
                 select: appointmentSelect,
             });
-        });
 
-        const {
-            patient: { fullName: patientName },
-            doctor: { fullName: doctorName },
-        } = appointment;
+            const {
+                patient: { fullName: patientName },
+                doctor: { fullName: doctorName },
+            } = appointment;
 
-        this.logger.log(
-            `📢 Sending notification to admin about new appointment with traceId: ${traceId}`,
-        );
+            this.logger.log(
+                `📢 Sending notification to admin about new appointment with traceId: ${traceId}`,
+            );
 
-        this.sendNotificationWithFallback(
-            this.config.get('ADMIN_ID') as string,
-            `${patientName}'s appointment with ${doctorName} is booked for ${appointmentDate.toISOString()}.`,
-            traceId,
-            { appointmentId: appointment.id },
-            'Failed to send notification about new appointment',
-        );
+            this.sendNotificationWithFallback(
+                this.config.get('ADMIN_ID') as string,
+                `${patientName}'s appointment with ${doctorName} is booked for ${normalizedDate}.`,
+                traceId,
+                { appointmentId: appointment.id },
+                'Failed to send notification about new appointment',
+            );
 
-        return {
-            appointment,
-            message: 'Appointment created successfully',
-        };
+            return {
+                appointment,
+                message: 'Appointment created successfully',
+            };
+        }
+
+        catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                throw new BadRequestException("Appointment could not be created. Please try another time.");
+            }
+            throw error;
+        }
     }
 
     /** ----------------------
