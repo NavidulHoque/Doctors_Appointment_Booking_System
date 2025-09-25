@@ -310,9 +310,6 @@ export class AppointmentService {
             date,
         } = appointment;
 
-        const appointmentDate = new Date(date);
-        const formattedDate = appointmentDate.toISOString();
-
         const body: Record<string, any> = {};
         if (status) body.status = status;
         if (isPaid && paymentMethod) {
@@ -324,19 +321,19 @@ export class AppointmentService {
 
         /** CONFIRM */
         if (status === 'CONFIRMED') {
-            const oneHourBefore = new Date(appointmentDate.getTime() - 60 * 60 * 1000);
+            const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
 
             await Promise.all([
                 this.sendNotificationWithFallback(
                     patientId,
-                    `Your appointment with ${doctorName} is confirmed for ${formattedDate}.`,
+                    `Your appointment with ${doctorName} is confirmed for ${date.toString()}.`,
                     traceId,
                     { appointmentId },
                     'Failed to send appointment confirmation',
                 ),
                 this.sendNotificationWithFallback(
                     doctorId,
-                    `Your appointment with ${patientName} is confirmed for ${formattedDate}.`,
+                    `Your appointment with ${patientName} is confirmed for ${date.toString()}.`,
                     traceId,
                     { appointmentId },
                     'Failed to send appointment confirmation',
@@ -364,7 +361,7 @@ export class AppointmentService {
                     'start-appointment',
                     { status: 'RUNNING', appointment, traceId },
                     {
-                        delay: appointmentDate.getTime() - now.getTime(),
+                        delay: date.getTime() - now.getTime(),
                         backoff: { type: 'exponential', delay: 5000 },
                         attempts: 5,
                         removeOnComplete: true,
@@ -379,7 +376,7 @@ export class AppointmentService {
             body.cancellationReason = cancellationReason;
             this.sendNotificationWithFallback(
                 patientId,
-                `Your appointment with ${doctorName} was cancelled for ${formattedDate}. Reason: ${cancellationReason}`,
+                `Your appointment with ${doctorName} was cancelled on ${date.toString()}. Reason: ${cancellationReason}`,
                 traceId,
                 { appointmentId },
                 'Failed to send appointment cancellation',
