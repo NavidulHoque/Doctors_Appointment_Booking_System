@@ -1,6 +1,6 @@
 import { IsOptional, IsString } from 'class-validator';
 
-export class GetAppointmentCountsDto {
+export class GetAppointmentExtraDto {
 
   @IsOptional()
   @IsString()

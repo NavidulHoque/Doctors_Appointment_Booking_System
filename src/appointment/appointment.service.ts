@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateAppointmentDto, GetAppointmentCountsDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
+import { CreateAppointmentDto, GetAppointmentExtraDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
@@ -106,15 +106,15 @@ export class AppointmentService {
         const skip = (page - 1) * limit;
         let orderBy: any = { date: 'desc' };
 
-        const query: any = {};
+        const query: Prisma.AppointmentWhereInput = {};
         if (doctorId) query.doctorId = doctorId;
         if (patientId) query.patientId = patientId;
         if (isPaid !== undefined) query.isPaid = isPaid;
         if (paymentMethod) query.paymentMethod = paymentMethod;
 
-        if (status) {
-            query.status = status;
-            if (['CONFIRMED', 'PENDING', 'RUNNING'].includes(status)) {
+        if (status && status.length > 0) {
+            query.status = { in: status };
+            if (status.some((s) => ['CONFIRMED', 'PENDING', 'RUNNING'].includes(s))) {
                 orderBy = { date: 'asc' };
             }
         }
@@ -157,7 +157,7 @@ export class AppointmentService {
             ];
         }
 
-        const [appointments, totalAppointments] = await this.prisma.$transaction([
+        const [appointments, totalAppointments] = await Promise.all([
             this.prisma.appointment.findMany({
                 where: query,
                 orderBy,
@@ -169,7 +169,7 @@ export class AppointmentService {
         ]);
 
         return {
-            data: appointments,
+            appointments,
             pagination: {
                 totalItems: totalAppointments,
                 totalPages: Math.ceil(totalAppointments / limit),
@@ -182,9 +182,9 @@ export class AppointmentService {
     /** ----------------------
     * GET COUNTS
     * ---------------------- */
-    async getAllAppointmentCount(queryParam: GetAppointmentCountsDto) {
+    async getAllAppointmentCount(queryParam: GetAppointmentExtraDto) {
         const { doctorId, patientId } = queryParam;
-        const query: any = {};
+        const query: Prisma.AppointmentWhereInput = {};
         if (doctorId) query.doctorId = doctorId;
         if (patientId) query.patientId = patientId;
 
@@ -246,7 +246,7 @@ export class AppointmentService {
     /** ----------------------
     * GET GRAPH
     * ---------------------- */
-    async getTotalAppointmentsGraph(queryParam: GetAppointmentsDto) {
+    async getTotalAppointmentsGraph(queryParam: GetAppointmentExtraDto) {
 
         const { doctorId, patientId } = queryParam;
 
@@ -289,7 +289,7 @@ export class AppointmentService {
         }));
 
         return {
-            data: result,
+            result,
             message: "Appointments graph fetched successfully"
         };
     }

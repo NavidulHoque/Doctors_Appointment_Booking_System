@@ -37,10 +37,17 @@ export class GetAppointmentsDto extends PaginationDto {
   readonly isFuture?: boolean
 
   @IsOptional()
-  @IsString()
-  @Transform(({ value }) => value.toUpperCase())
-  @IsEnum(Status, { message: 'Status must be pending, confirmed, completed, running or cancelled' })
-  readonly status?: Status;
+  @Transform(({ value }) =>
+    Array.isArray(value)
+      ? value.map((v) => v.toUpperCase())
+      : [value.toUpperCase()],
+  )
+  @IsEnum(Status, {
+    each: true,
+    message:
+      'Status must be one of: pending, confirmed, completed, running, or cancelled',
+  })
+  readonly status?: Status[];
 
   @IsOptional()
   @IsString()

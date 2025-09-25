@@ -2,7 +2,6 @@ import {
     Body,
     Controller,
     Get,
-    HttpCode,
     Param,
     Patch,
     Post,
@@ -14,7 +13,7 @@ import { AppointmentService } from './appointment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import {
     CreateAppointmentDto,
-    GetAppointmentCountsDto,
+    GetAppointmentExtraDto,
     GetAppointmentsDto,
     UpdateAppointmentDto,
 } from './dto';
@@ -60,25 +59,13 @@ export class AppointmentController {
 
     @Get('count')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getAllAppointmentCount(@Query() query: GetAppointmentCountsDto) {
+    getAllAppointmentCount(@Query() query: GetAppointmentExtraDto) {
         return this.appointmentService.getAllAppointmentCount(query);
-    }
-
-    @Get(':id')
-    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getAppointmentById(
-        @Param('id', EntityByIdPipe('appointment', appointmentSelect))
-        appointment: Record<string, any>,
-    ) {
-        return {
-            data: appointment,
-            message: 'Appointment fetched successfully',
-        };
     }
 
     @Get('graph/total')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getTotalAppointmentsGraph(@Query() query: GetAppointmentsDto) {
+    getTotalAppointmentsGraph(@Query() query: GetAppointmentExtraDto) {
         return this.appointmentService.getTotalAppointmentsGraph(query);
     }
 
