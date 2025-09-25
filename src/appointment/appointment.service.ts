@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
+import { CreateAppointmentDto, GetAppointmentCountsDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
@@ -32,9 +32,6 @@ export class AppointmentService {
                 throw new BadRequestException('Patient ID is required');
             }
 
-            // Normalize date to UTC, that will solve timezone related issues
-            const normalizedDate = new Date(date.toISOString());
-
             const [patient, doctor] = await Promise.all([
                 this.prisma.user.findUnique({ where: { id: patientId }, select: { role: true } }),
                 this.prisma.user.findUnique({ where: { id: doctorId }, select: { role: true } })
@@ -49,7 +46,7 @@ export class AppointmentService {
             }
 
             const appointment = await this.prisma.appointment.create({
-                data: { patientId: patientId!, doctorId, date: normalizedDate },
+                data: { patientId: patientId!, doctorId, date },
                 select: appointmentSelect,
             });
 
@@ -64,7 +61,7 @@ export class AppointmentService {
 
             this.sendNotificationWithFallback(
                 this.config.get('ADMIN_ID') as string,
-                `${patientName}'s appointment with ${doctorName} is booked for ${normalizedDate}.`,
+                `${patientName}'s appointment with ${doctorName} is booked for ${date}.`,
                 traceId,
                 { appointmentId: appointment.id },
                 'Failed to send notification about new appointment',
@@ -78,7 +75,7 @@ export class AppointmentService {
 
         catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                throw new BadRequestException("Appointment could not be created. Please try another time.");
+                throw new BadRequestException("Appointment already booked");
             }
             throw error;
         }
@@ -102,6 +99,10 @@ export class AppointmentService {
             isFuture,
         } = queryParam;
 
+        if ([isToday, isPast, isFuture].filter(Boolean).length > 1) {
+            throw new BadRequestException('Only one of isToday, isPast, or isFuture can be passed as query parameter');
+        }
+
         const skip = (page - 1) * limit;
         let orderBy: any = { date: 'desc' };
 
@@ -119,13 +120,16 @@ export class AppointmentService {
         }
 
         const now = new Date();
+
         if (isToday) {
             const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
             const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
             query.date = { gte: start, lte: end };
             orderBy = { date: 'asc' };
         }
+
         if (isPast) query.date = { lte: now };
+
         if (isFuture) {
             query.date = { gte: now };
             orderBy = { date: 'asc' };
@@ -178,7 +182,7 @@ export class AppointmentService {
     /** ----------------------
     * GET COUNTS
     * ---------------------- */
-    async getAllAppointmentCount(queryParam: GetAppointmentsDto) {
+    async getAllAppointmentCount(queryParam: GetAppointmentCountsDto) {
         const { doctorId, patientId } = queryParam;
         const query: any = {};
         if (doctorId) query.doctorId = doctorId;
@@ -197,7 +201,7 @@ export class AppointmentService {
             totalUnPaidAppointments,
             totalCashPaidAppointments,
             totalOnlinePaidAppointments,
-        ] = await this.prisma.$transaction([
+        ] = await Promise.all([
             this.prisma.appointment.count({ where: query }),
             this.prisma.appointment.findMany({
                 where: query,
@@ -221,7 +225,7 @@ export class AppointmentService {
         ]);
 
         return {
-            data: {
+            counts: {
                 totalAppointments,
                 totalUniquePatientsCount: uniquePatients.length,
                 totalUniqueDoctorsCount: uniqueDoctors.length,

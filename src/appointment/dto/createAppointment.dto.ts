@@ -15,15 +15,14 @@ export class FutureDate implements ValidatorConstraintInterface {
 export class CreateAppointmentDto {
   @IsOptional()
   @IsString()
-  @IsUUID()
   patientId?: string;
 
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   @IsUUID()
   readonly doctorId: string;
 
-  @Type(() => Date)
+  @Type(() => Date) // convert to javascript Date object
   @IsDate({ message: "Date must be a valid date" })
   @Validate(FutureDate)
   readonly date: Date;

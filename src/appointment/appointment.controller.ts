@@ -14,6 +14,7 @@ import { AppointmentService } from './appointment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import {
     CreateAppointmentDto,
+    GetAppointmentCountsDto,
     GetAppointmentsDto,
     UpdateAppointmentDto,
 } from './dto';
@@ -59,7 +60,7 @@ export class AppointmentController {
 
     @Get('count')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getAllAppointmentCount(@Query() query: GetAppointmentsDto) {
+    getAllAppointmentCount(@Query() query: GetAppointmentCountsDto) {
         return this.appointmentService.getAllAppointmentCount(query);
     }
 

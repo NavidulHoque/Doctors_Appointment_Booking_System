@@ -1,20 +1,9 @@
-import { IsOptional, IsInt, Min, Max, IsString } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
-import { BaseAppointmentDto } from './baseAppointment.dto';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { Transform, } from 'class-transformer';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { Method, Status } from '@prisma/client';
 
-export class GetAppointmentsDto extends BaseAppointmentDto {
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1, { message: 'Page must be at least 1' })
-  readonly page?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Max(10, { message: 'Limit must be at most 10' })
-  readonly limit?: number;
+export class GetAppointmentsDto extends PaginationDto {
 
   @IsOptional()
   @IsString()
@@ -46,4 +35,16 @@ export class GetAppointmentsDto extends BaseAppointmentDto {
   @IsOptional()
   @Transform(({ value }) => value === 'true')
   readonly isFuture?: boolean
+
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value.toUpperCase())
+  @IsEnum(Status, { message: 'Status must be pending, confirmed, completed, running or cancelled' })
+  readonly status?: Status;
+
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value.toUpperCase())
+  @IsEnum(Method, { message: 'Payment method must be cash or online' })
+  readonly paymentMethod?: Method;
 }
