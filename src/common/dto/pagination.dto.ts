@@ -1,16 +1,16 @@
 import { Type } from "class-transformer";
-import { IsInt, IsNotEmpty, IsOptional, Max, Min } from "class-validator";
+import { IsDefined, IsInt, IsNotEmpty, Max, Min } from "class-validator";
 
 export class PaginationDto {
-    @IsNotEmpty()
+    @IsDefined({ message: 'Page is required' })
     @Type(() => Number)
-    @IsInt()
+    @IsInt({ message: 'Page must be an integer' })
     @Min(1, { message: 'Page must be at least 1' })
     readonly page: number;
 
-    @IsNotEmpty()
+    @IsDefined({ message: 'Limit is required' })
     @Type(() => Number)
-    @IsInt()
+    @IsInt({ message: 'Limit must be an integer' })
     @Max(10, { message: 'Limit must be at most 10' })
     readonly limit: number;
 }

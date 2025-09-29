@@ -8,6 +8,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { EmailService } from 'src/email/email.service';
 import { Prisma, Role } from '@prisma/client';
+import { DateTime } from 'luxon';
 
 @Injectable()
 export class AppointmentService {
@@ -84,88 +85,21 @@ export class AppointmentService {
     /** ----------------------
     * GET ALL
     * ---------------------- */
-    async getAllAppointments(queryParam: GetAppointmentsDto) {
-        const {
-            page = 1,
-            limit = 10,
-            search,
-            doctorId,
-            patientId,
-            status,
-            isPaid,
-            paymentMethod,
-            isToday,
-            isPast,
-            isFuture,
-        } = queryParam;
-
-        if ([isToday, isPast, isFuture].filter(Boolean).length > 1) {
-            throw new BadRequestException('Only one of isToday, isPast, or isFuture can be passed as query parameter');
-        }
+    async getAllAppointments(dto: GetAppointmentsDto) {
+        const { page, limit } = dto;
 
         const skip = (page - 1) * limit;
-        let orderBy: any = { date: 'desc' };
-
-        const query: Prisma.AppointmentWhereInput = {};
-        if (doctorId) query.doctorId = doctorId;
-        if (patientId) query.patientId = patientId;
-        if (isPaid !== undefined) query.isPaid = isPaid;
-        if (paymentMethod) query.paymentMethod = paymentMethod;
-
-        if (status && status.length > 0) {
-            query.status = { in: status };
-            if (status.some((s) => ['CONFIRMED', 'PENDING', 'RUNNING'].includes(s))) {
-                orderBy = { date: 'asc' };
-            }
-        }
-
-        const now = new Date();
-
-        if (isToday) {
-            const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-            const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59));
-            query.date = { gte: start, lte: end };
-            orderBy = { date: 'asc' };
-        }
-
-        if (isPast) query.date = { lte: now };
-
-        if (isFuture) {
-            query.date = { gte: now };
-            orderBy = { date: 'asc' };
-        }
-
-        if (search) {
-            query.OR = [
-                { cancellationReason: { contains: search, mode: 'insensitive' } },
-                {
-                    doctor: {
-                        OR: [
-                            { fullName: { contains: search, mode: 'insensitive' } },
-                            { email: { contains: search, mode: 'insensitive' } },
-                        ],
-                    },
-                },
-                {
-                    patient: {
-                        OR: [
-                            { fullName: { contains: search, mode: 'insensitive' } },
-                            { email: { contains: search, mode: 'insensitive' } },
-                        ],
-                    },
-                },
-            ];
-        }
+        const { query: where, orderBy } = this.buildAppointmentQuery(dto);
 
         const [appointments, totalAppointments] = await Promise.all([
             this.prisma.appointment.findMany({
-                where: query,
+                where,
                 orderBy,
                 select: appointmentSelect,
                 take: limit,
                 skip,
             }),
-            this.prisma.appointment.count({ where: query }),
+            this.prisma.appointment.count({ where }),
         ]);
 
         return {
@@ -182,8 +116,8 @@ export class AppointmentService {
     /** ----------------------
     * GET COUNTS
     * ---------------------- */
-    async getAllAppointmentCount(queryParam: GetAppointmentExtraDto) {
-        const { doctorId, patientId } = queryParam;
+    async getAllAppointmentCount(dto: GetAppointmentExtraDto) {
+        const { doctorId, patientId } = dto;
         const query: Prisma.AppointmentWhereInput = {};
         if (doctorId) query.doctorId = doctorId;
         if (patientId) query.patientId = patientId;
@@ -404,6 +338,77 @@ export class AppointmentService {
     /** ----------------------
      * HELPERS
      * ---------------------- */
+    private buildAppointmentQuery(dto: GetAppointmentsDto) {
+        const {
+            search, doctorId, patientId, status, isPaid,
+            paymentMethod, isToday, isPast, isFuture,
+        } = dto;
+
+        if ([isToday, isPast, isFuture].filter(Boolean).length > 1) {
+            throw new BadRequestException('Only one of isToday, isPast, or isFuture can be passed');
+        }
+
+        const query: Prisma.AppointmentWhereInput = {};
+        let orderBy: any = { date: 'desc' };
+        const now = new Date();
+
+        if (doctorId) query.doctorId = doctorId;
+        if (patientId) query.patientId = patientId;
+        if (isPaid !== undefined) query.isPaid = isPaid;
+        if (paymentMethod) query.paymentMethod = paymentMethod;
+
+        if (status && status.length > 0) {
+            query.status = { in: status };
+            if (status.some((s) => ['CONFIRMED', 'PENDING', 'RUNNING'].includes(s))) {
+                orderBy = { date: 'asc' };
+            }
+        }
+
+        if (isToday) {
+            const { startUTC, endUTC } = this.getStartEndDayUTC('Asia/Dhaka');
+            query.date = { gte: startUTC, lte: endUTC };
+            orderBy = { date: 'asc' };
+        }
+
+        if (isPast) query.date = { lte: now };
+
+        if (isFuture) {
+            query.date = { gte: now };
+            orderBy = { date: 'asc' };
+        }
+
+        if (search) {
+            query.OR = [
+                { cancellationReason: { contains: search, mode: 'insensitive' } },
+                {
+                    doctor: {
+                        OR: [
+                            { fullName: { contains: search, mode: 'insensitive' } },
+                            { email: { contains: search, mode: 'insensitive' } },
+                        ],
+                    },
+                },
+                {
+                    patient: {
+                        OR: [
+                            { fullName: { contains: search, mode: 'insensitive' } },
+                            { email: { contains: search, mode: 'insensitive' } },
+                        ],
+                    },
+                },
+            ];
+        }
+
+        return { query, orderBy };
+    }
+
+    private getStartEndDayUTC(timezone: string) {
+        const localTime = DateTime.fromJSDate(new Date(), { zone: timezone });
+        const startUTC = localTime.startOf('day').toUTC().toJSDate();
+        const endUTC = localTime.endOf('day').toUTC().toJSDate();
+        return { startUTC, endUTC };
+    }
+
     private async sendNotificationWithFallback(
         userId: string,
         message: string,

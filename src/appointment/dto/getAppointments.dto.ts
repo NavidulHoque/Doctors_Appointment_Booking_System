@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 import { Transform, } from 'class-transformer';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { Method, Status } from '@prisma/client';
@@ -7,6 +7,8 @@ export class GetAppointmentsDto extends PaginationDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => value.trim())
+  @MinLength(3, { message: 'Search query must be at least 3 characters long' })
   readonly search?: string;
 
   @IsOptional()
