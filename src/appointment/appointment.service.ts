@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAppointmentDto, GetAppointmentExtraDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
@@ -180,9 +180,9 @@ export class AppointmentService {
     /** ----------------------
     * GET GRAPH
     * ---------------------- */
-    async getTotalAppointmentsGraph(queryParam: GetAppointmentExtraDto) {
+    async getTotalAppointmentsGraph(dto: GetAppointmentExtraDto) {
 
-        const { doctorId, patientId } = queryParam;
+        const { doctorId, patientId } = dto;
 
         const months = [
             'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
@@ -216,7 +216,7 @@ export class AppointmentService {
             ? await this.prisma.$queryRawUnsafe(query, ...values)
             : await this.prisma.$queryRawUnsafe(query);
 
-        const result = rawResult.map((item: any) => ({
+        const result = rawResult.map((item: Record<string, any>) => ({
             year: Number(item.year),
             month: months[Number(item.month) - 1],
             total: Number(item.total),
@@ -236,95 +236,10 @@ export class AppointmentService {
         traceId: string,
         appointment: Record<string, any>,
     ) {
-        const { status, isPaid, paymentMethod, cancellationReason } = dto;
-        const {
-            id: appointmentId,
-            patient: { id: patientId, fullName: patientName },
-            doctor: { id: doctorId, fullName: doctorName },
-            date,
-        } = appointment;
-
-        const body: Record<string, any> = {};
-        if (status) body.status = status;
-        if (isPaid && paymentMethod) {
-            body.isPaid = isPaid;
-            body.paymentMethod = paymentMethod;
-        }
-
-        const now = new Date();
-
-        /** CONFIRM */
-        if (status === 'CONFIRMED') {
-            const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
-
-            await Promise.all([
-                this.sendNotificationWithFallback(
-                    patientId,
-                    `Your appointment with ${doctorName} is confirmed for ${date.toString()}.`,
-                    traceId,
-                    { appointmentId },
-                    'Failed to send appointment confirmation',
-                ),
-                this.sendNotificationWithFallback(
-                    doctorId,
-                    `Your appointment with ${patientName} is confirmed for ${date.toString()}.`,
-                    traceId,
-                    { appointmentId },
-                    'Failed to send appointment confirmation',
-                ),
-            ]);
-
-            await Promise.all([
-                this.sendNotificationWithFallback(
-                    patientId,
-                    `Your appointment with ${doctorName} starts in 1 hour.`,
-                    traceId,
-                    { appointmentId },
-                    'Failed to send appointment reminder',
-                    oneHourBefore.getTime() - now.getTime(),
-                ),
-                this.sendNotificationWithFallback(
-                    doctorId,
-                    `Your appointment with ${patientName} starts in 1 hour.`,
-                    traceId,
-                    { appointmentId },
-                    'Failed to send appointment reminder',
-                    oneHourBefore.getTime() - now.getTime(),
-                ),
-                this.appointmentQueue.add(
-                    'start-appointment',
-                    { status: 'RUNNING', appointment, traceId },
-                    {
-                        delay: date.getTime() - now.getTime(),
-                        backoff: { type: 'exponential', delay: 5000 },
-                        attempts: 5,
-                        removeOnComplete: true,
-                        removeOnFail: false,
-                    },
-                ),
-            ]);
-        }
-
-        /** CANCEL */
-        if (status === 'CANCELLED') {
-            body.cancellationReason = cancellationReason;
-            this.sendNotificationWithFallback(
-                patientId,
-                `Your appointment with ${doctorName} was cancelled on ${date.toString()}. Reason: ${cancellationReason}`,
-                traceId,
-                { appointmentId },
-                'Failed to send appointment cancellation',
-            );
-        }
-
-        /** COMPLETE → auto mark paid */
-        if (status === 'COMPLETED' && !appointment.isPaid) {
-            body.isPaid = true;
-            body.paymentMethod = 'CASH';
-        }
+        const body = await this.prepareAppointmentUpdate(dto, appointment, traceId);
 
         const updatedAppointment = await this.prisma.appointment.update({
-            where: { id: appointmentId },
+            where: { id: appointment.id },
             data: body,
             select: appointmentSelect,
         });
@@ -338,6 +253,114 @@ export class AppointmentService {
     /** ----------------------
      * HELPERS
      * ---------------------- */
+    private async prepareAppointmentUpdate(dto: UpdateAppointmentDto, appointment: Record<string, any>, traceId: string) {
+        const { status, isPaid, paymentMethod, cancellationReason } = dto;
+        const {
+            id: appointmentId,
+            patient: { id: patientId, fullName: patientName },
+            doctor: { id: doctorId, fullName: doctorName },
+            date,
+        } = appointment;
+
+        const body: Record<string, any> = {};
+        if (status) body.status = status;
+
+        if (isPaid && paymentMethod) {
+
+            if (appointment.status === "CONFIRMED") {
+                body.isPaid = isPaid;
+                body.paymentMethod = paymentMethod;
+            }
+
+            else {
+                throw new ForbiddenException('Appointment need to be confirmed to update payment status');
+            }
+        }
+
+        const now = new Date();
+
+        switch (status) {
+
+            case 'CONFIRMED': {
+                const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
+
+                await Promise.all([
+                    this.sendNotificationWithFallback(
+                        patientId,
+                        `Your appointment with ${doctorName} is confirmed for ${date.toString()}.`,
+                        traceId,
+                        { appointmentId },
+                        'Failed to send appointment confirmation',
+                    ),
+                    this.sendNotificationWithFallback(
+                        doctorId,
+                        `Your appointment with ${patientName} is confirmed for ${date.toString()}.`,
+                        traceId,
+                        { appointmentId },
+                        'Failed to send appointment confirmation',
+                    ),
+                ]);
+
+                await Promise.all([
+                    this.sendNotificationWithFallback(
+                        patientId,
+                        `Your appointment with ${doctorName} starts in 1 hour.`,
+                        traceId,
+                        { appointmentId },
+                        'Failed to send appointment reminder',
+                        oneHourBefore.getTime() - now.getTime(),
+                    ),
+                    this.sendNotificationWithFallback(
+                        doctorId,
+                        `Your appointment with ${patientName} starts in 1 hour.`,
+                        traceId,
+                        { appointmentId },
+                        'Failed to send appointment reminder',
+                        oneHourBefore.getTime() - now.getTime(),
+                    ),
+                    this.appointmentQueue.add(
+                        'start-appointment',
+                        { status: 'RUNNING', appointment, traceId },
+                        {
+                            delay: date.getTime() - now.getTime(),
+                            backoff: { type: 'exponential', delay: 5000 },
+                            attempts: 5,
+                            removeOnComplete: true,
+                            removeOnFail: false,
+                        },
+                    ),
+                ]);
+                break;
+            }
+
+            case 'CANCELLED': {
+                body.cancellationReason = cancellationReason;
+
+                this.sendNotificationWithFallback(
+                    patientId,
+                    `Your appointment with ${doctorName} was cancelled on ${date.toString()}. Reason: ${cancellationReason}`,
+                    traceId,
+                    { appointmentId },
+                    'Failed to send appointment cancellation',
+                );
+                break;
+            }
+
+            case 'COMPLETED': {
+                if (!appointment.isPaid) {
+                    body.isPaid = true;
+                    body.paymentMethod = 'CASH';
+                }
+                break;
+            }
+
+            default:
+                break;
+        }
+
+        return body;
+    }
+
     private buildAppointmentQuery(dto: GetAppointmentsDto) {
         const {
             search, doctorId, patientId, status, isPaid,
@@ -365,7 +388,10 @@ export class AppointmentService {
         }
 
         if (isToday) {
-            const { startUTC, endUTC } = this.getStartEndDayUTC('Asia/Dhaka');
+            const localTime = DateTime.fromJSDate(new Date(), { zone: 'Asia/Dhaka' });
+            const startUTC = localTime.startOf('day').toUTC().toJSDate();
+            const endUTC = localTime.endOf('day').toUTC().toJSDate();
+
             query.date = { gte: startUTC, lte: endUTC };
             orderBy = { date: 'asc' };
         }
@@ -400,13 +426,6 @@ export class AppointmentService {
         }
 
         return { query, orderBy };
-    }
-
-    private getStartEndDayUTC(timezone: string) {
-        const localTime = DateTime.fromJSDate(new Date(), { zone: timezone });
-        const startUTC = localTime.startOf('day').toUTC().toJSDate();
-        const endUTC = localTime.endOf('day').toUTC().toJSDate();
-        return { startUTC, endUTC };
     }
 
     private async sendNotificationWithFallback(
