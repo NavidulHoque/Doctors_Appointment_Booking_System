@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateAppointmentDto, GetAppointmentExtraDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
+import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
@@ -9,6 +9,7 @@ import { Queue } from 'bull';
 import { EmailService } from 'src/email/email.service';
 import { Prisma, Role } from '@prisma/client';
 import { DateTime } from 'luxon';
+import { UserDto } from 'src/user/dto';
 
 @Injectable()
 export class AppointmentService {
@@ -85,11 +86,11 @@ export class AppointmentService {
     /** ----------------------
     * GET ALL
     * ---------------------- */
-    async getAllAppointments(dto: GetAppointmentsDto) {
+    async getAllAppointments(dto: GetAppointmentsDto, user: UserDto) {
         const { page, limit } = dto;
 
         const skip = (page - 1) * limit;
-        const { query: where, orderBy } = this.buildAppointmentQuery(dto);
+        const { query: where, orderBy } = this.buildAppointmentQuery(dto, user);
 
         const [appointments, totalAppointments] = await Promise.all([
             this.prisma.appointment.findMany({
@@ -116,11 +117,8 @@ export class AppointmentService {
     /** ----------------------
     * GET COUNTS
     * ---------------------- */
-    async getAllAppointmentCount(dto: GetAppointmentExtraDto) {
-        const { doctorId, patientId } = dto;
-        const query: Prisma.AppointmentWhereInput = {};
-        if (doctorId) query.doctorId = doctorId;
-        if (patientId) query.patientId = patientId;
+    async getAllAppointmentCount(user: UserDto) {
+        const query = this.applyRoleBasedScope(user, {});
 
         const [
             totalAppointments,
@@ -180,9 +178,9 @@ export class AppointmentService {
     /** ----------------------
     * GET GRAPH
     * ---------------------- */
-    async getTotalAppointmentsGraph(dto: GetAppointmentExtraDto) {
+    async getTotalAppointmentsGraph(user: UserDto) {
 
-        const { doctorId, patientId } = dto;
+        const { doctorId, patientId } = this.applyRoleBasedScope(user, {});
 
         const months = [
             'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
@@ -235,8 +233,9 @@ export class AppointmentService {
         dto: UpdateAppointmentDto,
         traceId: string,
         appointment: Record<string, any>,
+        userRole = ""
     ) {
-        const body = await this.prepareAppointmentUpdate(dto, appointment, traceId);
+        const body = await this.prepareAppointmentUpdate(dto, appointment, traceId, userRole);
 
         const updatedAppointment = await this.prisma.appointment.update({
             where: { id: appointment.id },
@@ -253,8 +252,14 @@ export class AppointmentService {
     /** ----------------------
      * HELPERS
      * ---------------------- */
-    private async prepareAppointmentUpdate(dto: UpdateAppointmentDto, appointment: Record<string, any>, traceId: string) {
-        const { status, isPaid, paymentMethod, cancellationReason } = dto;
+    private async prepareAppointmentUpdate(
+        dto: UpdateAppointmentDto,
+        appointment: Record<string, any>,
+        traceId: string,
+        userRole: string
+    ) {
+        const { status, cancellationReason } = dto;
+
         const {
             id: appointmentId,
             patient: { id: patientId, fullName: patientName },
@@ -265,72 +270,68 @@ export class AppointmentService {
         const body: Record<string, any> = {};
         if (status) body.status = status;
 
-        if (isPaid && paymentMethod) {
-
-            if (appointment.status === "CONFIRMED") {
-                body.isPaid = isPaid;
-                body.paymentMethod = paymentMethod;
-            }
-
-            else {
-                throw new ForbiddenException('Appointment need to be confirmed to update payment status');
-            }
-        }
-
         const now = new Date();
 
         switch (status) {
 
             case 'CONFIRMED': {
-                const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
 
-                await Promise.all([
-                    this.sendNotificationWithFallback(
-                        patientId,
-                        `Your appointment with ${doctorName} is confirmed for ${date.toString()}.`,
-                        traceId,
-                        { appointmentId },
-                        'Failed to send appointment confirmation',
-                    ),
-                    this.sendNotificationWithFallback(
-                        doctorId,
-                        `Your appointment with ${patientName} is confirmed for ${date.toString()}.`,
-                        traceId,
-                        { appointmentId },
-                        'Failed to send appointment confirmation',
-                    ),
-                ]);
+                if (Role.ADMIN === userRole) {
+                    const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
 
-                await Promise.all([
-                    this.sendNotificationWithFallback(
-                        patientId,
-                        `Your appointment with ${doctorName} starts in 1 hour.`,
-                        traceId,
-                        { appointmentId },
-                        'Failed to send appointment reminder',
-                        oneHourBefore.getTime() - now.getTime(),
-                    ),
-                    this.sendNotificationWithFallback(
-                        doctorId,
-                        `Your appointment with ${patientName} starts in 1 hour.`,
-                        traceId,
-                        { appointmentId },
-                        'Failed to send appointment reminder',
-                        oneHourBefore.getTime() - now.getTime(),
-                    ),
-                    this.appointmentQueue.add(
-                        'start-appointment',
-                        { status: 'RUNNING', appointment, traceId },
-                        {
-                            delay: date.getTime() - now.getTime(),
-                            backoff: { type: 'exponential', delay: 5000 },
-                            attempts: 5,
-                            removeOnComplete: true,
-                            removeOnFail: false,
-                        },
-                    ),
-                ]);
-                break;
+                    await Promise.all([
+                        this.sendNotificationWithFallback(
+                            patientId,
+                            `Your appointment with ${doctorName} is confirmed for ${date.toString()}.`,
+                            traceId,
+                            { appointmentId },
+                            'Failed to send appointment confirmation',
+                        ),
+                        this.sendNotificationWithFallback(
+                            doctorId,
+                            `Your appointment with ${patientName} is confirmed for ${date.toString()}.`,
+                            traceId,
+                            { appointmentId },
+                            'Failed to send appointment confirmation',
+                        ),
+                    ]);
+
+                    await Promise.all([
+                        this.sendNotificationWithFallback(
+                            patientId,
+                            `Your appointment with ${doctorName} starts in 1 hour.`,
+                            traceId,
+                            { appointmentId },
+                            'Failed to send appointment reminder',
+                            oneHourBefore.getTime() - now.getTime(),
+                        ),
+                        this.sendNotificationWithFallback(
+                            doctorId,
+                            `Your appointment with ${patientName} starts in 1 hour.`,
+                            traceId,
+                            { appointmentId },
+                            'Failed to send appointment reminder',
+                            oneHourBefore.getTime() - now.getTime(),
+                        ),
+                        this.appointmentQueue.add(
+                            'start-appointment',
+                            { status: 'RUNNING', appointment, traceId },
+                            {
+                                delay: date.getTime() - now.getTime(),
+                                backoff: { type: 'exponential', delay: 5000 },
+                                attempts: 5,
+                                removeOnComplete: true,
+                                removeOnFail: false,
+                            },
+                        ),
+                    ]);
+                }
+
+                else {
+                    throw new ForbiddenException("Only admin can confirm appointments");
+                }
+
+                break
             }
 
             case 'CANCELLED': {
@@ -347,10 +348,18 @@ export class AppointmentService {
             }
 
             case 'COMPLETED': {
-                if (!appointment.isPaid) {
-                    body.isPaid = true;
-                    body.paymentMethod = 'CASH';
+                if (Role.ADMIN === userRole) {
+
+                    if (!appointment.isPaid) {
+                        body.isPaid = true;
+                        body.paymentMethod = 'CASH';
+                    }
                 }
+
+                else {
+                    throw new ForbiddenException("Only admin can complete appointments");
+                }
+
                 break;
             }
 
@@ -361,22 +370,21 @@ export class AppointmentService {
         return body;
     }
 
-    private buildAppointmentQuery(dto: GetAppointmentsDto) {
+    private buildAppointmentQuery(dto: GetAppointmentsDto, user: UserDto) {
         const {
-            search, doctorId, patientId, status, isPaid,
+            search, status, isPaid,
             paymentMethod, isToday, isPast, isFuture,
         } = dto;
+
+        const query = this.applyRoleBasedScope(user, {});
 
         if ([isToday, isPast, isFuture].filter(Boolean).length > 1) {
             throw new BadRequestException('Only one of isToday, isPast, or isFuture can be passed');
         }
 
-        const query: Prisma.AppointmentWhereInput = {};
         let orderBy: any = { date: 'desc' };
         const now = new Date();
 
-        if (doctorId) query.doctorId = doctorId;
-        if (patientId) query.patientId = patientId;
         if (isPaid !== undefined) query.isPaid = isPaid;
         if (paymentMethod) query.paymentMethod = paymentMethod;
 
@@ -426,6 +434,21 @@ export class AppointmentService {
         }
 
         return { query, orderBy };
+    }
+
+    private applyRoleBasedScope(user: UserDto, query: Prisma.AppointmentWhereInput) {
+        switch (user.role) {
+
+            case Role.PATIENT:
+                query.patientId = user.id;
+                break;
+
+            case Role.DOCTOR:
+                query.doctorId = user.id;
+                break;
+        }
+
+        return query
     }
 
     private async sendNotificationWithFallback(

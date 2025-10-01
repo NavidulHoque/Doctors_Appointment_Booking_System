@@ -12,14 +12,6 @@ export class GetAppointmentsDto extends PaginationDto {
   readonly search?: string;
 
   @IsOptional()
-  @IsString()
-  readonly doctorId?: string;
-
-  @IsOptional()
-  @IsString()
-  readonly patientId?: string;
-
-  @IsOptional()
   @Transform(({ value }) => {
     if (value === 'true') return true;
     if (value === 'false') return false;

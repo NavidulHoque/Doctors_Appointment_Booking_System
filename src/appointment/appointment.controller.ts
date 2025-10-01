@@ -13,7 +13,6 @@ import { AppointmentService } from './appointment.service';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import {
     CreateAppointmentDto,
-    GetAppointmentExtraDto,
     GetAppointmentsDto,
     UpdateAppointmentDto,
 } from './dto';
@@ -53,20 +52,25 @@ export class AppointmentController {
         ttl: 60,
         key: CacheKeyHelper.generateAppointmentsKey,
     })
-    getAllAppointments(@Query() query: GetAppointmentsDto) {
-        return this.appointmentService.getAllAppointments(query);
+    getAllAppointments(
+        @Query() dto: GetAppointmentsDto,
+        @User() user: UserDto
+    ) {
+        return this.appointmentService.getAllAppointments(dto, user);
     }
 
     @Get('count')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getAllAppointmentCount(@Query() query: GetAppointmentExtraDto) {
-        return this.appointmentService.getAllAppointmentCount(query);
+    getAllAppointmentCount(
+        @User() user: UserDto
+    ) {
+        return this.appointmentService.getAllAppointmentCount(user);
     }
 
     @Get('graph/total')
     @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
-    getTotalAppointmentsGraph(@Query() query: GetAppointmentExtraDto) {
-        return this.appointmentService.getTotalAppointmentsGraph(query);
+    getTotalAppointmentsGraph(@User() user: UserDto) {
+        return this.appointmentService.getTotalAppointmentsGraph(user);
     }
 
     @Patch(':id')
@@ -80,11 +84,13 @@ export class AppointmentController {
         @Param('id', EntityByIdPipe('appointment', appointmentSelect))
         appointment: Record<string, any>,
         @Req() request: RequestWithTrace,
+        @User("role") userRole: string
     ) {
         return this.appointmentService.updateAppointment(
             dto,
             request.traceId,
             appointment,
+            userRole
         );
     }
 }
