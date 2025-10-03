@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { CreateDoctorDto, GetDoctorsDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { doctorSelect } from 'src/prisma/prisma-selects';
@@ -10,7 +10,6 @@ import { SocketGateway } from 'src/socket/socket.gateway';
 @Injectable()
 export class DoctorService {
     private stripe: Stripe;
-    private readonly logger = new Logger(DoctorService.name)
 
     constructor(
         private readonly prisma: PrismaService,
@@ -258,25 +257,6 @@ export class DoctorService {
         return sortedDoctors
     }
 
-    async getTotalRevenue(user: Record<string, any>) {
-
-        const { id } = user
-
-        const doctor = await this.prisma.doctor.findUnique({
-            where: { userId: id },
-            select: { revenue: true }
-        })
-
-        if (!doctor) {
-            throw new NotFoundException("Doctor not found")
-        }
-
-        return {
-            totalRevenue: doctor?.revenue,
-            message: "Total revenue of doctor fetched successfully"
-        }
-    }
-
     async updateDoctor(data: Record<string, any>, traceId: string) {
 
         const { fullName, email, currentPassword, newPassword, phone, gender, birthDate, address, specialization, education, experience, aboutMe, fees, addAvailableTime, removeAvailableTime, isActive } = data.doctor
@@ -285,8 +265,6 @@ export class DoctorService {
 
         let userData: any = null
         let doctorData: any = null
-
-        this.logger.log(`✉️ Updating doctor with traceId ${traceId}`);
 
         if (fullName && email && phone && gender && birthDate && address && specialization && education && experience && aboutMe && fees) {
             userData = {
@@ -393,8 +371,6 @@ export class DoctorService {
             }
         })
 
-        this.logger.log(`✅ Doctor updated with traceId ${traceId}`);
-
         this.socketGateway.sendResponse(userId, {
             traceId,
             status: 'success',
@@ -419,8 +395,6 @@ export class DoctorService {
             throw new BadRequestException("Stripe account already exists")
         }
 
-        this.logger.log(`✉️ Creating stripe account with traceId ${traceId}`);
-
         const account = await this.stripe.accounts.create({
             type: 'express',
             email: doctor.user.email,
@@ -437,8 +411,6 @@ export class DoctorService {
             return_url: `${this.configService.get('FRONTEND_URL')}/stripe/onboarding/return?accountId=${account.id}`,
             type: 'account_onboarding',
         });
-
-        this.logger.log(`✅ Stripe account created with traceId ${traceId}`);
 
         this.socketGateway.sendResponse(userId, {
             traceId,
@@ -462,14 +434,10 @@ export class DoctorService {
 
         if (charges_enabled && payouts_enabled && details_submitted) {
 
-            this.logger.log(`✉️ Activating stripe account with traceId ${traceId}`);
-
             await this.prisma.doctor.update({
                 where: { userId: doctorId },
                 data: { isStripeAccountActive: true }
             })
-
-            this.logger.log(`✅ Stripe account activated with traceId ${traceId}`);
         }
 
         else {
@@ -487,11 +455,7 @@ export class DoctorService {
 
         const { userId: adminId, doctorId } = data
 
-        this.logger.log(`✉️ Deleting doctor with traceId ${traceId}`);
-
         await this.prisma.doctor.delete({ where: { userId: doctorId } })
-
-        this.logger.log(`✅ Doctor deleted with traceId ${traceId}`);
 
         this.socketGateway.sendResponse(adminId, {
             traceId,

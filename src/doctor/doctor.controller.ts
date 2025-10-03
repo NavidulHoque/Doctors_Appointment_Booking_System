@@ -6,7 +6,6 @@ import { Roles, User } from 'src/auth/decorators';
 import { Prisma, Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { doctorSelect } from 'src/prisma/prisma-selects';
-import { DoctorProducerService } from './doctor.producer.service';
 import { RequestWithTrace } from 'src/common/types';
 import { Cache } from 'src/common/decorators';
 import { CacheKeyHelper } from './helper';
@@ -19,11 +18,10 @@ export class DoctorController {
 
     constructor(
         private readonly doctorService: DoctorService,
-        private readonly doctorProducerService: DoctorProducerService,
         private readonly prisma: PrismaService
     ) { }
 
-    @Post("/create-doctor")
+    @Post()
     @Roles(Role.ADMIN)
     @Cache({
         enabled: true,
@@ -48,21 +46,13 @@ export class DoctorController {
         return this.doctorService.getAllDoctors(query)
     }
 
-    @Get("/get-a-doctor/:id")
+    @Get(":id")
     @Roles(Role.ADMIN, Role.PATIENT)
     getADoctor(
         @Param('id', EntityByIdPipe('doctor', doctorSelect)) doctor: Record<string, any>,
         @Query() query: GetDoctorsDto,
     ) {
         return this.doctorService.getADoctor(doctor, query)
-    }
-
-    @Get("/get-total-revenue")
-    @Roles(Role.DOCTOR)
-    getTotalRevenue(
-        @User() user: UserDto
-    ) {
-        return this.doctorService.getTotalRevenue(user)
     }
 
     @Patch("/update-doctor/:id")
@@ -85,7 +75,7 @@ export class DoctorController {
             doctorId: user.role === Role.DOCTOR ? user.id : doctorId
         }
 
-        return this.doctorProducerService.sendUpdateDoctor(data, traceId)
+        return this.doctorService.updateDoctor(data, traceId)
     }
 
     @Patch("/stripe/create-account")
@@ -112,7 +102,7 @@ export class DoctorController {
             doctor
         }
 
-        return this.doctorProducerService.sendCreateStripeAccount(data, traceId)
+        return this.doctorService.createStripeAccount(data, traceId)
     }
 
     @Patch("/stripe/activate-account")
@@ -133,7 +123,7 @@ export class DoctorController {
             stripeAccountId: doctor!.stripeAccountId
         }
 
-        return this.doctorProducerService.sendActivateStripeAccount(data, traceId)
+        return this.doctorService.activateStripeAccount(data, traceId)
     }
 
     @Delete("/delete-doctor/:id")
@@ -153,7 +143,7 @@ export class DoctorController {
             userId: adminId,
             doctorId
         }
-        return this.doctorProducerService.sendDeleteDoctor(data, traceId)
+        return this.doctorService.deleteDoctor(data, traceId)
     }
 
     private async fetchDoctor(doctorId: string, select: Prisma.DoctorSelect) {

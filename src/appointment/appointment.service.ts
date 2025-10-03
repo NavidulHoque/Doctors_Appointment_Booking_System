@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { EmailService } from 'src/email/email.service';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma, Role, Status } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { UserDto } from 'src/user/dto';
 
@@ -258,116 +258,24 @@ export class AppointmentService {
         traceId: string,
         userRole: string
     ) {
-        const { status, cancellationReason } = dto;
-
-        const {
-            id: appointmentId,
-            patient: { id: patientId, fullName: patientName },
-            doctor: { id: doctorId, fullName: doctorName },
-            date,
-        } = appointment;
-
-        const body: Record<string, any> = {};
-        if (status) body.status = status;
-
-        const now = new Date();
+        const { status } = dto;
 
         switch (status) {
+            case 'CONFIRMED':
+                return await this.handleConfirm(appointment, traceId, userRole);
 
-            case 'CONFIRMED': {
+            case 'CANCELLED':
+                return this.handleCancel(dto, appointment, traceId);
 
-                if (Role.ADMIN === userRole) {
-                    const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
+            case 'COMPLETED':
+                return this.handleComplete(appointment, userRole);
 
-                    await Promise.all([
-                        this.sendNotificationWithFallback(
-                            patientId,
-                            `Your appointment with ${doctorName} is confirmed for ${date.toString()}.`,
-                            traceId,
-                            { appointmentId },
-                            'Failed to send appointment confirmation',
-                        ),
-                        this.sendNotificationWithFallback(
-                            doctorId,
-                            `Your appointment with ${patientName} is confirmed for ${date.toString()}.`,
-                            traceId,
-                            { appointmentId },
-                            'Failed to send appointment confirmation',
-                        ),
-                    ]);
-
-                    await Promise.all([
-                        this.sendNotificationWithFallback(
-                            patientId,
-                            `Your appointment with ${doctorName} starts in 1 hour.`,
-                            traceId,
-                            { appointmentId },
-                            'Failed to send appointment reminder',
-                            oneHourBefore.getTime() - now.getTime(),
-                        ),
-                        this.sendNotificationWithFallback(
-                            doctorId,
-                            `Your appointment with ${patientName} starts in 1 hour.`,
-                            traceId,
-                            { appointmentId },
-                            'Failed to send appointment reminder',
-                            oneHourBefore.getTime() - now.getTime(),
-                        ),
-                        this.appointmentQueue.add(
-                            'start-appointment',
-                            { status: 'RUNNING', appointment, traceId },
-                            {
-                                delay: date.getTime() - now.getTime(),
-                                backoff: { type: 'exponential', delay: 5000 },
-                                attempts: 5,
-                                removeOnComplete: true,
-                                removeOnFail: false,
-                            },
-                        ),
-                    ]);
-                }
-
-                else {
-                    throw new ForbiddenException("Only admin can confirm appointments");
-                }
-
-                break
-            }
-
-            case 'CANCELLED': {
-                body.cancellationReason = cancellationReason;
-
-                this.sendNotificationWithFallback(
-                    patientId,
-                    `Your appointment with ${doctorName} was cancelled on ${date.toString()}. Reason: ${cancellationReason}`,
-                    traceId,
-                    { appointmentId },
-                    'Failed to send appointment cancellation',
-                );
-                break;
-            }
-
-            case 'COMPLETED': {
-                if (Role.ADMIN === userRole) {
-
-                    if (!appointment.isPaid) {
-                        body.isPaid = true;
-                        body.paymentMethod = 'CASH';
-                    }
-                }
-
-                else {
-                    throw new ForbiddenException("Only admin can complete appointments");
-                }
-
-                break;
-            }
+            case 'RUNNING':
+                return this.handleRunning(appointment, userRole);
 
             default:
-                break;
+                return {};
         }
-
-        return body;
     }
 
     private buildAppointmentQuery(dto: GetAppointmentsDto, user: UserDto) {
@@ -489,6 +397,145 @@ export class AppointmentService {
                 );
             }
         }
+    }
+
+    /** ----------------------
+     * Handlers
+     * ---------------------- */
+
+    private async handleConfirm(
+        appointment: Record<string, any>,
+        traceId: string,
+        userRole: string
+    ) {
+        const { id: appointmentId, patient, doctor, date, status: currentStatus } = appointment;
+        const { id: patientId, fullName: patientName } = patient;
+        const { id: doctorId, fullName: doctorName } = doctor;
+        const now = new Date();
+
+        if (userRole !== Role.ADMIN) {
+            throw new ForbiddenException("Only admin can confirm appointments");
+        }
+        if (currentStatus !== 'PENDING') {
+            throw new ForbiddenException("Appointment must be in PENDING status to confirm");
+        }
+
+        const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
+
+        await Promise.all([
+            this.sendNotificationWithFallback(
+                patientId,
+                `Your appointment with ${doctorName} is confirmed for ${date.toString()}.`,
+                traceId,
+                { appointmentId },
+                'Failed to send appointment confirmation',
+            ),
+            this.sendNotificationWithFallback(
+                doctorId,
+                `Your appointment with ${patientName} is confirmed for ${date.toString()}.`,
+                traceId,
+                { appointmentId },
+                'Failed to send appointment confirmation',
+            ),
+        ]);
+
+        await Promise.all([
+            this.sendNotificationWithFallback(
+                patientId,
+                `Your appointment with ${doctorName} starts in 1 hour.`,
+                traceId,
+                { appointmentId },
+                'Failed to send appointment reminder',
+                oneHourBefore.getTime() - now.getTime(),
+            ),
+            this.sendNotificationWithFallback(
+                doctorId,
+                `Your appointment with ${patientName} starts in 1 hour.`,
+                traceId,
+                { appointmentId },
+                'Failed to send appointment reminder',
+                oneHourBefore.getTime() - now.getTime(),
+            ),
+            this.appointmentQueue.add(
+                'start-appointment',
+                { status: 'RUNNING', appointment, traceId },
+                {
+                    delay: date.getTime() - now.getTime(),
+                    backoff: { type: 'exponential', delay: 5000 },
+                    attempts: 5,
+                    removeOnComplete: true,
+                    removeOnFail: false,
+                },
+            ),
+        ]);
+
+        return { status: Status.CONFIRMED };
+    }
+
+    private handleCancel(
+        dto: UpdateAppointmentDto,
+        appointment: Record<string, any>,
+        traceId: string,
+    ) {
+        const { id: appointmentId, doctor, date, status: currentStatus, patient } = appointment;
+        const { fullName: doctorName } = doctor;
+        const { id: patientId } = patient;
+
+        if (currentStatus === 'COMPLETED') {
+            throw new ForbiddenException("Cannot cancel a completed appointment");
+        }
+
+        const { cancellationReason } = dto;
+
+        this.sendNotificationWithFallback(
+            patientId,
+            `Your appointment with ${doctorName} was cancelled on ${date.toString()}. Reason: ${cancellationReason}`,
+            traceId,
+            { appointmentId },
+            'Failed to send appointment cancellation',
+        );
+
+        return { status: Status.CANCELLED, cancellationReason };
+    }
+
+    private handleComplete(
+        appointment: Record<string, any>,
+        userRole: string
+    ) {
+        const { status: currentStatus, isPaid, paymentMethod } = appointment;
+
+        if (userRole !== Role.ADMIN) {
+            throw new ForbiddenException("Only admin can complete appointments");
+        }
+        if (currentStatus !== 'RUNNING') {
+            throw new ForbiddenException("Appointment must be in RUNNING status to complete");
+        }
+
+        const body: Record<string, any> = { status: Status.COMPLETED };
+
+        if (!isPaid && !paymentMethod) {
+            body.isPaid = true;
+            body.paymentMethod = 'CASH';
+        }
+
+        return body;
+    }
+
+    private handleRunning(
+        appointment: Record<string, any>,
+        userRole: string
+    ) {
+        if (userRole !== Role.ADMIN) {
+            throw new ForbiddenException("Only admin can mark appointments as RUNNING");
+        }
+
+        const { status: currentStatus } = appointment;
+
+        if (currentStatus !== 'CONFIRMED') {
+            throw new ForbiddenException("Appointment must be in CONFIRMED status to mark as RUNNING");
+        }
+
+        return { status: Status.RUNNING };
     }
 }
 
