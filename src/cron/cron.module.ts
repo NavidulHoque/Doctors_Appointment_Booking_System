@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { InactiveUserCronService } from './inactiveUserCron.service';
-import { RemoveExpiredSessionsCronService } from './removeExpiredSessionsCron.service';
+import { InactiveUserCronService } from './inactive-user-cron.service';
+import { RemoveExpiredSessionsCronService } from './remove-expired-sessions-cron.service';
 
 @Module({
     providers: [InactiveUserCronService, RemoveExpiredSessionsCronService]

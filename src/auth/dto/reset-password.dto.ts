@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsString } from "class-validator";
-import { BaseAuthDto } from "./baseAuth.dto";
+import { BaseAuthDto } from "./base-auth.dto";
 
 export class ResetPasswordDto extends BaseAuthDto {
 

@@ -1,2 +1,2 @@
-export * from "./createMessage.dto"
-export * from "./updateMessage.dto"
+export * from "./create-message.dto"
+export * from "./update-message.dto"

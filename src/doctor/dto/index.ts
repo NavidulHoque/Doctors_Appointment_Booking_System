@@ -1,3 +1,3 @@
-export * from "./createDoctor.dto"
-export * from "./getDoctors.dto"
-export * from "./updateDoctor.dto"
+export * from "./create-doctor.dto"
+export * from "./get-doctors.dto"
+export * from "./update-doctor.dto"

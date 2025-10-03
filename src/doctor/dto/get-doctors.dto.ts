@@ -1,6 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { BaseDoctorDto } from './baseDoctor.dto';
+import { BaseDoctorDto } from './base-doctor.dto';
 
 export class GetDoctorsDto extends BaseDoctorDto {
     @Type(() => Number)

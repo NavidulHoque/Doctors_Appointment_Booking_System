@@ -1,7 +1,7 @@
 import { IsOptional, IsString, IsEnum, IsDate, IsBoolean, MinLength, Matches, IsEmail, IsNumber, Min } from 'class-validator';
 import { Gender } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
-import { BaseDoctorDto } from './baseDoctor.dto';
+import { BaseDoctorDto } from './base-doctor.dto';
 
 export class UpdateDoctorDto extends BaseDoctorDto {
     @IsOptional()

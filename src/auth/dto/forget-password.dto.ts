@@ -1,3 +1,3 @@
-import { BaseAuthDto } from "./baseAuth.dto";
+import { BaseAuthDto } from "./base-auth.dto";
 
 export class ForgetPasswordDto extends BaseAuthDto {}

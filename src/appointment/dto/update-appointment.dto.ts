@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString } from "class-validator";
-import { Transform } from "class-transformer";
+import { Transform} from "class-transformer";
 import { Status } from "@prisma/client";
 
 export class UpdateAppointmentDto {
