@@ -1,9 +1,8 @@
 import { IsOptional, IsString, IsEnum, IsDate, IsBoolean, MinLength, Matches, IsEmail, IsNumber, Min } from 'class-validator';
 import { Gender } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
-import { BaseDoctorDto } from './base-doctor.dto';
 
-export class UpdateDoctorDto extends BaseDoctorDto {
+export class UpdateDoctorDto {
     @IsOptional()
     @IsString()
     @MinLength(5, { message: 'Full name must be at least 5 characters long' })
@@ -21,6 +20,10 @@ export class UpdateDoctorDto extends BaseDoctorDto {
     @IsString()
     @MinLength(5, { message: 'Education must be at least 5 characters long' })
     readonly education?: string;
+
+    @IsOptional()
+    @IsString()
+    readonly specialization?: string;
 
     @IsOptional()
     @IsNumber()

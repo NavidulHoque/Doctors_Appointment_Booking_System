@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard, RolesGuard } from 'src/auth/guard';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
@@ -11,6 +11,7 @@ import { Cache } from 'src/common/decorators';
 import { CacheKeyHelper } from './helper';
 import { UserDto } from 'src/user/dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PaginationDto } from 'src/common/dto';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Controller('doctors')
@@ -33,7 +34,7 @@ export class DoctorController {
         return this.doctorService.createDoctor(dto)
     }
 
-    @Get("/get-all-doctors")
+    @Get()
     @Roles(Role.ADMIN, Role.PATIENT)
     @Cache({
         enabled: true,
@@ -50,14 +51,13 @@ export class DoctorController {
     @Roles(Role.ADMIN, Role.PATIENT)
     getADoctor(
         @Param('id', EntityByIdPipe('doctor', doctorSelect)) doctor: Record<string, any>,
-        @Query() query: GetDoctorsDto,
+        @Query() query: PaginationDto,
     ) {
         return this.doctorService.getADoctor(doctor, query)
     }
 
-    @Patch("/update-doctor/:id")
+    @Patch(":id")
     @Roles(Role.DOCTOR, Role.ADMIN)
-    @HttpCode(202)
     @Cache({
         enabled: true,
         invalidate: "cache:GET:/doctors:*"
@@ -80,7 +80,6 @@ export class DoctorController {
 
     @Patch("/stripe/create-account")
     @Roles(Role.DOCTOR)
-    @HttpCode(202)
     async createStripeAccount(
         @Req() request: RequestWithTrace,
         @User("id") doctorId: string
@@ -107,7 +106,6 @@ export class DoctorController {
 
     @Patch("/stripe/activate-account")
     @Roles(Role.DOCTOR)
-    @HttpCode(202)
     async activateStripeAccount(
         @User("id") userId: string,
         @Req() request: RequestWithTrace,
@@ -126,9 +124,8 @@ export class DoctorController {
         return this.doctorService.activateStripeAccount(data, traceId)
     }
 
-    @Delete("/delete-doctor/:id")
+    @Delete(":id")
     @Roles(Role.ADMIN)
-    @HttpCode(202)
     @Cache({
         enabled: true,
         invalidate: "cache:GET:/doctors:*"

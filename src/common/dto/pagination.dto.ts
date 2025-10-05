@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsDefined, IsInt, IsNotEmpty, Max, Min } from "class-validator";
+import { IsDefined, IsInt, Max, Min } from "class-validator";
 
 export class PaginationDto {
     @IsDefined({ message: 'Page is required' })

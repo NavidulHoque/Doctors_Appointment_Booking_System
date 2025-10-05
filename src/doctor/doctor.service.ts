@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { CreateDoctorDto, GetDoctorsDto } from './dto';
+import { CreateDoctorDto, DoctorResponseDto, GetDoctorsDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { doctorSelect } from 'src/prisma/prisma-selects';
 import * as argon from "argon2";
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { SocketGateway } from 'src/socket/socket.gateway';
+import { PaginationDto } from 'src/common/dto';
+import { Status } from '@prisma/client';
+import { PaginationResponseDto } from 'src/common/dto';
 
 @Injectable()
 export class DoctorService {
@@ -21,26 +24,42 @@ export class DoctorService {
         });
     }
 
+    /** ----------------------
+     * CREATE
+     * ---------------------- */
     async createDoctor(dto: CreateDoctorDto) {
 
         const { fullName, email, password, specialization, education, experience, aboutMe, fees, availableTimes } = dto
         try {
             const hashedPassword = await argon.hash(password);
 
-            const { id, fullName: newFullName, email: newEmail } = await this.prisma.user.create({ data: { fullName, email, password: hashedPassword, role: 'DOCTOR' } })
+            const result = await this.prisma.$transaction(async (tx) => {
+                const user = await tx.user.create({
+                    data: { fullName, email, password: hashedPassword, role: 'DOCTOR' },
+                });
 
-            const newDoctor = await this.prisma.doctor.create({
-                data: { userId: id, specialization, education, experience, aboutMe, fees, availableTimes }
+                const doctor = await tx.doctor.create({
+                    data: {
+                        userId: user.id,
+                        specialization,
+                        education,
+                        experience,
+                        aboutMe,
+                        fees,
+                        availableTimes
+                    },
+                    select: doctorSelect
+                });
+
+                const doctorResponse = new DoctorResponseDto(doctor)
+
+                return doctorResponse;
             });
 
             return {
-                doctor: {
-                    fullName: newFullName,
-                    email: newEmail,
-                    ...newDoctor
-                },
-                message: "Doctor created successfully"
-            }
+                doctor: result,
+                message: 'Doctor created successfully',
+            };
         }
 
         catch (error) {
@@ -56,205 +75,113 @@ export class DoctorService {
         }
     }
 
+    /** ----------------------
+     * GET ALL
+     * ---------------------- */
     async getAllDoctors(queryParams: GetDoctorsDto) {
+        const { page, limit, search, specialization, experience, fees, weeks, isActive } = queryParams;
 
-        const { page, limit, search, specialization, experience, fees, weeks, isActive } = queryParams
-
-        const skip = (page - 1) * limit
-
-        const query: Record<string, any> = specialization ? { specialization: { contains: specialization, mode: 'insensitive' } } : {} // will filter case-insensitive
-
-        if (experience?.length === 1) {
-            const [min] = experience;
-            query['experience'] = { gte: min };
-        }
-
-        if (experience?.length === 2) {
-            const [min, max] = experience;
-            query['experience'] = { gte: min, lte: max };
-        }
-
-        if (fees?.length === 1) {
-            const [max] = fees;
-            query['fees'] = { lte: max };
-        }
-
-        if (fees?.length === 2) {
-            const [min, max] = fees;
-            query['fees'] = { gte: min, lte: max };
-        }
-
-        if (isActive !== undefined) query['isActive'] = isActive
+        const query = this.buildDoctorQuery({ specialization, experience, fees, isActive });
 
         const doctors = await this.prisma.doctor.findMany({
             where: query,
             select: doctorSelect,
-        })
+        });
 
-        if (!doctors) {
-            throw new NotFoundException("Doctors not found")
+        if (!doctors.length) {
+            throw new NotFoundException("Doctors not found");
         }
 
-        let filteredDoctors = doctors.filter((doctor) => {
+        const filteredDoctors = this.filterDoctors(doctors, { search, weeks });
 
-            const specialization = doctor.specialization?.toLowerCase() || "";
-            const education = doctor.education?.toLowerCase() || "";
-            const aboutMe = doctor.aboutMe?.toLowerCase() || "";
-            const fullName = doctor.user?.fullName?.toLowerCase() || "";
-            const email = doctor.user?.email?.toLowerCase() || "";
-            const availableTimes = doctor.availableTimes?.map(time => time.toLowerCase()) || [];
+        const sortedDoctors = await this.sortDoctors(filteredDoctors);
 
-            const matchedSearch = search
-                ? specialization.includes(search) ||
-                education.includes(search) ||
-                aboutMe.includes(search) ||
-                fullName.includes(search) ||
-                email.includes(search) ||
-                availableTimes.some(time => time.includes(search))
-                : true;
+        const { paginatedItems, meta } = this.paginate(sortedDoctors, page, limit);
 
-            const matchedWeeks = weeks
-                ? availableTimes.some(time => weeks.some(week => time.includes(week)))
-                : true;
-
-            return matchedSearch && matchedWeeks;
-        })
-
-        //sort doctors based on average rating
-        const sortedDoctors = await this.modifyDoctors(filteredDoctors)
-
-        const totalItems = sortedDoctors.length
-
-        const paginatedDoctors = sortedDoctors.slice(skip, skip + limit)
+        const doctorResponses = paginatedItems.map((doctor) => new DoctorResponseDto(doctor));
 
         return {
-            doctors: paginatedDoctors,
-            pagination: {
-                totalItems,
-                totalPages: Math.ceil(totalItems / limit),
-                currentPage: page,
-                itemsPerPage: limit
-            },
-            message: "Doctors fetched successfully"
-        }
+            doctors: doctorResponses,
+            pagination: meta,
+            message: "Doctors fetched successfully",
+        };
     }
 
-    async getADoctor(doctor: Record<string, any>, queryParams: GetDoctorsDto) {
+    /** ----------------------
+     * GET A DOCTOR
+     * ---------------------- */
+    async getADoctor(doctor: Record<string, any>, queryParams: PaginationDto) {
+        const { page = 1, limit = 10 } = queryParams;
+        const skip = (page - 1) * limit;
+        const { id: doctorId } = doctor;
 
-        const { page, limit } = queryParams
-
-        const { id: doctorId } = doctor
-
-        const skip = (page - 1) * limit
-
-        const [reviews, totalReviews, averageRating, relatedDoctors, bookedAppointmentDates] = await this.prisma.$transaction([
-
-            this.prisma.review.findMany({
-                where: { doctorId },
-                orderBy: { createdAt: 'desc' },
-                select: {
-                    id: true,
-                    patient: {
-                        select: {
-                            id: true,
-                            fullName: true,
-                            email: true,
-                            avatarImage: true
-                        }
+        const [reviews, totalReviews, averageRating, relatedDoctors, bookedAppointmentDates] =
+            await Promise.all([
+                this.prisma.review.findMany({
+                    where: { doctorId },
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        patient: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                email: true,
+                                avatarImage: true,
+                            },
+                        },
+                        comment: true,
+                        rating: true,
+                        createdAt: true,
                     },
-                    comment: true,
-                    rating: true,
-                    createdAt: true
-                },
-                skip: skip,
-                take: limit
-            }),
+                    skip,
+                    take: limit
+                }),
 
-            this.prisma.review.count({ where: { doctorId } }),
+                this.prisma.review.count({ where: { doctorId } }),
 
-            this.prisma.review.aggregate({
-                where: { doctorId },
-                _avg: { rating: true }
-            }),
+                this.prisma.review.aggregate({
+                    where: { doctorId },
+                    _avg: { rating: true },
+                }),
 
-            this.prisma.doctor.findMany({
-                where: {
-                    specialization: doctor?.specialization,
-                    isActive: true,
-                    userId: {
-                        not: doctorId,
-                    }
-                },
-                take: 5,
-                select: doctorSelect
-            }),
+                this.prisma.doctor.findMany({
+                    where: {
+                        specialization: doctor.specialization,
+                        isActive: true,
+                        userId: { not: doctorId },
+                    },
+                    take: 5,
+                    select: doctorSelect,
+                }),
 
-            this.prisma.appointment.findMany({
-                where: {
-                    doctorId,
-                    status: {
-                        in: ["PENDING", "CONFIRMED"]
-                    }
-                },
-                select: {
-                    date: true
-                },
-            })
-        ])
+                this.prisma.appointment.findMany({
+                    where: {
+                        doctorId,
+                        status: { in: [Status.PENDING, Status.CONFIRMED] },
+                    },
+                    select: { date: true },
+                })
+            ]);
 
-        //sort doctors based on average rating
-        const sortedRelatedDoctors = await this.modifyDoctors(relatedDoctors)
+        const sortedRelatedDoctors = await this.sortDoctors(relatedDoctors);
+
+        const doctorResponse = new DoctorResponseDto(doctor);
+
+        const relatedDoctorResponses = sortedRelatedDoctors.map((doctor) => new DoctorResponseDto(doctor));
 
         return {
             doctor: {
-                ...doctor,
-                averageRating: averageRating._avg.rating,
+                ...doctorResponse,
+                averageRating: averageRating._avg.rating || 0,
                 totalReviews,
-                reviews
+                reviews,
             },
-            relatedDoctors: sortedRelatedDoctors,
+            relatedDoctors: relatedDoctorResponses,
             bookedAppointmentDates,
-            pagination: {
-                totalItems: totalReviews,
-                totalPages: Math.ceil(totalReviews / limit),
-                currentPage: page,
-                itemsPerPage: limit
-            },
-            message: "Doctor fetched successfully"
-        }
-    }
-
-    private async modifyDoctors(doctors: any[]) {
-
-        const doctorsWithRating = await Promise.all(doctors.map(async (doctor) => {
-
-            const [totalReviews, averageRating] = await this.prisma.$transaction([
-                this.prisma.review.count({ where: { doctorId: doctor.userId } }),
-                this.prisma.review.aggregate({
-                    where: { doctorId: doctor.userId },
-                    _avg: { rating: true },
-                }),
-            ]);
-
-            return {
-                ...doctor,
-                totalReviews,
-                averageRating: averageRating._avg.rating ? averageRating._avg.rating : 0,
-            };
-        }))
-
-        const sortedDoctors = doctorsWithRating.sort((a, b) => {
-
-            if (a.averageRating === b.averageRating) {
-                return b.experience - a.experience;
-            }
-
-            else {
-                return b.averageRating - a.averageRating
-            }
-        })
-
-        return sortedDoctors
+            pagination: new PaginationResponseDto(totalReviews, page, limit),
+            message: "Doctor fetched successfully",
+        };
     }
 
     async updateDoctor(data: Record<string, any>, traceId: string) {
@@ -462,5 +389,103 @@ export class DoctorService {
             status: 'success',
             message: "Doctor deleted successfully"
         })
+    }
+
+    /** ----------------------
+     * HELPERS
+     * ---------------------- */
+    private async sortDoctors(doctors: any[]) {
+
+        const doctorsWithRating = await Promise.all(doctors.map(async (doctor) => {
+
+            const [totalReviews, averageRating] = await this.prisma.$transaction([
+                this.prisma.review.count({ where: { doctorId: doctor.userId } }),
+                this.prisma.review.aggregate({
+                    where: { doctorId: doctor.userId },
+                    _avg: { rating: true },
+                }),
+            ]);
+
+            return {
+                ...doctor,
+                totalReviews,
+                averageRating: averageRating._avg.rating ? averageRating._avg.rating : 0,
+            };
+        }))
+
+        const sortedDoctors = doctorsWithRating.sort((a, b) => {
+
+            if (a.averageRating === b.averageRating) {
+                return b.experience - a.experience;
+            }
+
+            else {
+                return b.averageRating - a.averageRating
+            }
+        })
+
+        return sortedDoctors
+    }
+
+    private buildDoctorQuery({ specialization, experience, fees, isActive }: any) {
+        const query: Record<string, any> = {};
+
+        if (specialization) {
+            query.specialization = { contains: specialization, mode: 'insensitive' };
+        }
+
+        if (experience?.length === 1) {
+            query.experience = { gte: experience[0] };
+        } else if (experience?.length === 2) {
+            query.experience = { gte: experience[0], lte: experience[1] };
+        }
+
+        if (fees?.length === 1) {
+            query.fees = { lte: fees[0] };
+        } else if (fees?.length === 2) {
+            query.fees = { gte: fees[0], lte: fees[1] };
+        }
+
+        if (isActive !== undefined) {
+            query.isActive = isActive;
+        }
+
+        return query;
+    }
+
+    private filterDoctors(doctors: any[], { search, weeks }: { search?: string; weeks?: string[] }) {
+        return doctors.filter((doctor) => {
+            const specialization = doctor.specialization?.toLowerCase() || "";
+            const education = doctor.education?.toLowerCase() || "";
+            const aboutMe = doctor.aboutMe?.toLowerCase() || "";
+            const fullName = doctor.user?.fullName?.toLowerCase() || "";
+            const email = doctor.user?.email?.toLowerCase() || "";
+            const availableTimes = doctor.availableTimes?.map((time) => time.toLowerCase()) || [];
+
+            const matchedSearch = search
+                ? specialization.includes(search) ||
+                education.includes(search) ||
+                aboutMe.includes(search) ||
+                fullName.includes(search) ||
+                email.includes(search) ||
+                availableTimes.some((time) => time.includes(search))
+                : true;
+
+            const matchedWeeks = weeks
+                ? availableTimes.some((time) => weeks.some((week) => time.includes(week)))
+                : true;
+
+            return matchedSearch && matchedWeeks;
+        });
+    }
+
+    private paginate(items: any[], page: number, limit: number) {
+        const totalItems = items.length;
+        const skip = (page - 1) * limit;
+
+        return {
+            paginatedItems: items.slice(skip, skip + limit),
+            meta: new PaginationResponseDto(totalItems, page, limit),
+        };
     }
 }

@@ -53,10 +53,10 @@ export class AppointmentController {
         key: CacheKeyHelper.generateAppointmentsKey,
     })
     getAllAppointments(
-        @Query() dto: GetAppointmentsDto,
+        @Query() query: GetAppointmentsDto,
         @User() user: UserDto
     ) {
-        return this.appointmentService.getAllAppointments(dto, user);
+        return this.appointmentService.getAllAppointments(query, user);
     }
 
     @Get('count')

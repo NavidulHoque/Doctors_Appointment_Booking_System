@@ -1,17 +1,8 @@
-import { Transform, Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { BaseDoctorDto } from './base-doctor.dto';
+import { Transform } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
+import { PaginationDto } from 'src/common/dto';
 
-export class GetDoctorsDto extends BaseDoctorDto {
-    @Type(() => Number)
-    @IsInt()
-    @Min(1, { message: 'Page must be at least 1' })
-    readonly page: number;
-
-    @Type(() => Number)
-    @IsInt()
-    @Max(10, { message: 'Limit must be at most 10' })
-    readonly limit: number;
+export class GetDoctorsDto extends PaginationDto {
 
     @IsOptional()
     @Transform(({ value }) => typeof value === 'string' ? [value].map(Number) : value.map(Number))
@@ -31,6 +22,10 @@ export class GetDoctorsDto extends BaseDoctorDto {
         if (value === 'false') return false;
     })
     readonly isActive?: boolean;
+
+    @IsOptional()
+    @IsString()
+    readonly specialization?: string;
 
     @IsOptional()
     @IsString()

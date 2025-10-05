@@ -86,11 +86,11 @@ export class AppointmentService {
     /** ----------------------
     * GET ALL
     * ---------------------- */
-    async getAllAppointments(dto: GetAppointmentsDto, user: UserDto) {
-        const { page, limit } = dto;
+    async getAllAppointments(query: GetAppointmentsDto, user: UserDto) {
+        const { page, limit } = query;
 
         const skip = (page - 1) * limit;
-        const { query: where, orderBy } = this.buildAppointmentQuery(dto, user);
+        const { query: where, orderBy } = this.buildAppointmentQuery(query, user);
 
         const [appointments, totalAppointments] = await Promise.all([
             this.prisma.appointment.findMany({

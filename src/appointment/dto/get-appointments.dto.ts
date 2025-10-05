@@ -1,6 +1,6 @@
 import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 import { Transform, } from 'class-transformer';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from 'src/common/dto'; 
 import { Method, Status } from '@prisma/client';
 
 export class GetAppointmentsDto extends PaginationDto {
