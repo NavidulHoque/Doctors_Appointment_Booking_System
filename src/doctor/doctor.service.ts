@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { CreateDoctorDto, DoctorResponseDto, GetDoctorsDto } from './dto';
+import { CreateDoctorDto, DoctorResponseDto, GetDoctorsDto, UpdateDoctorDto, UpdateDoctorProfileDto, UpdateUserProfileDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { doctorSelect } from 'src/prisma/prisma-selects';
 import * as argon from "argon2";
@@ -9,6 +9,7 @@ import { SocketGateway } from 'src/socket/socket.gateway';
 import { PaginationDto } from 'src/common/dto';
 import { Status } from '@prisma/client';
 import { PaginationResponseDto } from 'src/common/dto';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class DoctorService {
@@ -184,134 +185,30 @@ export class DoctorService {
         };
     }
 
-    async updateDoctor(data: Record<string, any>, traceId: string) {
+    /** ----------------------
+     * UPDATE
+     * ---------------------- */
+    async updateDoctor(dto: UpdateDoctorDto, doctorId: string) {
 
-        const { fullName, email, currentPassword, newPassword, phone, gender, birthDate, address, specialization, education, experience, aboutMe, fees, addAvailableTime, removeAvailableTime, isActive } = data.doctor
+        // keeps only the properties that are present in the DTO classes
+        const userDto = plainToInstance(UpdateUserProfileDto, dto, { excludeExtraneousValues: true });
+        const doctorDto = plainToInstance(UpdateDoctorProfileDto, dto, { excludeExtraneousValues: true });
 
-        const { userId, doctorId } = data
-
-        let userData: any = null
-        let doctorData: any = null
-
-        if (fullName && email && phone && gender && birthDate && address && specialization && education && experience && aboutMe && fees) {
-            userData = {
-                fullName,
-                email,
-                phone,
-                gender,
-                birthDate,
-                address
-            }
-
-            doctorData = {
-                specialization,
-                education,
-                experience,
-                aboutMe,
-                fees
-            }
+        if (userDto.currentPassword && userDto.newPassword) {
+            await this.updatePassword(doctorId, userDto.currentPassword, userDto.newPassword);
         }
 
-        if (addAvailableTime) {
-            doctorData = {
-                availableTimes: {
-                    push: addAvailableTime
-                }
-            }
+        if (Object.values(userDto).some(value => value !== undefined)) {
+            await this.updateUserProfile(userDto, doctorId);
         }
 
-        if (isActive !== undefined) doctorData = { isActive }
-
-        if (currentPassword && newPassword) {
-
-            const user = await this.prisma.user.findUnique({ where: { id: doctorId } })
-
-            if (!user) {
-                throw new NotFoundException("User not found")
-            }
-
-            const isMatched = await argon.verify(currentPassword, user?.password as string)
-
-            if (!isMatched) {
-                throw new BadRequestException("Current password is incorrect")
-            }
-
-            const hashedPassword = await argon.hash(newPassword)
-
-            await this.prisma.user.update({
-                where: { id: doctorId },
-                data: {
-                    password: hashedPassword
-                }
-            })
-
-            return {
-                message: "Password updated successfully"
-            }
+        if (Object.values(doctorDto).some(value => value !== undefined)) {
+            await this.updateDoctorProfile(doctorDto, doctorId);
         }
 
-        if (removeAvailableTime) {
-
-            const doctorRecord = await this.prisma.doctor.findUnique({ where: { userId: doctorId } })
-
-            if (!doctorRecord) {
-                throw new NotFoundException("Doctor not found")
-            }
-
-            const updatedAvailableTimes = doctorRecord?.availableTimes.filter((time: string) => time !== removeAvailableTime);
-
-            doctorData = {
-                availableTimes: {
-                    set: updatedAvailableTimes
-                }
-            }
-        }
-
-        if (userData) {
-
-            const existingUser = await this.prisma.user.findUnique({
-                where: { email }
-            })
-
-            if (existingUser && doctorId !== existingUser.id) {
-                throw new BadRequestException("Email already exists")
-            }
-
-            await this.prisma.user.update({
-                where: { id: doctorId },
-                data: userData
-            })
-        }
-
-        const updatedDoctor = await this.prisma.doctor.update({
-            where: { userId: doctorId },
-            data: doctorData,
-            select: {
-                userId: true,
-                specialization: true,
-                education: true,
-                experience: true,
-                aboutMe: true,
-                fees: true,
-                availableTimes: true,
-                isActive: true
-            }
-        })
-
-        this.socketGateway.sendResponse(userId, {
-            traceId,
-            status: 'success',
-            message: "Doctor updated successfully",
-            data: {
-                fullName,
-                email,
-                phone,
-                gender,
-                birthDate,
-                address,
-                ...updatedDoctor
-            },
-        });
+        return {
+            message: "Doctor's profile updated successfully",
+        };
     }
 
     async createStripeAccount(data: Record<string, any>, traceId: string) {
@@ -487,5 +384,75 @@ export class DoctorService {
             paginatedItems: items.slice(skip, skip + limit),
             meta: new PaginationResponseDto(totalItems, page, limit),
         };
+    }
+
+    private async updatePassword(doctorId: string, currentPassword: string, newPassword: string) {
+        const user = await this.prisma.user.findUnique({ where: { id: doctorId } });
+        if (!user) throw new NotFoundException("User not found");
+
+        const isMatched = await argon.verify(user.password, currentPassword);
+        if (!isMatched) throw new BadRequestException("Current password is incorrect");
+
+        const hashedPassword = await argon.hash(newPassword);
+
+        await this.prisma.user.update({
+            where: { id: doctorId },
+            data: { password: hashedPassword }
+        });
+
+        return
+    }
+
+    private async updateUserProfile(userDto: UpdateUserProfileDto, doctorId: string) {
+        const { email } = userDto;
+
+        if (email) {
+            const existingUser = await this.prisma.user.findUnique({ where: { email } });
+            if (existingUser && doctorId !== existingUser.id) {
+                throw new BadRequestException("Email already exists");
+            }
+        }
+
+        await this.prisma.user.update({
+            where: { id: doctorId },
+            data: userDto
+        });
+
+        return
+    }
+
+    private async updateDoctorProfile(doctorDto: UpdateDoctorDto, doctorId: string) {
+        const { specialization, education, experience, aboutMe, fees, isActive, addAvailableTime, removeAvailableTime } = doctorDto
+
+        const doctorRecord = await this.prisma.doctor.findUnique({ where: { userId: doctorId } });
+        if (!doctorRecord) throw new NotFoundException("Doctor not found");
+
+        const doctorData: any = {};
+
+        if (specialization) doctorData.specialization = specialization;
+        if (education) doctorData.education = education;
+        if (experience) doctorData.experience = experience;
+        if (aboutMe) doctorData.aboutMe = aboutMe;
+        if (fees) doctorData.fees = fees;
+        if (isActive !== undefined) doctorData.isActive = isActive;
+
+        if (doctorDto.addAvailableTime) {
+            doctorData.availableTimes = { push: addAvailableTime };
+        }
+
+        if (doctorDto.removeAvailableTime) {
+            doctorData.availableTimes = {
+                set: doctorRecord.availableTimes.filter(
+                    (time: string) => time !== removeAvailableTime
+                )
+            };
+        }
+
+        await this.prisma.doctor.update({
+            where: { userId: doctorId },
+            data: doctorData
+        });
+
+        return
     }
 }

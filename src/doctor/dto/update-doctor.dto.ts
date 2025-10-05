@@ -53,7 +53,7 @@ export class UpdateDoctorDto {
     @IsOptional()
     @Type(() => Date)
     @IsDate({ message: 'Date must be a valid date' })
-    readonly birthDate?: string;
+    readonly birthDate?: Date;
 
     @IsOptional()
     @IsString()

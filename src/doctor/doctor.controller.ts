@@ -64,18 +64,11 @@ export class DoctorController {
     })
     updateDoctor(
         @Body() dto: UpdateDoctorDto,
-        @Param('id', EntityByIdPipe('doctor', { id: true })) { id: doctorId }: Record<string, string>,
-        @Req() request: RequestWithTrace,
-        @User() user: UserDto
+        @User() user: UserDto,
+        @Param('id') id: string,
     ) {
-        const traceId = request.traceId
-        const data = {
-            ...dto,
-            userId: user.id,
-            doctorId: user.role === Role.DOCTOR ? user.id : doctorId
-        }
-
-        return this.doctorService.updateDoctor(data, traceId)
+        const doctorId = user.role === Role.DOCTOR ? user.id : id;
+        return this.doctorService.updateDoctor(dto, doctorId);
     }
 
     @Patch("/stripe/create-account")
