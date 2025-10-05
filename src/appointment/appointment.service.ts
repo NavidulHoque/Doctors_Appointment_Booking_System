@@ -1,15 +1,16 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
+import { AppointmentResponseDto, CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { EmailService } from 'src/email/email.service';
-import { Prisma, Role, Status } from '@prisma/client';
+import { Method, Prisma, Role, Status } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { UserDto } from 'src/user/dto';
+import { PaginationResponseDto } from 'src/common/dto';
 
 @Injectable()
 export class AppointmentService {
@@ -43,13 +44,13 @@ export class AppointmentService {
                 throw new BadRequestException('Patient or Doctor not found');
             }
 
-            else if (patient.role !== Role.PATIENT || doctor.role !== Role.DOCTOR) {
+            else if (patient.role !== Role.PATIENT || doctor.role !== Role.DOCTOR){
                 throw new BadRequestException('Invalid roles: ensure patient is a PATIENT and doctor is a DOCTOR');
             }
-
+                
             const appointment = await this.prisma.appointment.create({
-                data: { patientId: patientId!, doctorId, date },
-                select: appointmentSelect,
+                data: { patientId, doctorId, date },
+                select: appointmentSelect
             });
 
             const {
@@ -57,9 +58,7 @@ export class AppointmentService {
                 doctor: { fullName: doctorName },
             } = appointment;
 
-            this.logger.log(
-                `📢 Sending notification to admin about new appointment with traceId: ${traceId}`,
-            );
+            this.logger.log(`📢 Sending notification to admin about new appointment with traceId: ${traceId}`);
 
             this.sendNotificationWithFallback(
                 this.config.get('ADMIN_ID') as string,
@@ -70,15 +69,16 @@ export class AppointmentService {
             );
 
             return {
-                appointment,
+                appointment: new AppointmentResponseDto(appointment),
                 message: 'Appointment created successfully',
             };
         }
 
         catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'){
                 throw new BadRequestException("Appointment already booked");
             }
+                
             throw error;
         }
     }
@@ -88,29 +88,23 @@ export class AppointmentService {
     * ---------------------- */
     async getAllAppointments(query: GetAppointmentsDto, user: UserDto) {
         const { page, limit } = query;
-
         const skip = (page - 1) * limit;
         const { query: where, orderBy } = this.buildAppointmentQuery(query, user);
 
         const [appointments, totalAppointments] = await Promise.all([
-            this.prisma.appointment.findMany({
-                where,
-                orderBy,
-                select: appointmentSelect,
-                take: limit,
-                skip,
+            this.prisma.appointment.findMany({ 
+                where, 
+                orderBy, 
+                select: appointmentSelect, 
+                take: limit, 
+                skip 
             }),
             this.prisma.appointment.count({ where }),
         ]);
 
         return {
-            appointments,
-            pagination: {
-                totalItems: totalAppointments,
-                totalPages: Math.ceil(totalAppointments / limit),
-                currentPage: page,
-                itemsPerPage: limit,
-            },
+            appointments: appointments.map(appointment => new AppointmentResponseDto(appointment)),
+            pagination: new PaginationResponseDto(totalAppointments, page, limit)
         };
     }
 
@@ -135,25 +129,17 @@ export class AppointmentService {
             totalOnlinePaidAppointments,
         ] = await Promise.all([
             this.prisma.appointment.count({ where: query }),
-            this.prisma.appointment.findMany({
-                where: query,
-                distinct: 'patientId',
-                select: { patientId: true },
-            }),
-            this.prisma.appointment.findMany({
-                where: query,
-                distinct: 'doctorId',
-                select: { doctorId: true },
-            }),
-            this.prisma.appointment.count({ where: { ...query, status: 'PENDING' } }),
-            this.prisma.appointment.count({ where: { ...query, status: 'CONFIRMED' } }),
-            this.prisma.appointment.count({ where: { ...query, status: 'RUNNING' } }),
-            this.prisma.appointment.count({ where: { ...query, status: 'COMPLETED' } }),
-            this.prisma.appointment.count({ where: { ...query, status: 'CANCELLED' } }),
+            this.prisma.appointment.findMany({ where: query, distinct: 'patientId', select: { patientId: true } }),
+            this.prisma.appointment.findMany({ where: query, distinct: 'doctorId', select: { doctorId: true } }),
+            this.prisma.appointment.count({ where: { ...query, status: Status.PENDING } }),
+            this.prisma.appointment.count({ where: { ...query, status: Status.CONFIRMED } }),
+            this.prisma.appointment.count({ where: { ...query, status: Status.RUNNING } }),
+            this.prisma.appointment.count({ where: { ...query, status: Status.COMPLETED } }),
+            this.prisma.appointment.count({ where: { ...query, status: Status.CANCELLED } }),
             this.prisma.appointment.count({ where: { ...query, isPaid: true } }),
             this.prisma.appointment.count({ where: { ...query, isPaid: false } }),
-            this.prisma.appointment.count({ where: { ...query, paymentMethod: 'CASH' } }),
-            this.prisma.appointment.count({ where: { ...query, paymentMethod: 'ONLINE' } }),
+            this.prisma.appointment.count({ where: { ...query, paymentMethod: Method.CASH } }),
+            this.prisma.appointment.count({ where: { ...query, paymentMethod: Method.ONLINE } }),
         ]);
 
         return {
