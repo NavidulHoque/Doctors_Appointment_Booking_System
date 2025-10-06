@@ -1,17 +1,11 @@
-import {
-    IsNotEmpty,
-    IsOptional,
-    IsString
-} from 'class-validator';
 import { BaseAuthDto } from './base-auth.dto';
+import { IsOptionalString, IsRequiredString } from 'src/common/decorators';
 
 export class LoginDto extends BaseAuthDto {
 
-    @IsString()
-    @IsNotEmpty({ message: 'Password is required' })
+    @IsRequiredString("Password is required")
     password: string;
 
-    @IsString()
-    @IsOptional()
+    @IsOptionalString()
     deviceName?: string;
 }

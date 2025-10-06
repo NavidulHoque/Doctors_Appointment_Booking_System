@@ -1,13 +1,12 @@
-import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEnum, IsOptional, MinLength } from 'class-validator';
 import { Transform, } from 'class-transformer';
 import { PaginationDto } from 'src/common/dto'; 
 import { Method, Status } from '@prisma/client';
+import { IsOptionalArrayEnum, IsOptionalEnum, IsOptionalString } from 'src/common/decorators';
 
 export class GetAppointmentsDto extends PaginationDto {
 
-  @IsOptional()
-  @IsString()
-  @Transform(({ value }) => value.trim())
+  @IsOptionalString()
   @MinLength(3, { message: 'Search query must be at least 3 characters long' })
   readonly search?: string;
 
@@ -30,22 +29,9 @@ export class GetAppointmentsDto extends PaginationDto {
   @Transform(({ value }) => value === 'true')
   readonly isFuture?: boolean
 
-  @IsOptional()
-  @Transform(({ value }) =>
-    Array.isArray(value)
-      ? value.map((v) => v.toUpperCase())
-      : [value.toUpperCase()],
-  )
-  @IsEnum(Status, {
-    each: true,
-    message:
-      'Status must be one of: pending, confirmed, completed, running, or cancelled',
-  })
+  @IsOptionalArrayEnum(Status, 'Status must be one of: pending, confirmed, completed, running, or cancelled')
   readonly status?: Status[];
 
-  @IsOptional()
-  @IsString()
-  @Transform(({ value }) => value.toUpperCase())
-  @IsEnum(Method, { message: 'Payment method must be cash or online' })
+  @IsOptionalEnum(Method, 'Payment method must be cash or online')
   readonly paymentMethod?: Method;
 }

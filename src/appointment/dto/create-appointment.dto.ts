@@ -1,5 +1,6 @@
 import { Type } from "class-transformer";
-import { IsDate, IsNotEmpty, IsOptional, IsString, IsUUID, Validate, ValidatorConstraint, ValidatorConstraintInterface } from "class-validator";
+import { IsDate, IsUUID, Validate, ValidatorConstraint, ValidatorConstraintInterface } from "class-validator";
+import { IsOptionalString, IsRequiredString } from "src/common/decorators";
 
 @ValidatorConstraint({ name: 'FutureDate', async: false })
 export class FutureDate implements ValidatorConstraintInterface {
@@ -13,12 +14,10 @@ export class FutureDate implements ValidatorConstraintInterface {
 }
 
 export class CreateAppointmentDto {
-  @IsOptional()
-  @IsString()
+  @IsOptionalString()
   patientId?: string;
 
-  @IsNotEmpty()
-  @IsString()
+  @IsRequiredString("Doctor ID is required")
   @IsUUID()
   readonly doctorId: string;
 

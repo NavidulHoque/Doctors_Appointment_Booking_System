@@ -1,11 +1,7 @@
-import {
-    IsNotEmpty,
-    IsString
-} from 'class-validator';
+import { IsRequiredString } from 'src/common/decorators';
 
 export class BaseAuthDto {
 
-    @IsString()
-    @IsNotEmpty({ message: "Email is required" })
+    @IsRequiredString("Email is required")
     email: string;
 }

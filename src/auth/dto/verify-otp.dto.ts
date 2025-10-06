@@ -1,9 +1,8 @@
-import { IsNotEmpty, IsString } from "class-validator";
 import { BaseAuthDto } from "./base-auth.dto";
+import { IsRequiredString } from "src/common/decorators";
 
 export class VerifyOtpDto extends BaseAuthDto {
 
-    @IsNotEmpty()
-    @IsString()
+    @IsRequiredString("OTP is required")
     otp: string;
 }

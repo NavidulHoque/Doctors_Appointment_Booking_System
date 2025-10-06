@@ -1,7 +1,6 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsRequiredString } from "src/common/decorators";
 
 export class LogoutDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsRequiredString('Session ID is required')
   sessionId: string
 }

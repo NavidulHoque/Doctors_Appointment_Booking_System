@@ -1,17 +1,13 @@
-import { IsEnum, IsOptional, IsString, MinLength } from "class-validator";
-import { Transform} from "class-transformer";
+import { MinLength } from "class-validator";
 import { Status } from "@prisma/client";
+import { IsOptionalEnum, IsOptionalString } from "src/common/decorators";
 
 export class UpdateAppointmentDto {
 
-    @IsOptional()
-    @IsString()
-    @Transform(({ value }) => value.trim())
+    @IsOptionalString()
     @MinLength(5, { message: 'Cancellation reason must be at least 5 characters long' })
     readonly cancellationReason?: string;
 
-    @IsOptional()
-    @Transform(({ value }) => value.trim().toUpperCase())
-    @IsEnum(Status, { message: 'Status must be pending, confirmed, completed, running or cancelled' })
+    @IsOptionalEnum(Status, 'Status must be pending, confirmed, completed, running or cancelled')
     readonly status?: Status;
 }
