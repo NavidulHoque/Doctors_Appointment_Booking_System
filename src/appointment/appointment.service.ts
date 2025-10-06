@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AppointmentResponseDto, CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
@@ -11,6 +11,7 @@ import { Method, Prisma, Role, Status } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { UserDto } from 'src/user/dto';
 import { PaginationResponseDto } from 'src/common/dto';
+import { InternalServerError } from 'openai';
 
 @Injectable()
 export class AppointmentService {
@@ -44,10 +45,10 @@ export class AppointmentService {
                 throw new BadRequestException('Patient or Doctor not found');
             }
 
-            else if (patient.role !== Role.PATIENT || doctor.role !== Role.DOCTOR){
+            else if (patient.role !== Role.PATIENT || doctor.role !== Role.DOCTOR) {
                 throw new BadRequestException('Invalid roles: ensure patient is a PATIENT and doctor is a DOCTOR');
             }
-                
+
             const appointment = await this.prisma.appointment.create({
                 data: { patientId, doctorId, date },
                 select: appointmentSelect
@@ -75,11 +76,11 @@ export class AppointmentService {
         }
 
         catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'){
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
                 throw new BadRequestException("Appointment already booked");
             }
-                
-            throw error;
+
+            throw error
         }
     }
 
@@ -92,12 +93,12 @@ export class AppointmentService {
         const { query: where, orderBy } = this.buildAppointmentQuery(query, user);
 
         const [appointments, totalAppointments] = await Promise.all([
-            this.prisma.appointment.findMany({ 
-                where, 
-                orderBy, 
-                select: appointmentSelect, 
-                take: limit, 
-                skip 
+            this.prisma.appointment.findMany({
+                where,
+                orderBy,
+                select: appointmentSelect,
+                take: limit,
+                skip
             }),
             this.prisma.appointment.count({ where }),
         ]);
@@ -219,19 +220,17 @@ export class AppointmentService {
         dto: UpdateAppointmentDto,
         traceId: string,
         appointment: Record<string, any>,
-        userRole = ""
+        userRole: string
     ) {
         const body = await this.prepareAppointmentUpdate(dto, appointment, traceId, userRole);
 
-        const updatedAppointment = await this.prisma.appointment.update({
+        await this.prisma.appointment.update({
             where: { id: appointment.id },
-            data: body,
-            select: appointmentSelect,
+            data: body
         });
 
         return {
-            message: 'Appointment updated successfully',
-            appointment: updatedAppointment,
+            message: 'Appointment updated successfully'
         };
     }
 
@@ -402,8 +401,9 @@ export class AppointmentService {
         if (userRole !== Role.ADMIN) {
             throw new ForbiddenException("Only admin can confirm appointments");
         }
-        if (currentStatus !== 'PENDING') {
-            throw new ForbiddenException("Appointment must be in PENDING status to confirm");
+
+        else if (currentStatus !== 'PENDING') {
+            throw new ForbiddenException("Appointment must be in pending status to confirm");
         }
 
         const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
@@ -444,7 +444,7 @@ export class AppointmentService {
             ),
             this.appointmentQueue.add(
                 'start-appointment',
-                { status: 'RUNNING', appointment, traceId },
+                { status: Status.RUNNING, appointment, traceId, userRole },
                 {
                     delay: date.getTime() - now.getTime(),
                     backoff: { type: 'exponential', delay: 5000 },
@@ -466,12 +466,15 @@ export class AppointmentService {
         const { id: appointmentId, doctor, date, status: currentStatus, patient } = appointment;
         const { fullName: doctorName } = doctor;
         const { id: patientId } = patient;
+        const { cancellationReason } = dto;
 
         if (currentStatus === 'COMPLETED') {
             throw new ForbiddenException("Cannot cancel a completed appointment");
         }
 
-        const { cancellationReason } = dto;
+        else if (!cancellationReason) {
+            throw new BadRequestException("Cancellation reason is required to cancel an appointment");
+        }
 
         this.sendNotificationWithFallback(
             patientId,
@@ -493,8 +496,9 @@ export class AppointmentService {
         if (userRole !== Role.ADMIN) {
             throw new ForbiddenException("Only admin can complete appointments");
         }
-        if (currentStatus !== 'RUNNING') {
-            throw new ForbiddenException("Appointment must be in RUNNING status to complete");
+
+        else if (currentStatus !== 'RUNNING') {
+            throw new ForbiddenException("Appointment must be in running status to complete");
         }
 
         const body: Record<string, any> = { status: Status.COMPLETED };
@@ -511,14 +515,13 @@ export class AppointmentService {
         appointment: Record<string, any>,
         userRole: string
     ) {
+        const { status: currentStatus } = appointment;
         if (userRole !== Role.ADMIN) {
-            throw new ForbiddenException("Only admin can mark appointments as RUNNING");
+            throw new ForbiddenException("Only admin can mark appointments as running");
         }
 
-        const { status: currentStatus } = appointment;
-
-        if (currentStatus !== 'CONFIRMED') {
-            throw new ForbiddenException("Appointment must be in CONFIRMED status to mark as RUNNING");
+        else if (currentStatus !== 'CONFIRMED') {
+            throw new ForbiddenException("Appointment must be in confirmed status to mark as running");
         }
 
         return { status: Status.RUNNING };

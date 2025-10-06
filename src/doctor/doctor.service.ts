@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { CreateDoctorDto, DoctorResponseDto, GetDoctorsDto, UpdateDoctorDto, UpdateDoctorProfileDto, UpdateUserProfileDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { doctorSelect } from 'src/prisma/prisma-selects';
@@ -7,7 +7,7 @@ import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { SocketGateway } from 'src/socket/socket.gateway';
 import { PaginationDto } from 'src/common/dto';
-import { Status } from '@prisma/client';
+import { Role, Status } from '@prisma/client';
 import { PaginationResponseDto } from 'src/common/dto';
 import { plainToInstance } from 'class-transformer';
 
@@ -36,7 +36,7 @@ export class DoctorService {
 
             const result = await this.prisma.$transaction(async (tx) => {
                 const user = await tx.user.create({
-                    data: { fullName, email, password: hashedPassword, role: 'DOCTOR' },
+                    data: { fullName, email, password: hashedPassword, role: Role.DOCTOR },
                 });
 
                 const doctor = await tx.doctor.create({
@@ -72,7 +72,7 @@ export class DoctorService {
                     throw new ConflictException("Email already exists");
                 }
             }
-            throw error;
+            throw error
         }
     }
 
