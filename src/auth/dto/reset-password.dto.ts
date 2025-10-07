@@ -3,6 +3,11 @@ import { IsRequiredString } from "src/common/decorators";
 
 export class ResetPasswordDto extends BaseAuthDto {
 
-    @IsRequiredString("New password is required")
+    @IsRequiredString({
+        requiredMessage: 'New password is required',
+        stringMessage: 'New password must be a string',
+        minLength: 8,
+        minLengthMessage: 'New password must be at least 8 characters long',
+    })
     newPassword: string;
 }

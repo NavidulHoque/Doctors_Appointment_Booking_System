@@ -1,35 +1,48 @@
 import { IsString, IsNumber, Min, MinLength, IsArray, ArrayNotEmpty, IsNotEmpty, Matches, IsEmail } from 'class-validator';
+import { IsRequiredEmail, IsRequiredString } from 'src/common/decorators';
 
 export class CreateDoctorDto {
-    @IsNotEmpty({ message: 'Full Name is required' })
-    @IsString()
-    @MinLength(5, { message: 'Full name must be at least 5 characters long' })
-    @Matches(/^[a-zA-Z. ]+$/, {
-        message: 'Full name can only contain letters, spaces, and dots',
+    @IsRequiredString({
+        requiredMessage: 'Name is required',
+        stringMessage: 'Name must be a string',
+        minLength: 5,
+        minLengthMessage: 'Name must be at least 5 characters long',
+        matches: {
+            pattern: /^[a-zA-Z. ]+$/,
+            message: 'Name can only contain letters, spaces, and dots',
+        },
     })
     readonly fullName: string;
 
-    @IsNotEmpty({ message: 'Email is required' })
-    @IsString()
-    @IsEmail({}, { message: 'Invalid email format' })
+    @IsRequiredEmail()
     readonly email: string;
 
-    @IsNotEmpty({ message: 'Password is required' })
-    @IsString()
-    @MinLength(8, { message: 'Password must be at least 8 characters long' })
-    @Matches(/^(?=.*\d)(?=.*[\W_]).{8,}$/, {
-        message:
-            'Password must contain at least one number and one special character',
+    @IsRequiredString({
+        requiredMessage: 'Password is required',
+        stringMessage: 'Password must be a string',
+        minLength: 8,
+        minLengthMessage: 'Password must be at least 8 characters long',
+        matches: {
+            pattern: /^(?=.*\d)(?=.*[\W_]).{8,}$/,
+            message: 'Password must contain at least one number and one special character',
+        },
     })
     readonly password: string;
 
-    @IsNotEmpty({ message: 'Specialization is required' })
-    @IsString()
+    @IsRequiredString({
+        requiredMessage: 'Specialization is required',
+        stringMessage: 'Specialization must be a string',
+        minLength: 3,
+        minLengthMessage: 'Specialization must be at least 3 characters long',
+    })
     readonly specialization: string;
 
-    @IsNotEmpty({ message: 'Education is required' })
-    @IsString()
-    @MinLength(5, { message: 'Education must be at least 5 characters long' })
+    @IsRequiredString({
+        requiredMessage: 'Education is required',
+        stringMessage: 'Education must be a string',
+        minLength: 5,
+        minLengthMessage: 'Education must be at least 5 characters long',
+    })
     readonly education: string;
 
     @IsNotEmpty({ message: 'Experience is required' })
@@ -37,9 +50,12 @@ export class CreateDoctorDto {
     @Min(1, { message: 'Experience must be at least 1 year' })
     readonly experience: number;
 
-    @IsNotEmpty({ message: 'About me is required' })
-    @IsString()
-    @MinLength(10, { message: 'About me must be at least 10 characters long' })
+    @IsRequiredString({
+        requiredMessage: 'About me is required',
+        stringMessage: 'About me must be a string',
+        minLength: 10,
+        minLengthMessage: 'About me must be at least 10 characters long',
+    })
     readonly aboutMe: string;
 
     @IsNotEmpty({ message: 'Fees is required' })
@@ -47,9 +63,8 @@ export class CreateDoctorDto {
     @Min(20, { message: 'Fees must be at least 20' })
     readonly fees: number;
 
-    @IsNotEmpty({ message: 'Available times is required' })
-    @IsArray()
-    @ArrayNotEmpty()
-    @IsString({ each: true })
+    @IsArray({ message: 'Available times must be an array' })
+    @ArrayNotEmpty({ message: 'Available times cannot be empty' })
+    @IsString({ each: true, message: 'Each available time must be a string' })
     readonly availableTimes: string[];
 }

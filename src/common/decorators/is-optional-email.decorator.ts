@@ -1,10 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
-import { IsNotEmpty, IsEmail } from 'class-validator';
+import { IsEmail, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-export function IsRequiredEmail() {
+export function IsOptionalEmail() {
     return applyDecorators(
-        IsNotEmpty({ message: 'Email is required' }),
+        IsOptional(),
         IsEmail({}, { message: 'Invalid email format' }),
         Transform(({ value }) => value.trim()),
     );

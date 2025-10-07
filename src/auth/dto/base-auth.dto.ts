@@ -1,7 +1,7 @@
-import { IsRequiredString } from 'src/common/decorators';
+import { IsRequiredEmail } from 'src/common/decorators';
 
 export class BaseAuthDto {
 
-    @IsRequiredString("Email is required")
+    @IsRequiredEmail()
     email: string;
 }

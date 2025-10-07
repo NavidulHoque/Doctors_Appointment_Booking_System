@@ -1,18 +1,37 @@
 import { applyDecorators } from '@nestjs/common';
-import { IsEnum, IsOptional } from 'class-validator';
+import { ArrayMaxSize, IsEnum, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { transformStringArray } from '../utils/string-transform.util';
 
-export function IsOptionalArrayEnum(enumType: object, message: string) {
-    return applyDecorators(
+interface IsOptionalArrayEnumOptions {
+    enumType: object;
+    message: string;
+    isLowercase?: boolean;
+    isUppercase?: boolean;
+    maxSize?: number;
+    maxSizeMessage?: string;
+}
+
+export function IsOptionalArrayEnum({
+    enumType,
+    message,
+    isLowercase = false,
+    isUppercase = false,
+    maxSize,
+    maxSizeMessage,
+}: IsOptionalArrayEnumOptions) {
+    const decorators: PropertyDecorator[] = [
         IsOptional(),
-        Transform(({ value }) =>
-            Array.isArray(value)
-                ? value.map((v) => v.trim().toUpperCase())
-                : [value.trim().toUpperCase()],
-        ),
+        Transform(({ value }) => transformStringArray(value, isLowercase, isUppercase)),
         IsEnum(enumType, {
             each: true,
-            message
+            message,
         }),
-    );
+    ];
+
+    if (maxSize !== undefined) {
+        decorators.push(ArrayMaxSize(maxSize, { message: maxSizeMessage }));
+    }
+
+    return applyDecorators(...decorators);
 }

@@ -1,6 +1,10 @@
 import { IsRequiredString } from "src/common/decorators";
 
 export class LogoutDto {
-  @IsRequiredString('Session ID is required')
+  @IsRequiredString({ 
+    requiredMessage: "Session ID is required", 
+    stringMessage: "Session ID must be a string",
+    isUUID: true
+  })
   sessionId: string
 }

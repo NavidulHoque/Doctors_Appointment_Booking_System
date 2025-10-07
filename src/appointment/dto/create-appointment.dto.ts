@@ -14,11 +14,10 @@ export class FutureDate implements ValidatorConstraintInterface {
 }
 
 export class CreateAppointmentDto {
-  @IsOptionalString()
+  @IsOptionalString({ stringMessage: "Patient ID must be a string" })
   patientId?: string;
 
-  @IsRequiredString("Doctor ID is required")
-  @IsUUID()
+  @IsRequiredString({ requiredMessage: "Doctor ID is required", stringMessage: "Doctor ID must be a string", isUUID: true})
   readonly doctorId: string;
 
   @Type(() => Date) // convert to javascript Date object

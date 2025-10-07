@@ -1,13 +1,19 @@
-import { MinLength } from "class-validator";
 import { Status } from "@prisma/client";
 import { IsOptionalEnum, IsOptionalString } from "src/common/decorators";
 
 export class UpdateAppointmentDto {
 
-    @IsOptionalString()
-    @MinLength(5, { message: 'Cancellation reason must be at least 5 characters long' })
+    @IsOptionalString({ 
+        stringMessage: 'Cancellation reason must be a string',
+        minLength: 5,
+        minLengthMessage: 'Cancellation reason must be at least 5 characters long', 
+    })
     readonly cancellationReason?: string;
 
-    @IsOptionalEnum(Status, 'Status must be pending, confirmed, completed, running or cancelled')
+    @IsOptionalEnum({ 
+        enumType: Status, 
+        message: `Status must be one of the following values: ${Object.values(Status).join(', ').toLowerCase()}`, 
+        isUppercase: true 
+    })
     readonly status?: Status;
 }
