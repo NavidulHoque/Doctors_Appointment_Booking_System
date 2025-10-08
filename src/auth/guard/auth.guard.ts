@@ -4,15 +4,13 @@ import {
     Injectable,
     UnauthorizedException
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import { AuthHelperService } from '../auth-helper.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(
-        private readonly jwtService: JwtService,
-        private readonly config: ConfigService,
+        private readonly authHelper: AuthHelperService
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -24,10 +22,8 @@ export class AuthGuard implements CanActivate {
             throw new UnauthorizedException("No token provided, please login")
         }
 
-        const secret = this.config.get('ACCESS_TOKEN_SECRET')
-
         try {
-            const payload = this.jwtService.verify(token!, { secret })
+            const payload = this.authHelper.verifyAccessToken(token)
 
             request['user'] = payload;
         }

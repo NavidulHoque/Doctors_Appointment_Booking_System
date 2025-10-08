@@ -1,25 +1,15 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as argon from "argon2";
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ForgetPasswordDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
+import { ForgetPasswordDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto, SessionResponseDto } from './dto';
 import { EmailService } from 'src/email/email.service';
 import { SmsService } from 'src/sms/sms.service';
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
+import { AuthHelperService } from './auth-helper.service';
 
 @Injectable()
 export class AuthService {
-
-  private readonly logger = new Logger(AuthService.name);
-  private readonly ACCESS_TOKEN_EXPIRES: string;
-  private readonly REFRESH_TOKEN_EXPIRES: string;
-  private readonly ACCESS_TOKEN_SECRET: string;
-  private readonly REFRESH_TOKEN_SECRET: string;
-  private readonly OTP_Expires: number;
-  private readonly Node_Env: string;
-
   private readonly sessionSelect = {
     id: true,
     deviceName: true,
@@ -35,25 +25,17 @@ export class AuthService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
     private readonly email: EmailService,
-    private readonly sms: SmsService
-  ) {
-    this.ACCESS_TOKEN_EXPIRES = this.config.get<string>('ACCESS_TOKEN_EXPIRES')!;
-    this.REFRESH_TOKEN_EXPIRES = this.config.get<string>('REFRESH_TOKEN_EXPIRES')!;
-    this.ACCESS_TOKEN_SECRET = this.config.get<string>('ACCESS_TOKEN_SECRET')!;
-    this.REFRESH_TOKEN_SECRET = this.config.get<string>('REFRESH_TOKEN_SECRET')!;
-    this.OTP_Expires = Number(this.config.get<string>('OTP_EXPIRES'))
-    this.Node_Env = this.config.get<string>('NODE_ENV')!
-  }
+    private readonly sms: SmsService,
+    private readonly authHelper: AuthHelperService
+  ) { }
 
   async register(dto: RegistrationDto) {
 
     const { password } = dto
 
     try {
-      const hashedPassword = await argon.hash(password);
+      const hashedPassword = await this.authHelper.hashValue(password);
 
       dto.password = hashedPassword
 
@@ -78,15 +60,15 @@ export class AuthService {
 
   async login({ email, password: plainPassword, deviceName, role }: Record<string, string>, res: Response) {
 
-    const user = await this.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
+    const user = await this.authHelper.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
 
     if (user.role !== role) {
       throw new UnauthorizedException(`${role} login only`);
     }
 
-    const { password: hashedPassword, id: userId } = user as any;
+    const { password: hashedPassword, id: userId } = user;
 
-    const isMatched = await argon.verify(hashedPassword, plainPassword)
+    const isMatched = await this.authHelper.verifyHash(hashedPassword, plainPassword)
 
     if (!isMatched) {
       throw new UnauthorizedException("Password invalid")
@@ -96,7 +78,7 @@ export class AuthService {
       data: {
         userId,
         deviceName: deviceName || null,
-        refreshToken: "abc",
+        refreshToken: "",
         expiresAt: new Date()
       },
       select: {
@@ -106,15 +88,13 @@ export class AuthService {
 
     const payload = { id: userId, role, email }
 
-    const accessToken = this.generateAccessToken(payload)
-    const refreshToken = this.generateRefreshToken({
+    const accessToken = this.authHelper.generateAccessToken(payload)
+    const refreshToken = this.authHelper.generateRefreshToken({
       ...payload,
       sessionId
     })
 
-    const hashedRefreshToken = await argon.hash(refreshToken);
-
-    const refreshTokenExpires = this.parseExpiry(this.REFRESH_TOKEN_EXPIRES)
+    const hashedRefreshToken = await this.authHelper.hashValue(refreshToken);
 
     const [_, session] = await this.prisma.$transaction([
       this.prisma.user.update({
@@ -128,29 +108,17 @@ export class AuthService {
         where: { id: sessionId },
         data: {
           refreshToken: hashedRefreshToken,
-          expiresAt: new Date(Date.now() + refreshTokenExpires * 24 * 60 * 60 * 1000)
+          expiresAt: new Date(Date.now() + this.authHelper.convertExpiryToMs())
         },
         select: this.sessionSelect
       })
     ]);
 
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: this.Node_Env === 'production',
-      sameSite: 'strict',
-      maxAge: this.convertExpiryToMs(this.ACCESS_TOKEN_EXPIRES),
-    });
-
-    res.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: this.Node_Env === 'production',
-      sameSite: 'strict',
-      maxAge: this.convertExpiryToMs(this.REFRESH_TOKEN_EXPIRES),
-    });
+    this.authHelper.setAuthCookies(res, accessToken, refreshToken);
 
     return {
       message: 'Logged in successfully',
-      session
+      session: new SessionResponseDto(session)
     }
   }
 
@@ -158,50 +126,32 @@ export class AuthService {
 
     const { email } = dto
 
-    const user = await this.fetchUserByEmail(email, 'Invalid Email')
+    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid Email')
 
-    const otp = (Math.floor(100000 + Math.random() * 900000)).toString();
-    const otpExpires = new Date(Date.now() + this.OTP_Expires * 60 * 1000)
+    const { otp, hashedOtp } = await this.authHelper.generateOtp()
+    const otpExpires = this.authHelper.getOtpExpiryDate()
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        otp,
+        otp: hashedOtp,
         otpExpires
       }
     })
 
-    this.email.sendOtpEmail(user.email, otp)
-
-      .catch((error) => {
-
-        this.logger.error(`❌ Failed to email otp, Reason: ${error.message} with traceId=${traceId}`);
-
-        this.email.alertAdmin(
-          'Failed to email otp',
-          `Failed to email otp userId=${user.id}, email=${user.email}, Reason: ${error.message} with traceId: ${traceId}`
-        )
-          .catch((error) => {
-            this.logger.error(`❌ Failed to alert admin. Reason: ${error.message} with traceId=${traceId}`);
-          })
-      })
+    this.email.sendOtpEmail(user.email, otp).catch((error) =>
+      this.authHelper.handleNotificationFailure('email otp', error, user, traceId)
+    );
 
     if (user.phone) {
-      this.sms.sendSms(
-        user.phone,
-        `Your OTP code is ${otp}. It will expire in ${this.OTP_Expires} minutes.`
-      )
-        .catch((error) => {
-          this.logger.error(`❌ Failed to send otp via sms, Reason: ${error.message} with traceId=${traceId}`);
-
-          this.email.alertAdmin(
-            'Failed to send otp via sms',
-            `Failed to send otp via sms userId=${user.id}, email=${user.email}, Reason: ${error.message} with traceId: ${traceId}`
-          )
-            .catch((error) => {
-              this.logger.error(`❌ Failed to alert admin. Reason: ${error.message} with traceId=${traceId}`);
-            })
-        })
+      this.sms
+        .sendSms(
+          user.phone,
+          `Your OTP code is ${otp}. It will expire in ${this.authHelper.OTP_EXPIRES} minutes.`
+        )
+        .catch((error) =>
+          this.authHelper.handleNotificationFailure('send otp via sms', error, user, traceId)
+        );
     }
 
     return {
@@ -213,14 +163,16 @@ export class AuthService {
 
     const { email, otp } = dto
 
-    const user = await this.fetchUserByEmail(email, 'Invalid email')
+    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid email')
 
     if (!user.otp || !user.otpExpires) {
       throw new NotFoundException('Otp not found');
     }
 
-    else if (user.otp !== otp) {
-      throw new BadRequestException('Invalid otp')
+    const isOtpValid = await this.authHelper.verifyHash(user.otp, otp)
+
+    if (!isOtpValid) {
+      throw new BadRequestException('Invalid otp');
     }
 
     else if (new Date() > user.otpExpires) {
@@ -255,13 +207,13 @@ export class AuthService {
 
     const { email, newPassword } = dto
 
-    const user = await this.fetchUserByEmail(email, 'Invalid email')
+    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid email')
 
     if (user.otp || user.otpExpires || !user.isOtpVerified) {
       throw new UnauthorizedException('Please verify otp first');
     }
 
-    const hashedPassword = await argon.hash(newPassword);
+    const hashedPassword = await this.authHelper.hashValue(newPassword);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -281,20 +233,10 @@ export class AuthService {
     let payload: { sessionId: string, id: string, role: string, email: string }
 
     try {
-      payload = this.jwtService.verify(refreshToken, {
-        secret: this.REFRESH_TOKEN_SECRET
-      });
+      payload = this.authHelper.verifyRefreshToken(refreshToken);
     }
 
     catch (error) {
-
-      const decoded = this.jwtService.decode(refreshToken);
-      const sessionId = decoded.sessionId;
-
-      if (sessionId) {
-        await this.deleteSession(sessionId);
-      }
-
       switch (error.name) {
 
         case "TokenExpiredError":
@@ -312,7 +254,7 @@ export class AuthService {
     }
 
     const { sessionId } = payload;
-    const session = await this.findSessionById(sessionId,
+    const session = await this.authHelper.findSessionById(sessionId,
       {
         refreshToken: true,
         expiresAt: true,
@@ -326,20 +268,20 @@ export class AuthService {
       }
     );
 
-    const isMatched = await argon.verify(session.refreshToken, refreshToken)
+    const isMatched = await this.authHelper.verifyHash(session.refreshToken, refreshToken)
 
     if (!isMatched) {
-      await this.deleteSession(sessionId);
+      await this.authHelper.deleteSession(sessionId);
       throw new BadRequestException('Refresh token invalid, please login again');
     }
 
     else if (new Date() > session.expiresAt) {
-      await this.deleteSession(sessionId);
+      await this.authHelper.deleteSession(sessionId);
       throw new UnauthorizedException("Session expired, please login again");
     }
 
-    const accessToken = this.generateAccessToken(session.user)
-    const newRefreshToken = this.generateRefreshToken({
+    const accessToken = this.authHelper.generateAccessToken(session.user)
+    const newRefreshToken = this.authHelper.generateRefreshToken({
       id: session.user.id,
       role: session.user.role,
       email: session.user.email,
@@ -352,28 +294,16 @@ export class AuthService {
       where: { id: sessionId },
       data: {
         refreshToken: hashedNewRefreshToken,
-        expiresAt: new Date(Date.now() + Number(this.parseExpiry(this.REFRESH_TOKEN_EXPIRES)) * 24 * 60 * 60 * 1000)
+        expiresAt: new Date(Date.now() + this.authHelper.convertExpiryToMs())
       },
       select: this.sessionSelect
     })
 
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: this.Node_Env === 'production',
-      sameSite: 'strict',
-      maxAge: this.convertExpiryToMs(this.ACCESS_TOKEN_EXPIRES),
-    });
-
-    res.cookie('refresh_token', newRefreshToken, {
-      httpOnly: true,
-      secure: this.Node_Env === 'production',
-      sameSite: 'strict',
-      maxAge: this.convertExpiryToMs(this.REFRESH_TOKEN_EXPIRES),
-    });
+    this.authHelper.setAuthCookies(res, accessToken, newRefreshToken);
 
     return {
       message: 'Token refreshed successfully',
-      session: updatedSession
+      session: new SessionResponseDto(updatedSession)
     }
   }
 
@@ -381,7 +311,7 @@ export class AuthService {
 
     const { sessionId } = dto
 
-    const session = await this.findSessionById(sessionId, { user: { select: { id: true } } })
+    const session = await this.authHelper.findSessionById(sessionId, { user: { select: { id: true } } })
 
     await this.prisma.$transaction([
 
@@ -398,84 +328,10 @@ export class AuthService {
       })
     ])
 
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    this.authHelper.clearAuthCookies(res);
 
     return {
       message: 'Logged out successfully'
     }
-  }
-
-  private async findSessionById(sessionId: string, select: any): Promise<any> {
-    const session = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-      select
-    })
-
-    if (!session) {
-      throw new NotFoundException('Session not found');
-    }
-
-    return session
-  }
-
-  private async deleteSession(sessionId: string) {
-    await this.prisma.session.delete({
-      where: { id: sessionId }
-    })
-  }
-
-  private convertExpiryToMs(expiresIn: string): number {
-    const match = expiresIn.match(/(\d+)([smhd])/);
-    if (!match) {
-      throw new Error(`Invalid expiry format: ${expiresIn}`);
-    }
-
-    const value = parseInt(match[1], 10);
-    const unit = match[2];
-
-    switch (unit) {
-      case 's': return value * 1000;
-      case 'm': return value * 60 * 1000;
-      case 'h': return value * 60 * 60 * 1000;
-      case 'd': return value * 24 * 60 * 60 * 1000;
-      default: throw new Error(`Unsupported expiry unit: ${unit}`);
-    }
-  }
-
-  private parseExpiry(expiresIn: string) {
-    return Number(expiresIn.replace(/\D/g, ''))
-  }
-
-  private generateAccessToken(payload: { id: string, role: string, email: string }) {
-    return this.jwtService.sign(payload, { secret: this.ACCESS_TOKEN_SECRET, expiresIn: this.ACCESS_TOKEN_EXPIRES });
-  }
-
-  private generateRefreshToken(payload: { id: string, role: string, email: string, sessionId: string }) {
-    return this.jwtService.sign(payload, { secret: this.REFRESH_TOKEN_SECRET, expiresIn: this.REFRESH_TOKEN_EXPIRES });
-  }
-
-  private async fetchUserByEmail(email: string, errorMessage: string): Promise<any> {
-
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        phone: true,
-        role: true,
-        password: true,
-        otp: true,
-        otpExpires: true,
-        isOtpVerified: true
-      }
-    });
-
-    if (!user) {
-      throw new BadRequestException(errorMessage);
-    }
-
-    return user;
   }
 }
