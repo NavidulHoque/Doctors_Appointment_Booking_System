@@ -11,10 +11,10 @@ export class RegistrationDto {
             message: 'Name can only contain letters, spaces, and dots',
         },
     })
-    fullName: string;
+    readonly fullName: string;
 
     @IsRequiredEmail()
-    email: string;
+    readonly email: string;
 
     @IsRequiredString({
         requiredMessage: 'Password is required',
@@ -26,5 +26,5 @@ export class RegistrationDto {
             message: 'Password must contain at least one number and one special character',
         },
     })
-    password: string;
+    readonly password: string;
 }

@@ -5,6 +5,8 @@ import * as argon from 'argon2';
 import { Response } from 'express';
 import { EmailService } from 'src/email/email.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Prisma, User as PrismaUser } from '@prisma/client';
+import { randomInt } from 'crypto'
 
 @Injectable()
 export class AuthHelperService {
@@ -12,11 +14,23 @@ export class AuthHelperService {
 
     // Environment variables
     private readonly ACCESS_TOKEN_EXPIRES: string;
-    private readonly REFRESH_TOKEN_EXPIRES: string;
+    public readonly REFRESH_TOKEN_EXPIRES: string;
     private readonly ACCESS_TOKEN_SECRET: string;
     private readonly REFRESH_TOKEN_SECRET: string;
     public readonly OTP_EXPIRES: number;
     private readonly NODE_ENV: string;
+
+    private readonly userSelect: Prisma.UserSelect = {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        role: true,
+        password: true,
+        otp: true,
+        otpExpires: true,
+        isOtpVerified: true
+    }
 
     constructor(
         private readonly config: ConfigService,
@@ -94,7 +108,7 @@ export class AuthHelperService {
      * OTP METHODS
      * ---------------------- */
     async generateOtp() {
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = randomInt(100000, 1000000).toString(); // 6 digit OTP
         const hashedOtp = await this.hashValue(otp);
         return { otp, hashedOtp };
     }
@@ -110,11 +124,10 @@ export class AuthHelperService {
         const accessMaxAge = this.convertExpiryToMs(this.ACCESS_TOKEN_EXPIRES);
         const refreshMaxAge = this.convertExpiryToMs(this.REFRESH_TOKEN_EXPIRES);
 
-        // env-aware secure flag (see medium issues)
         const cookieOpts = (maxAge: number) => ({
             httpOnly: true,
             secure: this.NODE_ENV === 'production',
-            sameSite: "none" as const,
+            sameSite: this.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
             maxAge
         });
 
@@ -130,17 +143,20 @@ export class AuthHelperService {
     /** ----------------------
      * SESSION METHODS
      * ---------------------- */
-    async findSessionById(sessionId: string, select: any): Promise<any> {
+    async findSessionById<T extends Prisma.SessionSelect>(
+        sessionId: string,
+        select: T,
+    ): Promise<Prisma.SessionGetPayload<{ select: T }>> {
         const session = await this.prisma.session.findUnique({
             where: { id: sessionId },
-            select
-        })
+            select,
+        });
 
         if (!session) {
             throw new NotFoundException('Session not found');
         }
 
-        return session
+        return session;
     }
 
     async deleteSession(sessionId: string) {
@@ -152,21 +168,11 @@ export class AuthHelperService {
     /** ----------------------
      * USER METHODS
      * ---------------------- */
-    async fetchUserByEmail(email: string, errorMessage: string): Promise<any> {
+    async fetchUserByEmail(email: string, errorMessage: string) {
 
         const user = await this.prisma.user.findUnique({
             where: { email },
-            select: {
-                id: true,
-                fullName: true,
-                email: true,
-                phone: true,
-                role: true,
-                password: true,
-                otp: true,
-                otpExpires: true,
-                isOtpVerified: true
-            }
+            select: this.userSelect
         });
 
         if (!user) {
@@ -179,10 +185,9 @@ export class AuthHelperService {
     /** ----------------------
      * UTILITY METHODS
      * ---------------------- */
-    convertExpiryToMs(expiry?: string) {
-        const str = expiry ?? this.REFRESH_TOKEN_EXPIRES;
-        const match = str.match(/(\d+)([smhd])/);
-        if (!match) throw new Error(`Invalid expiry format: ${str}`);
+    convertExpiryToMs(expiry: string) {
+        const match = expiry.match(/(\d+)([smhd])/);
+        if (!match) throw new Error(`Invalid expiry format: ${expiry}`);
         const value = parseInt(match[1], 10);
         const unit = match[2];
         switch (unit) {
@@ -194,18 +199,13 @@ export class AuthHelperService {
         }
     }
 
-    getRefreshTokenExpiryDate(): Date {
-        const expiresInMs = this.convertExpiryToMs();
-        return new Date(Date.now() + expiresInMs);
-    }
-
     /** ----------------------
      * HANDLER METHODS
      * ---------------------- */
     async handleNotificationFailure(
         actionDescription: string,
         error: Error,
-        user: Record<string, any>,
+        user: Pick<PrismaUser, 'id' | 'email'>,
         traceId: string
     ) {
         this.logger.error(`❌ Failed to ${actionDescription}, Reason: ${error.message} with traceId=${traceId}`);

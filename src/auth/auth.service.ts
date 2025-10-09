@@ -1,5 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import * as argon from "argon2";
+import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ForgetPasswordDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto, SessionResponseDto } from './dto';
 import { EmailService } from 'src/email/email.service';
@@ -7,10 +6,13 @@ import { SmsService } from 'src/sms/sms.service';
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 import { AuthHelperService } from './auth-helper.service';
+import { LoginPayload } from './interfaces';
+import { SessionWithUser } from './types';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
-  private readonly sessionSelect = {
+  private readonly sessionSelect: Prisma.SessionSelect = {
     id: true,
     deviceName: true,
     user: {
@@ -37,9 +39,9 @@ export class AuthService {
     try {
       const hashedPassword = await this.authHelper.hashValue(password);
 
-      dto.password = hashedPassword
+      const userData = { ...dto, password: hashedPassword };
 
-      await this.prisma.user.create({ data: dto })
+      await this.prisma.user.create({ data: userData })
 
       return { message: 'User created successfully' }
     }
@@ -47,10 +49,12 @@ export class AuthService {
     catch (error) {
       // Prisma unique constraint violation
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        const target = error.meta?.target?.[0];
+        const target = error.meta?.target;
 
-        if (target === 'email') {
-          throw new ConflictException("Email already exists");
+        const fields = Array.isArray(target) ? target.join(', ') : 'field(s)';
+
+        if (fields.includes('email')) {
+          throw new ConflictException('Email already exists');
         }
       }
 
@@ -58,9 +62,9 @@ export class AuthService {
     }
   }
 
-  async login({ email, password: plainPassword, deviceName, role }: Record<string, string>, res: Response) {
+  async login({ email, password: plainPassword, deviceName, role }: LoginPayload, res: Response) {
 
-    const user = await this.authHelper.fetchUserByEmail(email, "Specific Email is not registered yet, please register first")
+    const user = await this.authHelper.fetchUserByEmail(email, "Please create an account first")
 
     if (user.role !== role) {
       throw new UnauthorizedException(`${role} login only`);
@@ -71,20 +75,10 @@ export class AuthService {
     const isMatched = await this.authHelper.verifyHash(hashedPassword, plainPassword)
 
     if (!isMatched) {
-      throw new UnauthorizedException("Password invalid")
+      throw new UnauthorizedException("Invalid credentials")
     }
 
-    const { id: sessionId } = await this.prisma.session.create({
-      data: {
-        userId,
-        deviceName: deviceName || null,
-        refreshToken: "",
-        expiresAt: new Date()
-      },
-      select: {
-        id: true
-      }
-    })
+    const sessionId = randomUUID();
 
     const payload = { id: userId, role, email }
 
@@ -95,6 +89,7 @@ export class AuthService {
     })
 
     const hashedRefreshToken = await this.authHelper.hashValue(refreshToken);
+    const refreshExpiresAt = new Date(Date.now() + this.authHelper.convertExpiryToMs(this.authHelper.REFRESH_TOKEN_EXPIRES));
 
     const [_, session] = await this.prisma.$transaction([
       this.prisma.user.update({
@@ -104,11 +99,13 @@ export class AuthService {
           lastActiveAt: new Date()
         }
       }),
-      this.prisma.session.update({
-        where: { id: sessionId },
+      this.prisma.session.create({
         data: {
+          id: sessionId,
+          userId,
+          deviceName,
           refreshToken: hashedRefreshToken,
-          expiresAt: new Date(Date.now() + this.authHelper.convertExpiryToMs())
+          expiresAt: refreshExpiresAt
         },
         select: this.sessionSelect
       })
@@ -118,7 +115,7 @@ export class AuthService {
 
     return {
       message: 'Logged in successfully',
-      session: new SessionResponseDto(session)
+      session: new SessionResponseDto(session as SessionWithUser),
     }
   }
 
@@ -126,7 +123,7 @@ export class AuthService {
 
     const { email } = dto
 
-    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid Email')
+    const user = await this.authHelper.fetchUserByEmail(email, "Invalid credentials")
 
     const { otp, hashedOtp } = await this.authHelper.generateOtp()
     const otpExpires = this.authHelper.getOtpExpiryDate()
@@ -163,19 +160,13 @@ export class AuthService {
 
     const { email, otp } = dto
 
-    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid email')
+    const user = await this.authHelper.fetchUserByEmail(email, "Invalid credentials")
 
     if (!user.otp || !user.otpExpires) {
       throw new NotFoundException('Otp not found');
     }
 
-    const isOtpValid = await this.authHelper.verifyHash(user.otp, otp)
-
-    if (!isOtpValid) {
-      throw new BadRequestException('Invalid otp');
-    }
-
-    else if (new Date() > user.otpExpires) {
+    if (new Date() > user.otpExpires) {
 
       await this.prisma.user.update({
         where: { id: user.id },
@@ -187,6 +178,12 @@ export class AuthService {
       })
 
       throw new BadRequestException('OTP expired, please request a new one')
+    }
+
+    const isOtpValid = await this.authHelper.verifyHash(user.otp, otp)
+
+    if (!isOtpValid) {
+      throw new BadRequestException('Invalid otp');
     }
 
     await this.prisma.user.update({
@@ -207,7 +204,7 @@ export class AuthService {
 
     const { email, newPassword } = dto
 
-    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid email')
+    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid credentials')
 
     if (user.otp || user.otpExpires || !user.isOtpVerified) {
       throw new UnauthorizedException('Please verify otp first');
@@ -268,6 +265,11 @@ export class AuthService {
       }
     );
 
+    if (session.user.id !== payload.id) {
+      await this.authHelper.deleteSession(sessionId);
+      throw new BadRequestException('Token invalid, please login again');
+    }
+
     const isMatched = await this.authHelper.verifyHash(session.refreshToken, refreshToken)
 
     if (!isMatched) {
@@ -288,13 +290,13 @@ export class AuthService {
       sessionId
     })
 
-    const hashedNewRefreshToken = await argon.hash(newRefreshToken);
+    const hashedNewRefreshToken = await this.authHelper.hashValue(newRefreshToken);
 
     const updatedSession = await this.prisma.session.update({
       where: { id: sessionId },
       data: {
         refreshToken: hashedNewRefreshToken,
-        expiresAt: new Date(Date.now() + this.authHelper.convertExpiryToMs())
+        expiresAt: new Date(Date.now() + this.authHelper.convertExpiryToMs(this.authHelper.REFRESH_TOKEN_EXPIRES))
       },
       select: this.sessionSelect
     })
@@ -303,7 +305,7 @@ export class AuthService {
 
     return {
       message: 'Token refreshed successfully',
-      session: new SessionResponseDto(updatedSession)
+      session: new SessionResponseDto(updatedSession as SessionWithUser)
     }
   }
 

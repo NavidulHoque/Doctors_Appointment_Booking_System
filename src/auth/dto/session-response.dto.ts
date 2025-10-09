@@ -1,9 +1,12 @@
+import { User as PrismaUser } from '@prisma/client';
+import { SessionWithUser } from '../types';
+
 class BaseUserDto {
     readonly id: string;
     readonly fullName: string;
     readonly email: string;
 
-    constructor(user: Record<string, any>) {
+    constructor(user: PrismaUser) {
         this.id = user.id;
         this.fullName = user.fullName;
         this.email = user.email;
@@ -13,7 +16,7 @@ class BaseUserDto {
 class SessionUserInfoDto extends BaseUserDto {
     readonly role: string;
 
-    constructor(user: Record<string, any>) {
+    constructor(user: PrismaUser) {
         super(user);
         this.role = user.role;
     }
@@ -24,7 +27,7 @@ export class SessionResponseDto {
     readonly deviceName: string | null;
     readonly user: SessionUserInfoDto;
 
-    constructor(session: Record<string, any>) {
+    constructor(session: SessionWithUser) {
         this.id = session.id;
         this.deviceName = session.deviceName || null;
         this.user = new SessionUserInfoDto(session.user);
