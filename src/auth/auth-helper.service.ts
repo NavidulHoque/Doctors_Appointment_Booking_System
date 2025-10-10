@@ -8,6 +8,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma, User as PrismaUser } from '@prisma/client';
 import { randomInt, randomBytes } from 'crypto'
 import { userSelect } from './prisma-selects';
+import { JwtPayload } from './interfaces';
 
 @Injectable()
 export class AuthHelperService {
@@ -54,7 +55,7 @@ export class AuthHelperService {
         const secret =
             type === 'access' ? this.ACCESS_TOKEN_SECRET : this.REFRESH_TOKEN_SECRET;
 
-        return this.jwtService.verify(token, { secret });
+        return this.jwtService.verify(token, { secret }) as JwtPayload;
     }
 
     generateAccessToken(payload: { id: string; role: string; email: string }) {
