@@ -72,9 +72,13 @@ async function bootstrap() {
    * 🔹 5. Security & CORS
    */
   app.enableCors({
-    origin: true,
+    origin: [
+      'https://test-frontend.vercel.app', 
+      'http://localhost:3000' 
+    ],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-TOKEN'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   });
 
   /**

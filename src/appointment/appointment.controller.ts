@@ -10,7 +10,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
-import { AuthGuard, RolesGuard } from 'src/auth/guard';
+import { CsrfGuard, AuthGuard, RolesGuard } from 'src/auth/guard';
 import {
     CreateAppointmentDto,
     GetAppointmentsDto,
@@ -25,7 +25,7 @@ import { Cache } from 'src/common/decorators';
 import { CacheKeyHelper } from './helper';
 import { UserDto } from 'src/user/dto';
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentController {
     constructor(private readonly appointmentService: AppointmentService) { }

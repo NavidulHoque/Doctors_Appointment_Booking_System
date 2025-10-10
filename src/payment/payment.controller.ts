@@ -1,10 +1,10 @@
 import { Controller, Post, Body, UseGuards, Get, Query, ParseIntPipe, Param } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { AuthGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('payment')
 export class PaymentController {
   constructor(

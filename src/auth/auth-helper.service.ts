@@ -6,7 +6,8 @@ import { Response } from 'express';
 import { EmailService } from 'src/email/email.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma, User as PrismaUser } from '@prisma/client';
-import { randomInt } from 'crypto'
+import { randomInt, randomBytes } from 'crypto'
+import { userSelect } from './prisma-selects';
 
 @Injectable()
 export class AuthHelperService {
@@ -19,18 +20,6 @@ export class AuthHelperService {
     private readonly REFRESH_TOKEN_SECRET: string;
     public readonly OTP_EXPIRES: number;
     private readonly NODE_ENV: string;
-
-    private readonly userSelect: Prisma.UserSelect = {
-        id: true,
-        fullName: true,
-        email: true,
-        phone: true,
-        role: true,
-        password: true,
-        otp: true,
-        otpExpires: true,
-        isOtpVerified: true
-    }
 
     constructor(
         private readonly config: ConfigService,
@@ -124,20 +113,32 @@ export class AuthHelperService {
         const accessMaxAge = this.convertExpiryToMs(this.ACCESS_TOKEN_EXPIRES);
         const refreshMaxAge = this.convertExpiryToMs(this.REFRESH_TOKEN_EXPIRES);
 
-        const cookieOpts = (maxAge: number) => ({
-            httpOnly: true,
+        const cookieOpts = (maxAge: number, isHttpOnly = true) => ({
+            httpOnly: isHttpOnly,
             secure: this.NODE_ENV === 'production',
             sameSite: this.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
-            maxAge
+            maxAge,
+            path: '/'
         });
 
         res.cookie("access_token", accessToken, cookieOpts(accessMaxAge));
         res.cookie("refresh_token", refreshToken, cookieOpts(refreshMaxAge));
+
+        const csrfToken = randomBytes(32).toString('hex');
+        res.cookie('csrf_token', csrfToken, cookieOpts(refreshMaxAge, false));
     }
 
     clearAuthCookies(res: Response) {
-        res.clearCookie('access_token');
-        res.clearCookie('refresh_token');
+        const cookieOpts = {
+            httpOnly: true,
+            secure: this.NODE_ENV === 'production',
+            sameSite: this.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
+            path: '/', // frontend url where cookies are set
+        };
+
+        res.clearCookie('access_token', cookieOpts);
+        res.clearCookie('refresh_token', cookieOpts);
+        res.clearCookie('csrf_token', { ...cookieOpts, httpOnly: false });
     }
 
     /** ----------------------
@@ -172,7 +173,7 @@ export class AuthHelperService {
 
         const user = await this.prisma.user.findUnique({
             where: { email },
-            select: this.userSelect
+            select: userSelect
         });
 
         if (!user) {
@@ -186,7 +187,7 @@ export class AuthHelperService {
      * UTILITY METHODS
      * ---------------------- */
     convertExpiryToMs(expiry: string) {
-        const match = expiry.match(/(\d+)([smhd])/);
+        const match = expiry.match(/(\d+)([smhdSMHD])/);
         if (!match) throw new Error(`Invalid expiry format: ${expiry}`);
         const value = parseInt(match[1], 10);
         const unit = match[2];

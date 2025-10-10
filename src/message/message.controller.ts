@@ -12,7 +12,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
-import { AuthGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
 import { MessageProducerService } from './message.producer.service';
 import { CreateMessageDto, UpdateMessageDto } from './dto';
 import { Roles, User } from 'src/auth/decorators';
@@ -22,7 +22,7 @@ import { Cache } from 'src/common/decorators';
 import { RequestWithTrace } from '../common/types';
 import { CacheKeyHelper } from './helper';
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('messages')
 export class MessageController {
     constructor(

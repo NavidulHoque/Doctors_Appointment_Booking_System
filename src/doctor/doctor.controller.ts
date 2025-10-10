@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { AuthGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
 import { DoctorService } from './doctor.service';
 import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
 import { Roles, User } from 'src/auth/decorators';
@@ -13,7 +13,7 @@ import { UserDto } from 'src/user/dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationDto } from 'src/common/dto';
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('doctors')
 export class DoctorController {
 

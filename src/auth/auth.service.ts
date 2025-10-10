@@ -9,21 +9,10 @@ import { AuthHelperService } from './auth-helper.service';
 import { LoginPayload } from './interfaces';
 import { SessionWithUser } from './types';
 import { randomUUID } from 'crypto';
+import { sessionSelect } from './prisma-selects';
 
 @Injectable()
 export class AuthService {
-  private readonly sessionSelect: Prisma.SessionSelect = {
-    id: true,
-    deviceName: true,
-    user: {
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        role: true
-      }
-    }
-  }
 
   constructor(
     private readonly prisma: PrismaService,
@@ -50,12 +39,8 @@ export class AuthService {
       // Prisma unique constraint violation
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const target = error.meta?.target;
-
-        const fields = Array.isArray(target) ? target.join(', ') : 'field(s)';
-
-        if (fields.includes('email')) {
-          throw new ConflictException('Email already exists');
-        }
+        const fields = Array.isArray(target) ? target.join(', ') : String(target || 'field(s)');
+        throw new ConflictException(`${fields} already exists`);
       }
 
       throw error;
@@ -64,7 +49,7 @@ export class AuthService {
 
   async login({ email, password: plainPassword, deviceName, role }: LoginPayload, res: Response) {
 
-    const user = await this.authHelper.fetchUserByEmail(email, "Please create an account first")
+    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid credentials')
 
     if (user.role !== role) {
       throw new UnauthorizedException(`${role} login only`);
@@ -107,7 +92,7 @@ export class AuthService {
           refreshToken: hashedRefreshToken,
           expiresAt: refreshExpiresAt
         },
-        select: this.sessionSelect
+        select: sessionSelect
       })
     ]);
 
@@ -204,7 +189,7 @@ export class AuthService {
 
     const { email, newPassword } = dto
 
-    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid credentials')
+    const user = await this.authHelper.fetchUserByEmail(email, "Password reset request invalid or expired.")
 
     if (user.otp || user.otpExpires || !user.isOtpVerified) {
       throw new UnauthorizedException('Please verify otp first');
@@ -298,7 +283,7 @@ export class AuthService {
         refreshToken: hashedNewRefreshToken,
         expiresAt: new Date(Date.now() + this.authHelper.convertExpiryToMs(this.authHelper.REFRESH_TOKEN_EXPIRES))
       },
-      select: this.sessionSelect
+      select: sessionSelect
     })
 
     this.authHelper.setAuthCookies(res, accessToken, newRefreshToken);

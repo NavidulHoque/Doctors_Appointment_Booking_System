@@ -2,11 +2,11 @@ import { Controller, UseGuards } from '@nestjs/common';
 import { Body, Post } from '@nestjs/common';
 import { ReviewService } from './review.service';
 import { ReviewDto } from './dto';
-import { AuthGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('reviews')
 export class ReviewController {
 

@@ -1,10 +1,11 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ForgetPasswordDto, LoginDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
-import { AuthGuard } from './guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from './guard';
 import { Role } from '@prisma/client';
 import { RequestWithTrace } from 'src/common/types';
 import { Request, Response } from 'express';
+import { Roles } from './decorators';
 
 @Controller('auth')
 export class AuthController {
@@ -76,7 +77,8 @@ export class AuthController {
         return this.authService.refreshAccessToken(refreshToken, res)
     }
 
-    @UseGuards(AuthGuard)
+    @UseGuards(CsrfGuard, AuthGuard, RolesGuard)
+    @Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
     @Post("/logout")
     @HttpCode(200)
     logout(
