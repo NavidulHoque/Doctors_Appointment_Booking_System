@@ -22,7 +22,7 @@ import { EntityByIdPipe } from 'src/common/pipes';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
 import { Cache } from 'src/common/decorators';
-import { CacheKeyHelper } from './helper';
+import { CacheKeyHelper } from './helpers';
 import { UserDto } from 'src/user/dto';
 
 @UseGuards(CsrfGuard, AuthGuard, RolesGuard)

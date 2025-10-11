@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AppointmentResponseDto, CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
@@ -11,7 +11,7 @@ import { Method, Prisma, Role, Status } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { UserDto } from 'src/user/dto';
 import { PaginationResponseDto } from 'src/common/dto';
-import { InternalServerError } from 'openai';
+
 
 @Injectable()
 export class AppointmentService {
