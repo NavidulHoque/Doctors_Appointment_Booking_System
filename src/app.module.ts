@@ -27,6 +27,7 @@ import { CronModule } from './cron/cron.module';
 import { JwtModule } from '@nestjs/jwt';
 import { McpModule } from './mcp/mcp.module';
 import { OpenAiModule } from './gemini/gemini.module';
+import { AuthHelperModule } from './auth/helpers/auth-helper.mdoule';
 
 @Module({
   imports: [
@@ -69,7 +70,8 @@ import { OpenAiModule } from './gemini/gemini.module';
     SmsModule,
     CronModule,
     McpModule,
-    OpenAiModule
+    OpenAiModule,
+    AuthHelperModule
   ],
   controllers: [AppController],
   providers: [

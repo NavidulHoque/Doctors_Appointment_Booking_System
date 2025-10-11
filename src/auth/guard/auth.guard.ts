@@ -5,12 +5,11 @@ import {
     UnauthorizedException
 } from '@nestjs/common';
 import { Request } from 'express';
-import { AuthHelperService } from '../auth-helper.service';
+import { TokenHelper } from '../helpers/token.helper';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-    constructor(
-        private readonly authHelper: AuthHelperService
+    constructor(private readonly tokenHelper: TokenHelper
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -23,7 +22,7 @@ export class AuthGuard implements CanActivate {
         }
 
         try {
-            const payload = this.authHelper.verifyAccessToken(token)
+            const payload = this.tokenHelper.verifyAccessToken(token)
 
             request['user'] = payload;
         }
@@ -49,18 +48,23 @@ export class AuthGuard implements CanActivate {
         return true
     }
 
-    private extractToken(request: Request){
+    private extractToken(request: Request) {
 
         if (request.cookies && request.cookies['access_token']) {
             return request.cookies['access_token'];
         }
 
         const authHeader = request.headers.authorization;
-        if (authHeader) {
-            const [type, token] = authHeader.split(' ');
-            if (type.toLowerCase() === 'bearer' && token) {
-                return token;
-            }
-        }
+        const parts = authHeader?.split(/\s+/).filter(Boolean);
+        if (parts?.length !== 2) {
+            throw new UnauthorizedException("Invalid authorization header format")
+        };
+
+        const [type, token] = parts;
+        if (type.toLowerCase() !== 'bearer') {
+            throw new UnauthorizedException("Invalid authorization header type")
+        };
+        
+        return token;
     }
 }

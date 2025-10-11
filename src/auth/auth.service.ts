@@ -5,11 +5,15 @@ import { EmailService } from 'src/email/email.service';
 import { SmsService } from 'src/sms/sms.service';
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
-import { AuthHelperService } from './auth-helper.service';
-import { LoginPayload } from './interfaces';
-import { SessionWithUser } from './types';
+import { LoginPayload, RefreshTokenPayload } from './interfaces';
 import { randomUUID } from 'crypto';
 import { sessionSelect } from './prisma-selects';
+import { TokenHelper } from './helpers/token.helper';
+import { CryptoHelper } from './helpers/crypto.helper';
+import { OtpHelper } from './helpers/otp.helper';
+import { CookieHelper } from './helpers/cookie.helper';
+import { SessionUserHelper } from './helpers/session-user.helper';
+import { AuthNotificationHelper } from './helpers/notification.helper';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +22,12 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly sms: SmsService,
-    private readonly authHelper: AuthHelperService
+    private readonly tokenHelper: TokenHelper,
+    private readonly cryptoHelper: CryptoHelper,
+    private readonly otpHelper: OtpHelper,
+    private readonly cookieHelper: CookieHelper,
+    private readonly sessionUserHelper: SessionUserHelper,
+    private readonly notificationHelper: AuthNotificationHelper
   ) { }
 
   async register(dto: RegistrationDto) {
@@ -26,7 +35,7 @@ export class AuthService {
     const { password } = dto
 
     try {
-      const hashedPassword = await this.authHelper.hashValue(password);
+      const hashedPassword = await this.cryptoHelper.hashValue(password);
 
       const userData = { ...dto, password: hashedPassword };
 
@@ -49,7 +58,7 @@ export class AuthService {
 
   async login({ email, password: plainPassword, deviceName, role }: LoginPayload, res: Response) {
 
-    const user = await this.authHelper.fetchUserByEmail(email, 'Invalid credentials')
+    const user = await this.sessionUserHelper.fetchUserByEmail(email, 'Invalid credentials')
 
     if (user.role !== role) {
       throw new UnauthorizedException(`${role} login only`);
@@ -57,7 +66,7 @@ export class AuthService {
 
     const { password: hashedPassword, id: userId } = user;
 
-    const isMatched = await this.authHelper.verifyHash(hashedPassword, plainPassword)
+    const isMatched = await this.cryptoHelper.verifyHash(hashedPassword, plainPassword)
 
     if (!isMatched) {
       throw new UnauthorizedException("Invalid credentials")
@@ -67,14 +76,14 @@ export class AuthService {
 
     const payload = { id: userId, role, email }
 
-    const accessToken = this.authHelper.generateAccessToken(payload)
-    const refreshToken = this.authHelper.generateRefreshToken({
+    const accessToken = this.tokenHelper.generateAccessToken(payload)
+    const refreshToken = this.tokenHelper.generateRefreshToken({
       ...payload,
       sessionId
     })
 
-    const hashedRefreshToken = await this.authHelper.hashValue(refreshToken);
-    const refreshExpiresAt = new Date(Date.now() + this.authHelper.convertExpiryToMs(this.authHelper.REFRESH_TOKEN_EXPIRES));
+    const hashedRefreshToken = await this.cryptoHelper.hashValue(refreshToken);
+    const refreshExpiresAt = new Date(Date.now() + this.cookieHelper.convertExpiryToMs(this.tokenHelper.REFRESH_TOKEN_EXPIRES));
 
     const [_, session] = await this.prisma.$transaction([
       this.prisma.user.update({
@@ -96,11 +105,11 @@ export class AuthService {
       })
     ]);
 
-    this.authHelper.setAuthCookies(res, accessToken, refreshToken);
+    this.cookieHelper.setAuthCookies(res, accessToken, refreshToken);
 
     return {
       message: 'Logged in successfully',
-      session: new SessionResponseDto(session as SessionWithUser),
+      session: new SessionResponseDto(session),
     }
   }
 
@@ -108,10 +117,10 @@ export class AuthService {
 
     const { email } = dto
 
-    const user = await this.authHelper.fetchUserByEmail(email, "Invalid credentials")
+    const user = await this.sessionUserHelper.fetchUserByEmail(email, "Invalid credentials")
 
-    const { otp, hashedOtp } = await this.authHelper.generateOtp()
-    const otpExpires = this.authHelper.getOtpExpiryDate()
+    const { otp, hashedOtp } = await this.otpHelper.generateOtp()
+    const otpExpires = this.otpHelper.getOtpExpiryDate()
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -122,17 +131,17 @@ export class AuthService {
     })
 
     this.email.sendOtpEmail(user.email, otp).catch((error) =>
-      this.authHelper.handleNotificationFailure('email otp', error, user, traceId)
+      this.notificationHelper.handleNotificationFailure('email otp', error, user, traceId)
     );
 
     if (user.phone) {
       this.sms
         .sendSms(
           user.phone,
-          `Your OTP code is ${otp}. It will expire in ${this.authHelper.OTP_EXPIRES} minutes.`
+          `Your OTP code is ${otp}. It will expire in ${this.otpHelper.OTP_EXPIRES} minutes.`
         )
         .catch((error) =>
-          this.authHelper.handleNotificationFailure('send otp via sms', error, user, traceId)
+          this.notificationHelper.handleNotificationFailure('send otp via sms', error, user, traceId)
         );
     }
 
@@ -145,7 +154,7 @@ export class AuthService {
 
     const { email, otp } = dto
 
-    const user = await this.authHelper.fetchUserByEmail(email, "Invalid credentials")
+    const user = await this.sessionUserHelper.fetchUserByEmail(email, "Invalid credentials")
 
     if (!user.otp || !user.otpExpires) {
       throw new NotFoundException('Otp not found');
@@ -165,7 +174,7 @@ export class AuthService {
       throw new BadRequestException('OTP expired, please request a new one')
     }
 
-    const isOtpValid = await this.authHelper.verifyHash(user.otp, otp)
+    const isOtpValid = await this.cryptoHelper.verifyHash(user.otp, otp)
 
     if (!isOtpValid) {
       throw new BadRequestException('Invalid otp');
@@ -189,13 +198,13 @@ export class AuthService {
 
     const { email, newPassword } = dto
 
-    const user = await this.authHelper.fetchUserByEmail(email, "Password reset request invalid or expired.")
+    const user = await this.sessionUserHelper.fetchUserByEmail(email, "Password reset request invalid or expired.")
 
     if (user.otp || user.otpExpires || !user.isOtpVerified) {
       throw new UnauthorizedException('Please verify otp first');
     }
 
-    const hashedPassword = await this.authHelper.hashValue(newPassword);
+    const hashedPassword = await this.cryptoHelper.hashValue(newPassword);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -212,10 +221,10 @@ export class AuthService {
 
   async refreshAccessToken(refreshToken: string, res: Response) {
 
-    let payload: { sessionId: string, id: string, role: string, email: string }
+    let payload: RefreshTokenPayload
 
     try {
-      payload = this.authHelper.verifyRefreshToken(refreshToken);
+      payload = this.tokenHelper.verifyRefreshToken(refreshToken);
     }
 
     catch (error) {
@@ -236,61 +245,49 @@ export class AuthService {
     }
 
     const { sessionId } = payload;
-    const session = await this.authHelper.findSessionById(sessionId,
-      {
-        refreshToken: true,
-        expiresAt: true,
-        user: {
-          select: {
-            id: true,
-            role: true,
-            email: true
-          }
-        }
-      }
-    );
+    const session = await this.sessionUserHelper.findSessionById(sessionId);
 
     if (session.user.id !== payload.id) {
-      await this.authHelper.deleteSession(sessionId);
+      await this.sessionUserHelper.deleteSession(sessionId);
       throw new BadRequestException('Token invalid, please login again');
     }
 
-    const isMatched = await this.authHelper.verifyHash(session.refreshToken, refreshToken)
+    const isMatched = await this.cryptoHelper.verifyHash(session.refreshToken, refreshToken)
 
     if (!isMatched) {
-      await this.authHelper.deleteSession(sessionId);
+      await this.sessionUserHelper.deleteSession(sessionId);
       throw new BadRequestException('Refresh token invalid, please login again');
     }
 
     else if (new Date() > session.expiresAt) {
-      await this.authHelper.deleteSession(sessionId);
+      await this.sessionUserHelper.deleteSession(sessionId);
       throw new UnauthorizedException("Session expired, please login again");
     }
 
-    const accessToken = this.authHelper.generateAccessToken(session.user)
-    const newRefreshToken = this.authHelper.generateRefreshToken({
+    const accessToken = this.tokenHelper.generateAccessToken(session.user)
+    const newRefreshToken = this.tokenHelper.generateRefreshToken({
       id: session.user.id,
       role: session.user.role,
       email: session.user.email,
       sessionId
     })
 
-    const hashedNewRefreshToken = await this.authHelper.hashValue(newRefreshToken);
+    const hashedNewRefreshToken = await this.cryptoHelper.hashValue(newRefreshToken);
 
     const updatedSession = await this.prisma.session.update({
       where: { id: sessionId },
       data: {
         refreshToken: hashedNewRefreshToken,
-        expiresAt: new Date(Date.now() + this.authHelper.convertExpiryToMs(this.authHelper.REFRESH_TOKEN_EXPIRES))
+        expiresAt: new Date(Date.now() + this.cookieHelper.convertExpiryToMs(this.tokenHelper.REFRESH_TOKEN_EXPIRES))
       },
       select: sessionSelect
     })
 
-    this.authHelper.setAuthCookies(res, accessToken, newRefreshToken);
+    this.cookieHelper.setAuthCookies(res, accessToken, newRefreshToken);
 
     return {
       message: 'Token refreshed successfully',
-      session: new SessionResponseDto(updatedSession as SessionWithUser)
+      session: new SessionResponseDto(updatedSession)
     }
   }
 
@@ -298,7 +295,7 @@ export class AuthService {
 
     const { sessionId } = dto
 
-    const session = await this.authHelper.findSessionById(sessionId, { user: { select: { id: true } } })
+    const session = await this.sessionUserHelper.findSessionById(sessionId)
 
     await this.prisma.$transaction([
 
@@ -315,7 +312,7 @@ export class AuthService {
       })
     ])
 
-    this.authHelper.clearAuthCookies(res);
+    this.cookieHelper.clearAuthCookies(res);
 
     return {
       message: 'Logged out successfully'

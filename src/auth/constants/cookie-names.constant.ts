@@ -1,1 +1,0 @@
-export const COOKIE_NAMES = { ACCESS: 'access_token', REFRESH: 'refresh_token', CSRF: 'csrf_token' };

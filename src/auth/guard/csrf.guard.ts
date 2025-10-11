@@ -11,7 +11,6 @@ export class CsrfGuard implements CanActivate {
     canActivate(context: ExecutionContext): boolean {
         const request = context.switchToHttp().getRequest<Request>();
 
-        // CSRF check not needed for safe methods
         const method = request.method.toUpperCase();
         if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
             return true;

@@ -1,6 +1,6 @@
-export interface LoginPayload {
-    email: string;
+import { BasePayload } from "./base-payload.interface";
+
+export interface LoginPayload extends BasePayload {
     password: string;
     deviceName?: string;
-    role: string;
 }
