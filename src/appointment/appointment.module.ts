@@ -1,9 +1,11 @@
-import { Global, Module } from '@nestjs/common';
+import { forwardRef, Global, Module } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { AppointmentController } from './appointment.controller';
 import { AppointmentProcessor } from './processors';
 import { BullModule } from '@nestjs/bull';
 import { DLQProcessor } from './processors/dlq.processor';
+import { AppointmentHelper } from './helpers';
+import { AppointmentHandler } from './handlers';
 
 @Global()
 @Module({
@@ -16,7 +18,13 @@ import { DLQProcessor } from './processors/dlq.processor';
     }),
   ],
   controllers: [AppointmentController],
-  providers: [AppointmentService, AppointmentProcessor, DLQProcessor],
-  exports: [AppointmentService],
+  providers: [
+    AppointmentService,
+    AppointmentProcessor, 
+    DLQProcessor,
+    AppointmentHelper,
+    AppointmentHandler
+  ],
+  exports: [AppointmentService, AppointmentHelper, AppointmentHandler],
 })
 export class AppointmentModule { }

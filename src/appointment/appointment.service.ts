@@ -2,16 +2,11 @@ import { BadRequestException, ForbiddenException, Injectable, Logger } from '@ne
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AppointmentResponseDto, CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/prisma/prisma-selects';
-import { NotificationService } from 'src/notification/notification.service';
 import { ConfigService } from '@nestjs/config';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
-import { EmailService } from 'src/email/email.service';
 import { Method, Prisma, Role, Status } from '@prisma/client';
-import { DateTime } from 'luxon';
 import { UserDto } from 'src/user/dto';
 import { PaginationResponseDto } from 'src/common/dto';
-
+import { AppointmentHelper } from './helpers/appointment.helper';
 
 @Injectable()
 export class AppointmentService {
@@ -19,10 +14,8 @@ export class AppointmentService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly notificationService: NotificationService,
-        private readonly email: EmailService,
         private readonly config: ConfigService,
-        @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
+        private readonly appointmentHelper: AppointmentHelper
     ) { }
 
     /** ----------------------
@@ -61,7 +54,7 @@ export class AppointmentService {
 
             this.logger.log(`📢 Sending notification to admin about new appointment with traceId: ${traceId}`);
 
-            this.sendNotificationWithFallback(
+            this.appointmentHelper.sendNotificationWithFallback(
                 this.config.get('ADMIN_ID') as string,
                 `${patientName}'s appointment with ${doctorName} is booked for ${date}.`,
                 traceId,
@@ -90,7 +83,7 @@ export class AppointmentService {
     async getAllAppointments(query: GetAppointmentsDto, user: UserDto) {
         const { page, limit } = query;
         const skip = (page - 1) * limit;
-        const { query: where, orderBy } = this.buildAppointmentQuery(query, user);
+        const { query: where, orderBy } = this.appointmentHelper.buildAppointmentQuery(query, user);
 
         const [appointments, totalAppointments] = await Promise.all([
             this.prisma.appointment.findMany({
@@ -113,7 +106,7 @@ export class AppointmentService {
     * GET COUNTS
     * ---------------------- */
     async getAllAppointmentCount(user: UserDto) {
-        const query = this.applyRoleBasedScope(user, {});
+        const query = this.appointmentHelper.applyRoleBasedScope(user, {});
 
         const [
             totalAppointments,
@@ -167,7 +160,7 @@ export class AppointmentService {
     * ---------------------- */
     async getTotalAppointmentsGraph(user: UserDto) {
 
-        const { doctorId, patientId } = this.applyRoleBasedScope(user, {});
+        const { doctorId, patientId } = this.appointmentHelper.applyRoleBasedScope(user, {});
 
         const months = [
             'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
@@ -222,7 +215,7 @@ export class AppointmentService {
         appointment: Record<string, any>,
         userRole: string
     ) {
-        const body = await this.prepareAppointmentUpdate(dto, appointment, traceId, userRole);
+        const body = await this.appointmentHelper.prepareAppointmentUpdate(dto, appointment, traceId, userRole);
 
         await this.prisma.appointment.update({
             where: { id: appointment.id },
@@ -232,299 +225,6 @@ export class AppointmentService {
         return {
             message: 'Appointment updated successfully'
         };
-    }
-
-    /** ----------------------
-     * HELPERS
-     * ---------------------- */
-    private async prepareAppointmentUpdate(
-        dto: UpdateAppointmentDto,
-        appointment: Record<string, any>,
-        traceId: string,
-        userRole: string
-    ) {
-        const { status } = dto;
-
-        switch (status) {
-            case 'CONFIRMED':
-                return await this.handleConfirm(appointment, traceId, userRole);
-
-            case 'CANCELLED':
-                return this.handleCancel(dto, appointment, traceId);
-
-            case 'COMPLETED':
-                return this.handleComplete(appointment, userRole);
-
-            case 'RUNNING':
-                return this.handleRunning(appointment, userRole);
-
-            default:
-                return {};
-        }
-    }
-
-    private buildAppointmentQuery(dto: GetAppointmentsDto, user: UserDto) {
-        const {
-            search, status, isPaid,
-            paymentMethod, isToday, isPast, isFuture,
-        } = dto;
-
-        const query = this.applyRoleBasedScope(user, {});
-
-        if ([isToday, isPast, isFuture].filter(Boolean).length > 1) {
-            throw new BadRequestException('Only one of isToday, isPast, or isFuture can be passed');
-        }
-
-        let orderBy: any = { date: 'desc' };
-        const now = new Date();
-
-        if (isPaid !== undefined) query.isPaid = isPaid;
-        if (paymentMethod) query.paymentMethod = paymentMethod;
-
-        if (status && status.length > 0) {
-            query.status = { in: status };
-            if (status.some((s) => ['CONFIRMED', 'PENDING', 'RUNNING'].includes(s))) {
-                orderBy = { date: 'asc' };
-            }
-        }
-
-        if (isToday) {
-            const localTime = DateTime.fromJSDate(new Date(), { zone: 'Asia/Dhaka' });
-            const startUTC = localTime.startOf('day').toUTC().toJSDate();
-            const endUTC = localTime.endOf('day').toUTC().toJSDate();
-
-            query.date = { gte: startUTC, lte: endUTC };
-            orderBy = { date: 'asc' };
-        }
-
-        if (isPast) query.date = { lte: now };
-
-        if (isFuture) {
-            query.date = { gte: now };
-            orderBy = { date: 'asc' };
-        }
-
-        if (search) {
-            query.OR = [
-                { cancellationReason: { contains: search, mode: 'insensitive' } },
-                {
-                    doctor: {
-                        OR: [
-                            { fullName: { contains: search, mode: 'insensitive' } },
-                            { email: { contains: search, mode: 'insensitive' } },
-                        ],
-                    },
-                },
-                {
-                    patient: {
-                        OR: [
-                            { fullName: { contains: search, mode: 'insensitive' } },
-                            { email: { contains: search, mode: 'insensitive' } },
-                        ],
-                    },
-                },
-            ];
-        }
-
-        return { query, orderBy };
-    }
-
-    private applyRoleBasedScope(user: UserDto, query: Prisma.AppointmentWhereInput) {
-        switch (user.role) {
-
-            case Role.PATIENT:
-                query.patientId = user.id;
-                break;
-
-            case Role.DOCTOR:
-                query.doctorId = user.id;
-                break;
-        }
-
-        return query
-    }
-
-    private async sendNotificationWithFallback(
-        userId: string,
-        message: string,
-        traceId: string,
-        meta: Record<string, any>,
-        alertSubject: string,
-        delay = 0,
-    ) {
-        try {
-            await this.notificationService.sendNotifications(
-                userId,
-                message,
-                traceId,
-                delay,
-                meta,
-            );
-        }
-
-        catch (error) {
-            this.logger.error(
-                `❌ Failed to insert notification into queue, Reason: ${error.message}, traceId=${traceId}`,
-            );
-
-            try {
-                await this.email.alertAdmin(
-                    alertSubject,
-                    `${alertSubject}<br>
-                     Reason: ${error.message}<br>
-                     traceId: ${traceId}`,
-                );
-            }
-
-            catch (emailError) {
-                this.logger.error(
-                    `❌ Failed to send alert email, Reason: ${emailError.message}, traceId=${traceId}`,
-                );
-            }
-        }
-    }
-
-    /** ----------------------
-     * Handlers
-     * ---------------------- */
-
-    private async handleConfirm(
-        appointment: Record<string, any>,
-        traceId: string,
-        userRole: string
-    ) {
-        const { id: appointmentId, patient, doctor, date, status: currentStatus } = appointment;
-        const { id: patientId, fullName: patientName } = patient;
-        const { id: doctorId, fullName: doctorName } = doctor;
-        const now = new Date();
-
-        if (userRole !== Role.ADMIN) {
-            throw new ForbiddenException("Only admin can confirm appointments");
-        }
-
-        else if (currentStatus !== 'PENDING') {
-            throw new ForbiddenException("Appointment must be in pending status to confirm");
-        }
-
-        const oneHourBefore = new Date(date.getTime() - 60 * 60 * 1000);
-
-        await Promise.all([
-            this.sendNotificationWithFallback(
-                patientId,
-                `Your appointment with ${doctorName} is confirmed for ${date.toString()}.`,
-                traceId,
-                { appointmentId },
-                'Failed to send appointment confirmation',
-            ),
-            this.sendNotificationWithFallback(
-                doctorId,
-                `Your appointment with ${patientName} is confirmed for ${date.toString()}.`,
-                traceId,
-                { appointmentId },
-                'Failed to send appointment confirmation',
-            ),
-        ]);
-
-        await Promise.all([
-            this.sendNotificationWithFallback(
-                patientId,
-                `Your appointment with ${doctorName} starts in 1 hour.`,
-                traceId,
-                { appointmentId },
-                'Failed to send appointment reminder',
-                oneHourBefore.getTime() - now.getTime(),
-            ),
-            this.sendNotificationWithFallback(
-                doctorId,
-                `Your appointment with ${patientName} starts in 1 hour.`,
-                traceId,
-                { appointmentId },
-                'Failed to send appointment reminder',
-                oneHourBefore.getTime() - now.getTime(),
-            ),
-            this.appointmentQueue.add(
-                'start-appointment',
-                { status: Status.RUNNING, appointment, traceId, userRole },
-                {
-                    delay: date.getTime() - now.getTime(),
-                    backoff: { type: 'exponential', delay: 5000 },
-                    attempts: 5,
-                    removeOnComplete: true,
-                    removeOnFail: false,
-                },
-            ),
-        ]);
-
-        return { status: Status.CONFIRMED };
-    }
-
-    private handleCancel(
-        dto: UpdateAppointmentDto,
-        appointment: Record<string, any>,
-        traceId: string,
-    ) {
-        const { id: appointmentId, doctor, date, status: currentStatus, patient } = appointment;
-        const { fullName: doctorName } = doctor;
-        const { id: patientId } = patient;
-        const { cancellationReason } = dto;
-
-        if (currentStatus === 'COMPLETED') {
-            throw new ForbiddenException("Cannot cancel a completed appointment");
-        }
-
-        else if (!cancellationReason) {
-            throw new BadRequestException("Cancellation reason is required to cancel an appointment");
-        }
-
-        this.sendNotificationWithFallback(
-            patientId,
-            `Your appointment with ${doctorName} was cancelled on ${date.toString()}. Reason: ${cancellationReason}`,
-            traceId,
-            { appointmentId },
-            'Failed to send appointment cancellation',
-        );
-
-        return { status: Status.CANCELLED, cancellationReason };
-    }
-
-    private handleComplete(
-        appointment: Record<string, any>,
-        userRole: string
-    ) {
-        const { status: currentStatus, isPaid, paymentMethod } = appointment;
-
-        if (userRole !== Role.ADMIN) {
-            throw new ForbiddenException("Only admin can complete appointments");
-        }
-
-        else if (currentStatus !== 'RUNNING') {
-            throw new ForbiddenException("Appointment must be in running status to complete");
-        }
-
-        const body: Record<string, any> = { status: Status.COMPLETED };
-
-        if (!isPaid && !paymentMethod) {
-            body.isPaid = true;
-            body.paymentMethod = 'CASH';
-        }
-
-        return body;
-    }
-
-    private handleRunning(
-        appointment: Record<string, any>,
-        userRole: string
-    ) {
-        const { status: currentStatus } = appointment;
-        if (userRole !== Role.ADMIN) {
-            throw new ForbiddenException("Only admin can mark appointments as running");
-        }
-
-        else if (currentStatus !== 'CONFIRMED') {
-            throw new ForbiddenException("Appointment must be in confirmed status to mark as running");
-        }
-
-        return { status: Status.RUNNING };
     }
 }
 
