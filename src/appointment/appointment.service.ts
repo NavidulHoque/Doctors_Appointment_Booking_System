@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { AppointmentResponseDto, CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
+import { AppointmentCountResponseDto, AppointmentResponseDto, CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
 import { appointmentSelect } from 'src/appointment/prisma-selects';
 import { ConfigService } from '@nestjs/config';
 import { Method, Prisma, Role, Status } from '@prisma/client';
@@ -137,22 +137,24 @@ export class AppointmentService {
             this.prisma.appointment.count({ where: { ...query, paymentMethod: Method.ONLINE } }),
         ]);
 
+        const countResponse = new AppointmentCountResponseDto({
+            totalAppointments,
+            totalUniquePatientsCount: uniquePatients.length,
+            totalUniqueDoctorsCount: uniqueDoctors.length,
+            totalPendingAppointments,
+            totalConfirmedAppointments,
+            totalRunningAppointments,
+            totalCompletedAppointments,
+            totalCancelledAppointments,
+            totalPaidAppointments,
+            totalUnPaidAppointments,
+            totalCashPaidAppointments,
+            totalOnlinePaidAppointments,
+        })
+        
         return {
-            counts: {
-                totalAppointments,
-                totalUniquePatientsCount: uniquePatients.length,
-                totalUniqueDoctorsCount: uniqueDoctors.length,
-                totalPendingAppointments,
-                totalConfirmedAppointments,
-                totalRunningAppointments,
-                totalCompletedAppointments,
-                totalCancelledAppointments,
-                totalPaidAppointments,
-                totalUnPaidAppointments,
-                totalCashPaidAppointments,
-                totalOnlinePaidAppointments,
-            },
-            message: 'Appointments count fetched successfully',
+            count: countResponse,
+            message: 'Appointments count fetched successfully'
         };
     }
 
