@@ -8,6 +8,7 @@ import { UserDto } from 'src/user/dto';
 import { PaginationResponseDto } from 'src/common/dto';
 import { AppointmentHelper } from './helpers/appointment.helper';
 import { AppointmentWithUser } from './types';
+import { AppointmentGraphResult } from './interfaces';
 
 @Injectable()
 export class AppointmentService {
@@ -193,11 +194,11 @@ export class AppointmentService {
                 ORDER BY year, month;
                 `;
 
-        const rawResult: any[] = values.length > 0
-            ? await this.prisma.$queryRawUnsafe(query, ...values)
-            : await this.prisma.$queryRawUnsafe(query);
+        const rawResult = values.length > 0
+            ? await this.prisma.$queryRawUnsafe<AppointmentGraphResult[]>(query, ...values)
+            : await this.prisma.$queryRawUnsafe<AppointmentGraphResult[]>(query);
 
-        const result = rawResult.map((item: Record<string, any>) => ({
+        const result = rawResult.map((item: AppointmentGraphResult) => ({
             year: Number(item.year),
             month: months[Number(item.month) - 1],
             total: Number(item.total),

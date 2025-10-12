@@ -7,6 +7,7 @@ import { DateTime } from 'luxon';
 import { Prisma, Role } from "@prisma/client";
 import { AppointmentHandler } from "../handlers";
 import { AppointmentWithUser } from "../types";
+import { NotificationMeta } from "../interfaces";
 
 @Injectable()
 export class AppointmentHelper {
@@ -130,7 +131,7 @@ export class AppointmentHelper {
         userId: string,
         message: string,
         traceId: string,
-        meta: Record<string, any>,
+        meta: NotificationMeta,
         alertSubject: string,
         delay = 0,
     ) {

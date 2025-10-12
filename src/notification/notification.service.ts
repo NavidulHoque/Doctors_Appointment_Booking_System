@@ -86,7 +86,13 @@ export class NotificationService {
     }
   }
 
-  async sendNotifications(userId: string, content: string, traceId: string, delay: number = 0, metadata: Record<string, any> = {}) {
+  async sendNotifications(
+    userId: string,
+    content: string,
+    traceId: string,
+    delay: number = 0,
+    metadata: Record<string, any> = {}
+  ) {
 
     await this.notificationQueue.add(
       'send-notification',
