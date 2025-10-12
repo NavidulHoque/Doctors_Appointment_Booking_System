@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { CreateDoctorDto, DoctorResponseDto, GetDoctorsDto, UpdateDoctorDto, UpdateDoctorProfileDto, UpdateUserProfileDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { doctorSelect } from 'src/prisma/prisma-selects';
+import { doctorSelect } from 'src/doctor/prisma-selects';
 import * as argon from "argon2";
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';

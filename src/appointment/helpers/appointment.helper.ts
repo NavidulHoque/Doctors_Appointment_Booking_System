@@ -6,6 +6,7 @@ import { UserDto } from "src/user/dto";
 import { DateTime } from 'luxon';
 import { Prisma, Role } from "@prisma/client";
 import { AppointmentHandler } from "../handlers";
+import { AppointmentWithUser } from "../types";
 
 @Injectable()
 export class AppointmentHelper {
@@ -20,7 +21,7 @@ export class AppointmentHelper {
 
     async prepareAppointmentUpdate(
         dto: UpdateAppointmentDto,
-        appointment: Record<string, any>,
+        appointment: AppointmentWithUser,
         traceId: string,
         userRole: string
     ) {

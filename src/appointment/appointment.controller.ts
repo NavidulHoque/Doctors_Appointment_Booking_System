@@ -19,11 +19,12 @@ import {
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
-import { appointmentSelect } from 'src/prisma/prisma-selects';
+import { appointmentSelect } from 'src/appointment/prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
 import { Cache } from 'src/common/decorators';
 import { CacheKeyHelper } from './helpers';
 import { UserDto } from 'src/user/dto';
+import { AppointmentWithUser } from './types';
 
 @UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('appointments')
@@ -82,7 +83,7 @@ export class AppointmentController {
     updateAppointment(
         @Body() dto: UpdateAppointmentDto,
         @Param('id', EntityByIdPipe('appointment', appointmentSelect))
-        appointment: Record<string, any>,
+        appointment: AppointmentWithUser,
         @Req() request: RequestWithTrace,
         @User("role") userRole: string
     ) {

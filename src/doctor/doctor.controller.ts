@@ -5,7 +5,7 @@ import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
 import { Roles, User } from 'src/auth/decorators';
 import { Prisma, Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
-import { doctorSelect } from 'src/prisma/prisma-selects';
+import { doctorSelect } from 'src/doctor/prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
 import { Cache } from 'src/common/decorators';
 import { CacheKeyHelper } from './helper';

@@ -4,6 +4,7 @@ import { AppointmentHelper } from "../helpers";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from 'bull';
 import { UpdateAppointmentDto } from "../dto";
+import { AppointmentWithUser } from "../types";
 
 @Injectable()
 export class AppointmentHandler {
@@ -17,7 +18,7 @@ export class AppointmentHandler {
     }
 
     async handleConfirm(
-        appointment: Record<string, any>,
+        appointment: AppointmentWithUser,
         traceId: string,
         userRole: string
     ) {
@@ -88,7 +89,7 @@ export class AppointmentHandler {
 
     handleCancel(
         dto: UpdateAppointmentDto,
-        appointment: Record<string, any>,
+        appointment: AppointmentWithUser,
         traceId: string,
     ) {
         const { id: appointmentId, doctor, date, status: currentStatus, patient } = appointment;
@@ -116,7 +117,7 @@ export class AppointmentHandler {
     }
 
     handleComplete(
-        appointment: Record<string, any>,
+        appointment: AppointmentWithUser,
         userRole: string
     ) {
         const { status: currentStatus, isPaid, paymentMethod } = appointment;
@@ -140,7 +141,7 @@ export class AppointmentHandler {
     }
 
     handleRunning(
-        appointment: Record<string, any>,
+        appointment: AppointmentWithUser,
         userRole: string
     ) {
         const { status: currentStatus } = appointment;

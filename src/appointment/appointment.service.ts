@@ -1,12 +1,13 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AppointmentResponseDto, CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dto';
-import { appointmentSelect } from 'src/prisma/prisma-selects';
+import { appointmentSelect } from 'src/appointment/prisma-selects';
 import { ConfigService } from '@nestjs/config';
 import { Method, Prisma, Role, Status } from '@prisma/client';
 import { UserDto } from 'src/user/dto';
 import { PaginationResponseDto } from 'src/common/dto';
 import { AppointmentHelper } from './helpers/appointment.helper';
+import { AppointmentWithUser } from './types';
 
 @Injectable()
 export class AppointmentService {
@@ -63,7 +64,7 @@ export class AppointmentService {
             );
 
             return {
-                appointment: new AppointmentResponseDto(appointment),
+                appointment: new AppointmentResponseDto(appointment as AppointmentWithUser),
                 message: 'Appointment created successfully',
             };
         }
@@ -97,7 +98,7 @@ export class AppointmentService {
         ]);
 
         return {
-            appointments: appointments.map(appointment => new AppointmentResponseDto(appointment)),
+            appointments: appointments.map(appointment => new AppointmentResponseDto(appointment as AppointmentWithUser)),
             pagination: new PaginationResponseDto(totalAppointments, page, limit)
         };
     }
@@ -212,7 +213,7 @@ export class AppointmentService {
     async updateAppointment(
         dto: UpdateAppointmentDto,
         traceId: string,
-        appointment: Record<string, any>,
+        appointment: AppointmentWithUser,
         userRole: string
     ) {
         const body = await this.appointmentHelper.prepareAppointmentUpdate(dto, appointment, traceId, userRole);
