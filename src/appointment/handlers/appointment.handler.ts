@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, forwardRef, Inject, Injectable } from "@nestjs/common";
-import { Role, Status } from "@prisma/client";
+import { Appointment as PrismaAppointment, Role, Status } from "@prisma/client";
 import { AppointmentHelper } from "../helpers";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from 'bull';
@@ -13,9 +13,7 @@ export class AppointmentHandler {
         @Inject(forwardRef(() => AppointmentHelper))
         private readonly appointmentHelper: AppointmentHelper,
         @InjectQueue('appointment-queue') private readonly appointmentQueue: Queue
-    ) { 
-        console.log('AppointmentHandler initialized');
-    }
+    ) {}
 
     async handleConfirm(
         appointment: AppointmentWithUser,
@@ -110,7 +108,7 @@ export class AppointmentHandler {
             `Your appointment with ${doctorName} was cancelled on ${date.toString()}. Reason: ${cancellationReason}`,
             traceId,
             { appointmentId },
-            'Failed to send appointment cancellation',
+            'Failed to send appointment cancellation'
         );
 
         return { status: Status.CANCELLED, cancellationReason };
@@ -130,7 +128,7 @@ export class AppointmentHandler {
             throw new ForbiddenException("Appointment must be in running status to complete");
         }
 
-        const body: Record<string, any> = { status: Status.COMPLETED };
+        const body: Partial<PrismaAppointment> = { status: Status.COMPLETED };
 
         if (!isPaid && !paymentMethod) {
             body.isPaid = true;

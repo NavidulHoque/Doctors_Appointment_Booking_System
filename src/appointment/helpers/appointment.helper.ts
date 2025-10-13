@@ -7,7 +7,7 @@ import { DateTime } from 'luxon';
 import { Prisma, Role } from "@prisma/client";
 import { AppointmentHandler } from "../handlers";
 import { AppointmentWithUser } from "../types";
-import { NotificationMeta } from "../interfaces";
+import { NotificationMeta } from "src/notification/interfaces";
 
 @Injectable()
 export class AppointmentHelper {
@@ -58,7 +58,7 @@ export class AppointmentHelper {
             throw new BadRequestException('Only one of isToday, isPast, or isFuture can be passed');
         }
 
-        let orderBy: any = { date: 'desc' };
+        let orderBy: Prisma.AppointmentOrderByWithRelationInput = { date: 'desc' };
         const now = new Date();
 
         if (isPaid !== undefined) query.isPaid = isPaid;

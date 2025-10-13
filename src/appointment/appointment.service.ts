@@ -9,6 +9,7 @@ import { PaginationResponseDto } from 'src/common/dto';
 import { AppointmentHelper } from './helpers/appointment.helper';
 import { AppointmentWithUser } from './types';
 import { AppointmentGraphResult } from './interfaces';
+import { HandleErrorsService } from 'src/common/services';
 
 @Injectable()
 export class AppointmentService {
@@ -17,7 +18,8 @@ export class AppointmentService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly config: ConfigService,
-        private readonly appointmentHelper: AppointmentHelper
+        private readonly appointmentHelper: AppointmentHelper,
+        private readonly handleErrorsService: HandleErrorsService
     ) { }
 
     /** ----------------------
@@ -71,11 +73,7 @@ export class AppointmentService {
         }
 
         catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                throw new BadRequestException("Appointment already booked");
-            }
-
-            throw error
+            this.handleErrorsService.handleUniqueConstraintError(error)
         }
     }
 
@@ -171,14 +169,14 @@ export class AppointmentService {
         ]
 
         let whereClause = '';
-        const values: any[] = [];
+        const values: string[] = [];
 
-        if (doctorId) {
+        if (doctorId && typeof doctorId === 'string') {
             whereClause = `WHERE "doctorId" = $1`;
             values.push(doctorId);
         }
 
-        else if (patientId) {
+        else if (patientId && typeof patientId === 'string') {
             whereClause = `WHERE "patientId" = $1`;
             values.push(patientId);
         }
@@ -198,7 +196,7 @@ export class AppointmentService {
             ? await this.prisma.$queryRawUnsafe<AppointmentGraphResult[]>(query, ...values)
             : await this.prisma.$queryRawUnsafe<AppointmentGraphResult[]>(query);
 
-        const result = rawResult.map((item: AppointmentGraphResult) => ({
+        const result = rawResult.map(item => ({
             year: Number(item.year),
             month: months[Number(item.month) - 1],
             total: Number(item.total),

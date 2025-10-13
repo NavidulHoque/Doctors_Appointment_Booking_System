@@ -8,12 +8,8 @@ import { Response } from 'express';
 import { LoginPayload, RefreshTokenPayload } from './interfaces';
 import { randomUUID } from 'crypto';
 import { sessionSelect } from './prisma-selects';
-import { TokenHelper } from './helpers/token.helper';
-import { CryptoHelper } from './helpers/crypto.helper';
-import { OtpHelper } from './helpers/otp.helper';
-import { CookieHelper } from './helpers/cookie.helper';
-import { SessionUserHelper } from './helpers/session-user.helper';
-import { AuthNotificationHelper } from './helpers/notification.helper';
+import { AuthNotificationHelper, CookieHelper, CryptoHelper, OtpHelper, SessionUserHelper, TokenHelper } from './helpers';
+import { HandleErrorsService } from 'src/common/services';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +23,8 @@ export class AuthService {
     private readonly otpHelper: OtpHelper,
     private readonly cookieHelper: CookieHelper,
     private readonly sessionUserHelper: SessionUserHelper,
-    private readonly notificationHelper: AuthNotificationHelper
+    private readonly notificationHelper: AuthNotificationHelper,
+    private readonly handleErrorsService: HandleErrorsService
   ) { }
 
   async register(dto: RegistrationDto) {
@@ -45,14 +42,7 @@ export class AuthService {
     }
 
     catch (error) {
-      // Prisma unique constraint violation
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        const target = error.meta?.target;
-        const fields = Array.isArray(target) ? target.join(', ') : String(target || 'field(s)');
-        throw new ConflictException(`${fields} already exists`);
-      }
-
-      throw error;
+      this.handleErrorsService.handleUniqueConstraintError(error);
     }
   }
 

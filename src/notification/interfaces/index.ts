@@ -1,0 +1,1 @@
+export * from './notification-meta.interface';

@@ -5,31 +5,23 @@ class BaseUserDto {
     readonly id: string;
     readonly fullName: string;
     readonly email: string;
+    readonly role: string;
 
-    constructor(user: PrismaUser) {
+    constructor(user: Pick<PrismaUser, 'id' | 'fullName' | 'email' | 'role'>) {
         this.id = user.id;
         this.fullName = user.fullName;
         this.email = user.email;
     }
 }
 
-class SessionUserInfoDto extends BaseUserDto {
-    readonly role: string;
-
-    constructor(user: PrismaUser) {
-        super(user);
-        this.role = user.role;
-    }
-}
-
 export class SessionResponseDto {
     readonly id: string;
     readonly deviceName: string | null;
-    readonly user: SessionUserInfoDto;
+    readonly user: BaseUserDto;
 
     constructor(session: SessionWithUser) {
         this.id = session.id;
-        this.deviceName = session.deviceName || null;
-        this.user = new SessionUserInfoDto(session.user);
+        this.deviceName = session.deviceName;
+        this.user = new BaseUserDto(session.user);
     }
 }

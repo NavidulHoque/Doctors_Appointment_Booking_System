@@ -10,6 +10,7 @@ import { PaginationDto } from 'src/common/dto';
 import { Role, Status } from '@prisma/client';
 import { PaginationResponseDto } from 'src/common/dto';
 import { plainToInstance } from 'class-transformer';
+import { HandleErrorsService } from 'src/common/services';
 
 @Injectable()
 export class DoctorService {
@@ -18,7 +19,8 @@ export class DoctorService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly configService: ConfigService,
-        private readonly socketGateway: SocketGateway
+        private readonly socketGateway: SocketGateway,
+        private readonly handleErrorsService: HandleErrorsService
     ) {
         this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY') as string, {
             apiVersion: '2025-07-30.basil',
@@ -64,15 +66,7 @@ export class DoctorService {
         }
 
         catch (error) {
-            // Prisma unique constraint violation
-            if (error.code === 'P2002') {
-                const target = error.meta?.target?.[0];
-
-                if (target === 'email') {
-                    throw new ConflictException("Email already exists");
-                }
-            }
-            throw error
+            this.handleErrorsService.handleUniqueConstraintError(error)
         }
     }
 
