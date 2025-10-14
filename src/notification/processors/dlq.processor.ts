@@ -1,8 +1,8 @@
 import { OnQueueFailed, Process, Processor } from "@nestjs/bull";
 import { Logger } from "@nestjs/common";
 import { Job } from "bull";
-import { EmailService } from "src/email/email.service";
-import { PrismaService } from "src/prisma/prisma.service";
+import { EmailService } from "src/email";
+import { PrismaService } from "src/prisma";
 
 @Processor('failed-notification')
 export class DLQProcessor {

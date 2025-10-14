@@ -1,4 +1,4 @@
-import { IsString, IsNumber, Min, MinLength, IsArray, ArrayNotEmpty, IsNotEmpty, Matches, IsEmail } from 'class-validator';
+import { IsString, IsNumber, Min, IsArray, ArrayNotEmpty, IsNotEmpty } from 'class-validator';
 import { IsRequiredEmail, IsRequiredString } from 'src/common/decorators';
 
 export class CreateDoctorDto {

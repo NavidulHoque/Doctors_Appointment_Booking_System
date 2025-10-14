@@ -1,9 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { ForgetPasswordDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto, SessionResponseDto } from './dto';
-import { EmailService } from 'src/email/email.service';
-import { SmsService } from 'src/sms/sms.service';
-import { Prisma } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { PrismaService } from 'src/prisma';
+import { ForgetPasswordDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto, SessionResponseDto } from './dtos';
+import { EmailService } from 'src/email'
+import { SmsService } from 'src/sms';
 import { Response } from 'express';
 import { LoginPayload, RefreshTokenPayload } from './interfaces';
 import { randomUUID } from 'crypto';

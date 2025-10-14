@@ -1,17 +1,17 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guards';
 import { DoctorService } from './doctor.service';
-import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dto';
+import { CreateDoctorDto, GetDoctorsDto, UpdateDoctorDto } from './dtos';
 import { Roles, User } from 'src/auth/decorators';
 import { Prisma, Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
-import { doctorSelect } from 'src/doctor/prisma-selects';
+import { doctorSelect } from './prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
 import { Cache } from 'src/common/decorators';
-import { CacheKeyHelper } from './helper';
-import { UserDto } from 'src/user/dto';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { PaginationDto } from 'src/common/dto';
+import { CacheKeyHelper } from './helpers';
+import { UserDto } from 'src/user/dtos';
+import { PrismaService } from 'src/prisma';
+import { PaginationDto } from 'src/common/dtos';
 
 @UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('doctors')

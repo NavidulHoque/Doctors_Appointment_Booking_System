@@ -1,34 +1,32 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
-import { AppointmentModule } from './appointment/appointment.module';
-import { DoctorModule } from './doctor/doctor.module';
+import { AuthModule } from './auth';
+import { UserModule } from './user';
+import { AppointmentModule } from './appointment';
+import { DoctorModule } from './doctor';
 import { AppController } from './app.controller';
-import { PrismaModule } from './prisma/prisma.module';
-import { ReviewModule } from './review/review.module';
-import { MessageModule } from './message/message.module';
+import { PrismaModule } from './prisma';
+import { ReviewModule } from './review';
+import { MessageModule } from './message';
 import { BullModule } from '@nestjs/bull';
-import { NotificationModule } from './notification/notification.module';
-import { PaymentModule } from './payment/payment.module';
-import { WebhookModule } from './webhook/webhook.module';
+import { NotificationModule } from './notification';
+import { PaymentModule } from './payment';
+import { WebhookModule } from './webhook';
 import { ScheduleModule } from '@nestjs/schedule';
-import { UploadsModule } from './uploads/uploads.module';
-import { SocketModule } from './socket/socket.module';
-import { KafkaModule } from './kafka/kafka.module';
-import { RedisModule } from './redis/redis.module';
-import { EmailModule } from './email/email.module';
+import { UploadsModule } from './uploads';
+import { SocketModule } from './socket';
+import { KafkaModule } from './kafka';
+import { RedisModule, RedisService, RedisThrottlerStorage } from './redis';
+import { EmailModule } from './email';
 import { seconds, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { RedisService } from './redis/redis.service';
-import { RedisThrottlerStorage } from './redis/redis-throttler.storage';
-import { SmsModule } from './sms/sms.module';
-import { CronModule } from './cron/cron.module';
+import { SmsModule } from './sms';
+import { CronModule } from './cron';
 import { JwtModule } from '@nestjs/jwt';
-import { McpModule } from './mcp/mcp.module';
-import { OpenAiModule } from './gemini/gemini.module';
-import { AuthHelperModule } from './auth/helpers/auth-helper.module';
+import { McpModule } from './mcp';
+import { OpenAiModule } from './gemini';
 import { CommonModule } from './common/services';
+import { AuthHelperModule } from './auth/helpers';
 
 @Module({
   imports: [
@@ -54,6 +52,7 @@ import { CommonModule } from './common/services';
     }),
     ScheduleModule.forRoot(), // for cron jobs to run
     AuthModule,
+    AuthHelperModule,
     UserModule,
     AppointmentModule,
     DoctorModule,
@@ -72,7 +71,6 @@ import { CommonModule } from './common/services';
     CronModule,
     McpModule,
     OpenAiModule,
-    AuthHelperModule,
     CommonModule
   ],
   controllers: [AppController],

@@ -1,9 +1,9 @@
 import { InjectQueue } from "@nestjs/bull";
 import { Injectable, Logger } from "@nestjs/common";
 import { Queue } from "bull";
-import { PrismaService } from "src/prisma/prisma.service";
-import { RedisService } from "src/redis/redis.service";
-import { SocketGateway } from "src/socket/socket.gateway";
+import { PrismaService } from "src/prisma";
+import { RedisService } from "src/redis";
+import { SocketGateway } from "src/socket";
 
 @Injectable()
 export class NotificationService {

@@ -3,7 +3,7 @@ import { Appointment as PrismaAppointment, Role, Status } from "@prisma/client";
 import { AppointmentHelper } from "../helpers";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from 'bull';
-import { UpdateAppointmentDto } from "../dto";
+import { UpdateAppointmentDto } from "../dtos";
 import { AppointmentWithUser } from "../types";
 
 @Injectable()

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { EmailService } from "src/email/email.service";
-import { NotificationService } from "src/notification/notification.service";
-import { PrismaService } from "src/prisma/prisma.service";
+import { EmailService } from "src/email"
+import { NotificationService } from "src/notification";
+import { PrismaService } from "src/prisma";
 import Stripe from "stripe";
 
 @Injectable()

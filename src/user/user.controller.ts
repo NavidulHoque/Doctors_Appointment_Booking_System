@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, Patch, Put, UseGuards } from '@nestjs/common';
-import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
 import { UserService } from './user.service';
-import { UserDto } from './dto';
-import { Roles, User } from 'src/auth/decorators';
+import { UserDto } from './dtos';
+import { AuthGuard, CsrfGuard, RolesGuard  } from 'src/auth/guards';
 import { Role } from '@prisma/client';
+import { Roles, User } from 'src/auth/decorators';
 
 @UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('users')

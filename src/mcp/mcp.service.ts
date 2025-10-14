@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AppointmentService } from 'src/appointment/appointment.service';
-import { CreateAppointmentDto, UpdateAppointmentDto } from 'src/appointment/dto';
-import { GetScheduleDto } from './dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { AppointmentService } from 'src/appointment';
+import { CreateAppointmentDto, UpdateAppointmentDto } from 'src/appointment/dtos';
+import { GetScheduleDto } from './dtos';
+import { PrismaService } from 'src/prisma';
 
 @Injectable()
 export class McpService {
@@ -18,7 +18,7 @@ export class McpService {
 
     try {
       const appointment = await this.appointment.createAppointment(dto, traceId);
-      return { success: true, message: 'Appointment booked', data: appointment.appointment };
+      return { success: true, message: 'Appointment booked', data: appointment!.appointment };
     } 
     
     catch (error) {

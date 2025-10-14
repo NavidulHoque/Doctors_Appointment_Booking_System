@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable, map, tap, from, switchMap, of } from 'rxjs';
-import { RedisService } from '../redis/redis.service';
-import { CACHE_KEY, CacheOptions } from 'src/common/decorators/cache.decorator';
+import { RedisService } from 'src/redis'; 
+import { CACHE_KEY, CacheOptions } from 'src/common/decorators';
 import { Request } from 'express';
 
 @Injectable()

@@ -1,8 +1,8 @@
 import { Controller, UseGuards } from '@nestjs/common';
 import { Body, Post } from '@nestjs/common';
 import { ReviewService } from './review.service';
-import { ReviewDto } from './dto';
-import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
+import { ReviewDto } from './dtos';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guards';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 

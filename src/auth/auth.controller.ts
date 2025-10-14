@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ForgetPasswordDto, LoginDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dto';
-import { AuthGuard, CsrfGuard, RolesGuard } from './guard';
+import { ForgetPasswordDto, LoginDto, RegistrationDto, VerifyOtpDto, ResetPasswordDto, LogoutDto } from './dtos';
+import { AuthGuard, CsrfGuard, RolesGuard } from './guards';
 import { Role } from '@prisma/client';
 import { RequestWithTrace } from 'src/common/types';
 import { Request, Response } from 'express';

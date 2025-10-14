@@ -1,29 +1,16 @@
 import {
-    Body,
-    Controller,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Query,
-    Req,
-    UseGuards,
-} from '@nestjs/common';
+    Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards} from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
-import { CsrfGuard, AuthGuard, RolesGuard } from 'src/auth/guard';
-import {
-    CreateAppointmentDto,
-    GetAppointmentsDto,
-    UpdateAppointmentDto,
-} from './dto';
+import { CsrfGuard, AuthGuard, RolesGuard } from 'src/auth/guards';
+import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto} from './dtos';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
-import { appointmentSelect } from 'src/appointment/prisma-selects';
+import { appointmentSelect } from './prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
 import { Cache } from 'src/common/decorators';
 import { CacheKeyHelper } from './helpers';
-import { UserDto } from 'src/user/dto';
+import { UserDto } from 'src/user/dtos';
 import { AppointmentWithUser } from './types';
 
 @UseGuards(CsrfGuard, AuthGuard, RolesGuard)

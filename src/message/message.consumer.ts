@@ -1,8 +1,8 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MessageService } from './message.service';
-import { KafkaProducerService } from 'src/kafka/kafka.producer.service';
-import { SocketGateway } from 'src/socket/socket.gateway';
+import { KafkaProducerService } from 'src/kafka';
+import { SocketGateway } from 'src/socket';
 
 @Controller()
 export class MessageConsumer {

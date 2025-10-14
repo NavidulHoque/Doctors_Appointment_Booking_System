@@ -1,7 +1,7 @@
 import { OnQueueFailed, Process, Processor } from "@nestjs/bull";
 import { Logger } from "@nestjs/common";
 import { Job } from "bull";
-import { EmailService } from "src/email/email.service";
+import { EmailService } from "src/email";
 
 @Processor('failed-appointment')
 export class DLQProcessor {

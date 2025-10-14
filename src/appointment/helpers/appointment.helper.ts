@@ -1,8 +1,8 @@
 import { BadRequestException, forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
-import { GetAppointmentsDto, UpdateAppointmentDto } from "../dto";
-import { EmailService } from "src/email/email.service";
-import { NotificationService } from "src/notification/notification.service";
-import { UserDto } from "src/user/dto";
+import { GetAppointmentsDto, UpdateAppointmentDto } from "../dtos";
+import { EmailService } from "src/email";
+import { NotificationService } from "src/notification";
+import { UserDto } from "src/user/dtos";
 import { DateTime } from 'luxon';
 import { Prisma, Role } from "@prisma/client";
 import { AppointmentHandler } from "../handlers";

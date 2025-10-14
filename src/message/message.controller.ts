@@ -1,26 +1,14 @@
-import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    HttpCode,
-    Param,
-    Patch,
-    Post,
-    Query,
-    Req,
-    UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, UseGuards} from '@nestjs/common';
 import { MessageService } from './message.service';
-import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guards';
 import { MessageProducerService } from './message.producer.service';
-import { CreateMessageDto, UpdateMessageDto } from './dto';
+import { CreateMessageDto, UpdateMessageDto } from './dtos';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { Cache } from 'src/common/decorators';
-import { RequestWithTrace } from '../common/types';
-import { CacheKeyHelper } from './helper';
+import { RequestWithTrace } from 'src/common/types';
+import { CacheKeyHelper } from './helpers';
 
 @UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('messages')

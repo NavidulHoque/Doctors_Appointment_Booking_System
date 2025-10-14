@@ -7,7 +7,7 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 import { RedisService } from './redis/redis.service';
 import { Http_CacheInterceptor } from './interceptors/http-cache.interceptor';
-import { traceMiddleware } from './common/middleware';
+import { traceMiddleware } from './common/middlewares';
 import { GlobalExceptionFilter } from './common/filters';
 
 async function bootstrap() {

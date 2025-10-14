@@ -1,6 +1,6 @@
-import { Controller, Post, Body, UseGuards, Get, Query, ParseIntPipe, Param } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Query, ParseIntPipe } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guards';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 

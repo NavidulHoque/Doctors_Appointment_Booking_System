@@ -1,7 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { UserDto } from './dto';
-import { NotFoundError } from 'rxjs';
+import { PrismaService } from 'src/prisma';
+import { UserDto } from './dtos';
 
 @Injectable()
 export class UserService {

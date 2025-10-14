@@ -1,6 +1,5 @@
 import { Method, Status } from '@prisma/client';
-import { AppointmentWithUser, UserWithDoctor } from '../types';
-import { PrismaUserSummary } from '../types/prisma-user-summary.type';
+import { AppointmentWithUser, UserWithDoctor, PrismaUserSummary } from '../types';
 
 export class UserInfoDto {
     readonly id: string;

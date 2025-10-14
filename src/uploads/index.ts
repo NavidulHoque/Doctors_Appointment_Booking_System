@@ -1,0 +1,5 @@
+export * from './cloudinary.service'
+export * from './uploads.service'
+export * from './uploads.module'
+export * from './multer.config'
+export * from './uploads.controller'

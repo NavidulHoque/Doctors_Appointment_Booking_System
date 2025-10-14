@@ -1,10 +1,10 @@
 import { Controller, Get, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
-import { Roles, User } from 'src/auth/decorators';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guards';
 import { Role } from '@prisma/client';
 import { Cache } from 'src/common/decorators';
-import { CacheKeyHelper } from './helper';
+import { CacheKeyHelper } from './helpers';
+import { Roles, User } from 'src/auth/decorators';
 
 @UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('notifications')

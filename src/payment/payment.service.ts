@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { StripeService } from 'src/payment/stripe.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { StripeService } from './stripe.service';
+import { PrismaService } from 'src/prisma';
 
 @Injectable()
 export class PaymentService {

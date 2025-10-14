@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { GeminiService } from './gemini.service';
-import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guards';
 import { Role } from '@prisma/client';
 import { Roles } from 'src/auth/decorators';
 import { RequestWithTrace } from 'src/common/types';

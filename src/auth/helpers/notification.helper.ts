@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { EmailService } from "src/email/email.service";
+import { EmailService } from "src/email";
 import { User as PrismaUser } from '@prisma/client';
 
 @Injectable()

@@ -1,5 +1,5 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
-import { KafkaProducerService } from 'src/kafka/kafka.producer.service';
+import { KafkaProducerService } from 'src/kafka';
 
 @Injectable()
 export class MessageProducerService {

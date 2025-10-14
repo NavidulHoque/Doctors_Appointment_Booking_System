@@ -8,7 +8,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from './multer.config';
 import { UploadsService } from './uploads.service';
-import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guard';
+import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guards';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 

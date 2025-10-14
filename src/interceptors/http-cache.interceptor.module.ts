@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
-import { RedisService } from 'src/redis/redis.service';
+import { RedisService } from 'src/redis';
 import { Http_CacheInterceptor } from './http-cache.interceptor';
 
 @Module({

@@ -1,14 +1,14 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
-import { CreateDoctorDto, DoctorResponseDto, GetDoctorsDto, UpdateDoctorDto, UpdateDoctorProfileDto, UpdateUserProfileDto } from './dto';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { doctorSelect } from 'src/doctor/prisma-selects';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { CreateDoctorDto, DoctorResponseDto, GetDoctorsDto, UpdateDoctorDto, UpdateDoctorProfileDto, UpdateUserProfileDto } from './dtos';
+import { PrismaService } from 'src/prisma';
+import { doctorSelect } from './prisma-selects'; 
 import * as argon from "argon2";
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
-import { SocketGateway } from 'src/socket/socket.gateway';
-import { PaginationDto } from 'src/common/dto';
+import { SocketGateway } from 'src/socket';
+import { PaginationDto } from 'src/common/dtos';
 import { Role, Status } from '@prisma/client';
-import { PaginationResponseDto } from 'src/common/dto';
+import { PaginationResponseDto } from 'src/common/dtos';
 import { plainToInstance } from 'class-transformer';
 import { HandleErrorsService } from 'src/common/services';
 

@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsDate, IsUUID, Validate, ValidatorConstraint, ValidatorConstraintInterface } from "class-validator";
+import { IsDate, Validate, ValidatorConstraint, ValidatorConstraintInterface } from "class-validator";
 import { IsOptionalString, IsRequiredString } from "src/common/decorators";
 
 @ValidatorConstraint({ name: 'FutureDate', async: false })

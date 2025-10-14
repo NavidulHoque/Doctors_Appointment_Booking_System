@@ -1,8 +1,8 @@
 import { IsOptional } from 'class-validator';
 import { Transform, } from 'class-transformer';
-import { PaginationDto } from 'src/common/dto'; 
+import { IsOptionalArrayEnum, IsOptionalEnum, IsOptionalString } from 'src/common/decorators'; 
+import { PaginationDto } from 'src/common/dtos';
 import { Method, Status } from '@prisma/client';
-import { IsOptionalArrayEnum, IsOptionalEnum, IsOptionalString } from 'src/common/decorators';
 
 export class GetAppointmentsDto extends PaginationDto {
 

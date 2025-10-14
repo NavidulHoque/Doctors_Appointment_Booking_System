@@ -1,9 +1,8 @@
 import { BullModule } from '@nestjs/bull';
 import { Global, Module } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { NotificationController } from './notifications.controller';
-import { DLQProcessor } from './processors/dlq.processor';
-import { NotificationProcessor } from './processors';
+import { NotificationController } from './notification.controller';
+import { DLQProcessor, NotificationProcessor } from './processors';
 
 @Global()
 @Module({

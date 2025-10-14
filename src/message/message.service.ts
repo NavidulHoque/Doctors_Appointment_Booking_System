@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { SocketGateway } from 'src/socket/socket.gateway';
+import { PrismaService } from 'src/prisma';
+import { SocketGateway } from 'src/socket';
 
 @Injectable()
 export class MessageService {

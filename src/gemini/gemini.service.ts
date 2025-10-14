@@ -7,10 +7,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { McpService } from 'src/mcp/mcp.service';
+import { McpService } from 'src/mcp';
 import { tools } from './tools';
-import { CreateAppointmentDto, UpdateAppointmentDto } from 'src/appointment/dto';
-import { GetScheduleDto } from 'src/mcp/dto';
+import { CreateAppointmentDto, UpdateAppointmentDto } from 'src/appointment/dtos';
+import { GetScheduleDto } from 'src/mcp/dtos';
 
 @Injectable()
 export class GeminiService {

@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer';
 import { IsOptional, IsString } from 'class-validator';
 import { IsOptionalString } from 'src/common/decorators';
-import { PaginationDto } from 'src/common/dto';
+import { PaginationDto } from 'src/common/dtos';
 
 export class GetDoctorsDto extends PaginationDto {
 

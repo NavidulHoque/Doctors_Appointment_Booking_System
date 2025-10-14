@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { PrismaService } from "src/prisma/prisma.service";
+import { PrismaService } from "src/prisma";
 import { sessionSelect, userSelect } from "../prisma-selects";
 
 @Injectable()
