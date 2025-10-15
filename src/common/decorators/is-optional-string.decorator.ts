@@ -1,17 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { transformStringValue } from '../utils/string-transform.util';
+import { StringOptions } from '../interfaces';
 
-interface IsOptionalStringOptions {
-    stringMessage: string;
-    isLowercase?: boolean;
-    isUppercase?: boolean;
-    minLength?: number;
-    maxLength?: number;
-    minLengthMessage?: string;
-    maxLengthMessage?: string;
-}
+interface IsOptionalStringOptions extends StringOptions { }
 
 export function IsOptionalString({
     stringMessage,
@@ -21,6 +14,7 @@ export function IsOptionalString({
     maxLength,
     minLengthMessage,
     maxLengthMessage,
+    matches
 }: IsOptionalStringOptions) {
     const decorators: PropertyDecorator[] = [
         IsOptional(),
@@ -34,6 +28,10 @@ export function IsOptionalString({
 
     if (maxLength !== undefined) {
         decorators.push(MaxLength(maxLength, { message: maxLengthMessage }));
+    }
+
+    if (matches) {
+        decorators.push(Matches(matches.pattern, { message: matches.message }));
     }
 
     return applyDecorators(...decorators);

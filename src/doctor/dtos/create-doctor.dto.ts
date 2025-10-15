@@ -1,5 +1,5 @@
-import { IsString, IsNumber, Min, IsArray, ArrayNotEmpty, IsNotEmpty } from 'class-validator';
-import { IsRequiredEmail, IsRequiredString } from 'src/common/decorators';
+import { IsString, IsArray, ArrayNotEmpty } from 'class-validator';
+import { IsRequiredEmail, IsRequiredNumber, IsRequiredString } from 'src/common/decorators';
 
 export class CreateDoctorDto {
     @IsRequiredString({
@@ -45,9 +45,12 @@ export class CreateDoctorDto {
     })
     readonly education: string;
 
-    @IsNotEmpty({ message: 'Experience is required' })
-    @IsNumber()
-    @Min(1, { message: 'Experience must be at least 1 year' })
+    @IsRequiredNumber({
+        requiredMessage: 'Experience is required',
+        numberMessage: 'Experience must be a number',
+        min: 1,
+        minMessage: 'Experience must be at least 1 year',
+    })
     readonly experience: number;
 
     @IsRequiredString({
@@ -58,9 +61,12 @@ export class CreateDoctorDto {
     })
     readonly aboutMe: string;
 
-    @IsNotEmpty({ message: 'Fees is required' })
-    @IsNumber()
-    @Min(20, { message: 'Fees must be at least 20' })
+    @IsRequiredNumber({
+        requiredMessage: 'Fees is required',
+        numberMessage: 'Fees must be a number',
+        min: 20,
+        minMessage: 'Fees must be at least 20',
+    })
     readonly fees: number;
 
     @IsArray({ message: 'Available times must be an array' })

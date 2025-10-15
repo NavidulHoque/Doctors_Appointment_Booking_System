@@ -1,6 +1,7 @@
-import { IsOptional, IsString, IsEnum, IsDate, IsBoolean, MinLength, Matches, IsEmail, IsNumber, Min } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsDate, MinLength, Matches, IsEmail, IsNumber, Min } from 'class-validator';
 import { Gender } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
+import { IsOptionalBoolean, IsOptionalString } from 'src/common/decorators';
 
 export class UpdateDoctorDto {
     @IsOptional()
@@ -40,8 +41,13 @@ export class UpdateDoctorDto {
     @Min(20, { message: 'Fees must be at least 20' })
     readonly fees?: number;
 
-    @IsOptional()
-    @IsString()
+    @IsOptionalString({
+        stringMessage: 'phone must be a string',
+        matches: {
+            pattern: /^\d{11}$/,
+            message: 'Phone number must be exactly 11 digits',
+        }
+    })
     readonly phone?: string;
 
     @IsOptional()
@@ -55,33 +61,42 @@ export class UpdateDoctorDto {
     @IsDate({ message: 'Date must be a valid date' })
     readonly birthDate?: Date;
 
-    @IsOptional()
-    @IsString()
+    @IsOptionalString({
+        stringMessage: 'address must be a string',
+    })
     readonly address?: string;
 
-    @IsOptional()
-    @IsString()
+    @IsOptionalString({
+        stringMessage: 'currentPassword must be a string',
+        minLength: 8,
+        minLengthMessage: 'current password must be at least 8 characters long',
+    })
     readonly currentPassword?: string;
 
-    @IsOptional()
-    @IsString()
-    @MinLength(8, { message: 'Password must be at least 8 characters long' })
-    @Matches(/^(?=.*\d)(?=.*[\W_]).{8,}$/, {
-        message:
-            'Password must contain at least one number and one special character',
+    @IsOptionalString({
+        stringMessage: 'new password must be a string',
+        minLength: 8,
+        minLengthMessage: 'Password must be at least 8 characters long',
+        matches: {
+            pattern: /^(?=.*\d)(?=.*[\W_]).{8,}$/,
+            message: 'Password must contain at least one number and one special character',
+        }
     })
     readonly newPassword?: string;
 
-    @IsOptional()
-    @IsBoolean()
+    @IsOptionalBoolean({
+        booleanMessage: 'isActive must be a boolean',
+    })
     readonly isActive?: boolean;
 
-    @IsOptional()
-    @IsString()
+    @IsOptionalString({
+        stringMessage: 'addAvailableTime must be a string',
+    })
     readonly addAvailableTime?: string;
 
-    @IsOptional()
-    @IsString()
+    @IsOptionalString({
+        stringMessage: 'removeAvailableTime must be a string',
+    })
     readonly removeAvailableTime?: string;
 }
 

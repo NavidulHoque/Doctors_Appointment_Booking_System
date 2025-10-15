@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString } from 'class-validator';
-import { IsOptionalString } from 'src/common/decorators';
+import { IsOptional } from 'class-validator';
+import { IsOptionalBoolean, IsOptionalString } from 'src/common/decorators';
 import { PaginationDto } from 'src/common/dtos';
 
 export class GetDoctorsDto extends PaginationDto {
@@ -17,11 +17,7 @@ export class GetDoctorsDto extends PaginationDto {
     @Transform(({ value }) => typeof value === 'string' ? [value] : value)
     readonly weeks?: string[];
 
-    @IsOptional()
-    @Transform(({ value }) => {
-        if (value === 'true') return true;
-        if (value === 'false') return false;
-    })
+    @IsOptionalBoolean({ booleanMessage: 'isActive must be a boolean' })
     readonly isActive?: boolean;
 
     @IsOptionalString({
@@ -31,9 +27,10 @@ export class GetDoctorsDto extends PaginationDto {
     })
     readonly specialization?: string;
 
-    @IsOptional()
-    @IsString()
-    @Transform(({ value }) => value.trim().toLowerCase())
+    @IsOptionalString({
+        stringMessage: 'search must be a string',
+        isLowercase: true
+    })
     readonly search?: string;
 }
 
