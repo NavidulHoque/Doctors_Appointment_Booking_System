@@ -8,5 +8,5 @@ export class VerifyOtpDto extends BaseAuthDto {
         stringMessage: 'OTP must be a string',
         matches: { pattern: /^\d{6}$/, message: 'OTP must be a 6-digit number' }
     })
-    otp: string;
+    readonly otp: string;
 }

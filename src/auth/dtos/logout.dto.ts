@@ -6,5 +6,5 @@ export class LogoutDto {
     stringMessage: "Session ID must be a string",
     isUUID: true
   })
-  sessionId: string
+  readonly sessionId: string
 }

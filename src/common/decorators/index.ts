@@ -4,3 +4,6 @@ export * from './is-required-string.decorator'
 export * from './is-optional-string.decorator'
 export * from "./is-optional-enum.decorator"
 export * from './is-optional-array-enum.decorator'
+export * from "./is-optional-boolean.decorator"
+export * from './is-optional-number.decorator'
+export * from './is-required-number.decorator'

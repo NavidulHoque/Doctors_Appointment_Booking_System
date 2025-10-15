@@ -15,7 +15,7 @@ export class FutureDate implements ValidatorConstraintInterface {
 
 export class CreateAppointmentDto {
   @IsOptionalString({ stringMessage: "Patient ID must be a string" })
-  patientId?: string;
+  readonly patientId?: string;
 
   @IsRequiredString({ requiredMessage: "Doctor ID is required", stringMessage: "Doctor ID must be a string", isUUID: true})
   readonly doctorId: string;

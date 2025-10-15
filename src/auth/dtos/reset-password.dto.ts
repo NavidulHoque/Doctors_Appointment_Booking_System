@@ -9,5 +9,5 @@ export class ResetPasswordDto extends BaseAuthDto {
         minLength: 8,
         minLengthMessage: 'New password must be at least 8 characters long',
     })
-    newPassword: string;
+    readonly newPassword: string;
 }

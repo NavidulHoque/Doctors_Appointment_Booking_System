@@ -9,8 +9,8 @@ export class LoginDto extends BaseAuthDto {
         minLength: 8,
         minLengthMessage: 'Password must be at least 8 characters long',
     })
-    password: string;
+    readonly password: string;
 
     @IsOptionalString({ stringMessage: 'Device name must be a string' })
-    deviceName?: string;
+    readonly deviceName?: string;
 }

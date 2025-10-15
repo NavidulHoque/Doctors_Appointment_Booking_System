@@ -1,8 +1,9 @@
 import {
-    Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards} from '@nestjs/common';
+    Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards
+} from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { CsrfGuard, AuthGuard, RolesGuard } from 'src/auth/guards';
-import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto} from './dtos';
+import { CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dtos';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
@@ -29,8 +30,12 @@ export class AppointmentController {
         @Req() request: RequestWithTrace,
         @User() user: UserDto
     ) {
-        dto.patientId = user.role === Role.PATIENT ? user.id : dto.patientId
-        return this.appointmentService.createAppointment(dto, request.traceId);
+        return this.appointmentService.createAppointment({
+            ...dto,
+            patientId: user.role === Role.PATIENT ? user.id : dto.patientId
+        },
+            request.traceId
+        );
     }
 
     @Get()
