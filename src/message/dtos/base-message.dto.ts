@@ -1,12 +1,16 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsRequiredString } from 'src/common/decorators';
 
 export class BaseMessageDto {
-    @IsString()
-    @IsNotEmpty()
-    content!: string;
+    @IsRequiredString({
+        requiredMessage: 'Content is required',
+        stringMessage: 'Content must be a string',
+    })
+    readonly content: string;
 
-    @IsString()
-    @IsNotEmpty()
-    receiverId!: string;
+    @IsRequiredString({
+        requiredMessage: 'Receiver ID is required',
+        stringMessage: 'Receiver ID must be a string',
+    })
+    readonly receiverId: string;
 }
 

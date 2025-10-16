@@ -1,17 +1,26 @@
 import { IsString, IsOptional, IsInt, Min, Max, IsNotEmpty } from 'class-validator';
+import { IsOptionalString, IsRequiredNumber, IsRequiredString } from 'src/common/decorators';
 
 export class ReviewDto {
-  @IsString()
-  @IsNotEmpty()
-  doctorId: string;
+  @IsRequiredString({
+    requiredMessage: 'Doctor ID is required',
+    stringMessage: 'Doctor ID must be a string',
+  })
+  readonly doctorId: string;
 
-  @IsOptional()
-  @IsString()
-  comment?: string;
+  @IsOptionalString({
+    stringMessage: 'Comment must be a string'
+  })
+  readonly comment?: string;
 
-  @IsInt()
-  @Min(1, { message: 'Rating must be at least 1' })
-  @Max(5, { message: 'Rating must be at most 5' })
-  rating: number;
+  @IsRequiredNumber({
+    requiredMessage: 'Rating is required',
+    numberMessage: 'Rating must be a number',
+    min: 1,
+    minMessage: 'Rating must be at least 1',
+    max: 5,
+    maxMessage: 'Rating must be at most 5',
+  })
+  readonly rating: number;
 }
 

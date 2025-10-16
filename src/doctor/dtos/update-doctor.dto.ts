@@ -1,44 +1,56 @@
-import { IsOptional, IsString, IsEnum, IsDate, MinLength, Matches, IsEmail, IsNumber, Min } from 'class-validator';
+import { IsOptional, IsDate } from 'class-validator';
 import { Gender } from '@prisma/client';
-import { Transform, Type } from 'class-transformer';
-import { IsOptionalBoolean, IsOptionalString } from 'src/common/decorators';
+import { Type } from 'class-transformer';
+import { IsOptionalBoolean, IsOptionalEnum, IsOptionalNumber, IsOptionalString, IsOptionalEmail } from 'src/common/decorators';
 
 export class UpdateDoctorDto {
-    @IsOptional()
-    @IsString()
-    @MinLength(5, { message: 'Full name must be at least 5 characters long' })
-    @Matches(/^[a-zA-Z. ]+$/, {
-        message: 'Full name can only contain letters, spaces, and dots',
+    @IsOptionalString({
+        stringMessage: 'Full name must be a string',
+        minLength: 5,
+        minLengthMessage: 'Full name must be at least 5 characters long',
+        matches: {
+            pattern: /^[a-zA-Z. ]+$/,
+            message: 'Full name can only contain letters, spaces, and dots',
+        }
     })
     readonly fullName?: string;
 
-    @IsOptional()
-    @IsString()
-    @IsEmail({}, { message: 'Invalid email format' })
+    @IsOptionalEmail()
     readonly email?: string;
 
-    @IsOptional()
-    @IsString()
-    @MinLength(5, { message: 'Education must be at least 5 characters long' })
+    @IsOptionalString({
+        stringMessage: 'Education must be a string',
+        minLength: 5,
+        minLengthMessage: 'Education must be at least 5 characters long',
+    })
     readonly education?: string;
 
-    @IsOptional()
-    @IsString()
+    @IsOptionalString({
+        stringMessage: 'Specialization must be a string',
+        minLength: 3,
+        minLengthMessage: 'Specialization must be at least 3 characters long',
+    })
     readonly specialization?: string;
 
-    @IsOptional()
-    @IsNumber()
-    @Min(1, { message: 'Experience must be at least 1 year' })
+    @IsOptionalNumber({
+        numberMessage: 'Experience must be a number',
+        min: 1,
+        minMessage: 'Experience must be at least 1 year',
+    })
     readonly experience?: number;
 
-    @IsOptional()
-    @IsString()
-    @MinLength(10, { message: 'About me must be at least 10 characters long' })
+    @IsOptionalString({
+        stringMessage: 'About me must be a string',
+        minLength: 10,
+        minLengthMessage: 'About me must be at least 10 characters long',
+    })
     readonly aboutMe?: string;
 
-    @IsOptional()
-    @IsNumber()
-    @Min(20, { message: 'Fees must be at least 20' })
+    @IsOptionalNumber({
+        numberMessage: 'Fees must be a number',
+        min: 20,
+        minMessage: 'Fees must be at least 20',
+    })
     readonly fees?: number;
 
     @IsOptionalString({
@@ -50,10 +62,11 @@ export class UpdateDoctorDto {
     })
     readonly phone?: string;
 
-    @IsOptional()
-    @IsString()
-    @IsEnum(Gender, { message: 'Gender must be male, female or other' })
-    @Transform(({ value }) => value.toUpperCase())
+    @IsOptionalEnum({
+        enumType: Gender,
+        message: 'Gender must be male, female or other',
+        isUppercase: true
+    })
     readonly gender?: Gender;
 
     @IsOptional()
