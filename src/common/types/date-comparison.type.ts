@@ -1,0 +1,1 @@
+export type ComparisonType = 'future' | 'futureOrEqual' | 'past' | 'pastOrEqual';

@@ -8,3 +8,5 @@ export * from "./is-optional-boolean.decorator"
 export * from './is-optional-number.decorator'
 export * from './is-required-number.decorator'
 export * from './is-optional-email.decorator'
+export * from './date-comparison.decorator'
+export * from './is-date-field.decorator'

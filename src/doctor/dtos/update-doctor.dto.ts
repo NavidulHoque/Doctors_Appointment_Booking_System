@@ -1,7 +1,5 @@
-import { IsOptional, IsDate } from 'class-validator';
 import { Gender } from '@prisma/client';
-import { Type } from 'class-transformer';
-import { IsOptionalBoolean, IsOptionalEnum, IsOptionalNumber, IsOptionalString, IsOptionalEmail } from 'src/common/decorators';
+import { IsOptionalBoolean, IsOptionalEnum, IsOptionalNumber, IsOptionalString, IsOptionalEmail, IsDateField } from 'src/common/decorators';
 
 export class UpdateDoctorDto {
     @IsOptionalString({
@@ -69,9 +67,10 @@ export class UpdateDoctorDto {
     })
     readonly gender?: Gender;
 
-    @IsOptional()
-    @Type(() => Date)
-    @IsDate({ message: 'Date must be a valid date' })
+    @IsDateField({
+        dateMessage: 'Date must be a valid date',
+        isOptional: true
+    })
     readonly birthDate?: Date;
 
     @IsOptionalString({
