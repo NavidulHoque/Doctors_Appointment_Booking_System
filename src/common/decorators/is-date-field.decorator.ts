@@ -16,7 +16,8 @@ export function IsDateField({
     isOptional = false,
     comparisonType,
     comparisonMessage,
-}: dateOptions) {
+}: dateOptions
+) {
     const decorators: PropertyDecorator[] = [
         Type(() => Date),
         IsDate({ message: dateMessage }),
@@ -27,11 +28,7 @@ export function IsDateField({
     }
 
     if (comparisonType) {
-        decorators.push(DateComparison(comparisonType as ComparisonType));
-
-        if (comparisonMessage) {
-            decorators.push(DateComparison(comparisonType as ComparisonType, { message: comparisonMessage }));
-        }
+        decorators.push(DateComparison(comparisonType as ComparisonType, { message: comparisonMessage }));
     }
 
     return applyDecorators(...decorators);

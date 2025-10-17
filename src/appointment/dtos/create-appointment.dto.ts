@@ -1,10 +1,16 @@
 import { IsOptionalString, IsRequiredString, IsDateField } from "src/common/decorators";
 
 export class CreateAppointmentDto {
-  @IsOptionalString({ stringMessage: "Patient ID must be a string" })
+  @IsOptionalString({ 
+    stringMessage: "Patient ID must be a string" 
+  })
   readonly patientId?: string;
 
-  @IsRequiredString({ requiredMessage: "Doctor ID is required", stringMessage: "Doctor ID must be a string", isUUID: true })
+  @IsRequiredString({ 
+    requiredMessage: "Doctor ID is required", 
+    stringMessage: "Doctor ID must be a string", 
+    isUUID: true 
+  })
   readonly doctorId: string;
 
   @IsDateField({

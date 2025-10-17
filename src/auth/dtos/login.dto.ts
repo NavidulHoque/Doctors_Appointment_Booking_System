@@ -11,6 +11,8 @@ export class LoginDto extends BaseAuthDto {
     })
     readonly password: string;
 
-    @IsOptionalString({ stringMessage: 'Device name must be a string' })
+    @IsOptionalString({ 
+        stringMessage: 'Device name must be a string' 
+    })
     readonly deviceName?: string;
 }

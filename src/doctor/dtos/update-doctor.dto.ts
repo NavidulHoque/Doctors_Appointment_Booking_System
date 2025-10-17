@@ -1,5 +1,12 @@
 import { Gender } from '@prisma/client';
-import { IsOptionalBoolean, IsOptionalEnum, IsOptionalNumber, IsOptionalString, IsOptionalEmail, IsDateField } from 'src/common/decorators';
+import {
+    IsOptionalBoolean,
+    IsOptionalEnum,
+    IsOptionalNumber,
+    IsOptionalString,
+    IsOptionalEmail,
+    IsDateField
+} from 'src/common/decorators';
 
 export class UpdateDoctorDto {
     @IsOptionalString({
@@ -68,7 +75,7 @@ export class UpdateDoctorDto {
     readonly gender?: Gender;
 
     @IsDateField({
-        dateMessage: 'Date must be a valid date',
+        dateMessage: 'Birth date must be a valid date',
         isOptional: true
     })
     readonly birthDate?: Date;

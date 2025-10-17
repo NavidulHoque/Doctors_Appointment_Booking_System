@@ -11,16 +11,24 @@ export class GetAppointmentsDto extends PaginationDto {
   })
   readonly search?: string;
 
-  @IsOptionalBoolean({ booleanMessage: 'isPaid must be a boolean' })
+  @IsOptionalBoolean({ 
+    booleanMessage: 'isPaid must be a boolean' 
+  })
   readonly isPaid?: boolean;
 
-  @IsOptionalBoolean({ booleanMessage: 'isToday must be a boolean' })
+  @IsOptionalBoolean({ 
+    booleanMessage: 'isToday must be a boolean' 
+  })
   readonly isToday?: boolean
 
-  @IsOptionalBoolean({ booleanMessage: 'isPast must be a boolean' })
+  @IsOptionalBoolean({ 
+    booleanMessage: 'isPast must be a boolean' 
+  })
   readonly isPast?: boolean
 
-  @IsOptionalBoolean({ booleanMessage: 'isFuture must be a boolean' })
+  @IsOptionalBoolean({ 
+    booleanMessage: 'isFuture must be a boolean' 
+  })
   readonly isFuture?: boolean
 
   @IsOptionalArrayEnum({
