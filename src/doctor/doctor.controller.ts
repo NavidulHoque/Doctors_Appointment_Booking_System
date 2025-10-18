@@ -13,7 +13,7 @@ import { UserDto } from 'src/user/dtos';
 import { PrismaService } from 'src/prisma';
 import { PaginationDto } from 'src/common/dtos';
 
-@UseGuards(CsrfGuard, AuthGuard, RolesGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Controller('doctors')
 export class DoctorController {
 
@@ -31,7 +31,9 @@ export class DoctorController {
     createDoctor(
         @Body() dto: CreateDoctorDto,
     ) {
-        return this.doctorService.createDoctor(dto)
+        // return this.doctorService.createDoctor(dto)
+        console.log(dto.fullName);
+        return "dto testing"
     }
 
     @Get()

@@ -3,6 +3,7 @@ import { IsNotEmpty, IsString, MinLength, MaxLength, Matches } from 'class-valid
 import { Transform } from 'class-transformer';
 import { transformStringValue } from '../utils/string-transform.util';
 import { IsUUID } from 'class-validator';
+import { TransformAfterValidation } from './transform-after-validation.decorator';
 
 interface IsRequiredStringOptions {
     requiredMessage: string;
@@ -30,25 +31,25 @@ export function IsRequiredString({
     matches
 }: IsRequiredStringOptions) {
     const decorators: PropertyDecorator[] = [
-        IsNotEmpty({ message: requiredMessage }),
+        TransformAfterValidation({ isLowercase, isUppercase }),
         IsString({ message: stringMessage }),
-        Transform(({ value }) => transformStringValue(value, isLowercase, isUppercase)),
+        IsNotEmpty({ message: requiredMessage }),
     ];
 
     if (isUUID) {
-        decorators.push(IsUUID('4', { message: 'Invalid UUID format' }));
+        decorators.unshift(IsUUID('4', { message: 'Invalid UUID format' }));
     }
 
     if (minLength) {
-        decorators.push(MinLength(minLength, { message: minLengthMessage }));
+        decorators.unshift(MinLength(minLength, { message: minLengthMessage }));
     }
 
     if (maxLength) {
-        decorators.push(MaxLength(maxLength, { message: maxLengthMessage }));
+        decorators.unshift(MaxLength(maxLength, { message: maxLengthMessage }));
     }
 
     if (matches) {
-        decorators.push(Matches(matches.pattern, { message: matches.message }));
+        decorators.unshift(Matches(matches.pattern, { message: matches.message }));
     }
 
     return applyDecorators(...decorators);
