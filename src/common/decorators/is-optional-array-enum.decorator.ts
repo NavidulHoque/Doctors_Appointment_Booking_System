@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { ArrayMaxSize, IsEnum, IsOptional } from 'class-validator';
-import { TransformAfterValidation } from './transform-after-validation.decorator';
+import { TransformInOrder } from './transform-in-order.decorator';
 import { IsOptionalArrayEnumOptions } from '../interfaces';
 
 export function IsOptionalArrayEnum({
@@ -16,7 +16,7 @@ export function IsOptionalArrayEnum({
             each: true,
             message,
         }),
-        TransformAfterValidation({ isLowercase, isUppercase }),
+        TransformInOrder({ isLowercase, isUppercase }),
         IsOptional(),
     ];
 

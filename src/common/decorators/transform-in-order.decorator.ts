@@ -5,12 +5,12 @@ import {
     ValidatorConstraintInterface,
 } from 'class-validator';
 import { transformStringValue } from '../utils';
-import { TransformAfterValidationOptions } from '../interfaces';
+import { TransformInOrderOptions } from '../interfaces';
 
-@ValidatorConstraint({ name: 'TransformAfterValidation', async: false })
-class TransformAfterValidationConstraint implements ValidatorConstraintInterface {
+@ValidatorConstraint({ name: 'TransformInOrder', async: false })
+class TransformInOrderConstraint implements ValidatorConstraintInterface {
     validate(value: string, args: ValidationArguments) {
-        const { isLowercase, isUppercase } = args.constraints[0] as TransformAfterValidationOptions;
+        const { isLowercase = false, isUppercase = false } = args.constraints[0] as TransformInOrderOptions;
 
         const obj = args.object;
         obj[args.property] = transformStringValue(value, isLowercase, isUppercase);
@@ -23,8 +23,8 @@ class TransformAfterValidationConstraint implements ValidatorConstraintInterface
     }
 }
 
-export function TransformAfterValidation(
-    options?: TransformAfterValidationOptions,
+export function TransformInOrder(
+    options?: TransformInOrderOptions,
 ) {
     return function (object: Object, propertyName: string) {
         registerDecorator({
@@ -32,7 +32,7 @@ export function TransformAfterValidation(
             propertyName,
             options,
             constraints: [options],
-            validator: TransformAfterValidationConstraint,
+            validator: TransformInOrderConstraint,
         });
     };
 }

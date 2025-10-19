@@ -1,8 +1,6 @@
-export interface IsOptionalArrayEnumOptions {
-    enumType: object;
-    message: string;
-    isLowercase?: boolean;
-    isUppercase?: boolean;
+import { EnumOptions } from "./enum-options.interface";
+
+export interface IsOptionalArrayEnumOptions extends EnumOptions {
     maxSize?: number;
     maxSizeMessage?: string;
 }

@@ -1,8 +1,5 @@
-export interface IsRequiredNumberOptions {
+import { NumberOptions } from "./number-options.interface";
+
+export interface IsRequiredNumberOptions extends NumberOptions {
     requiredMessage: string;
-    numberMessage: string;
-    min?: number;
-    max?: number;
-    minMessage?: string;
-    maxMessage?: string;
 }

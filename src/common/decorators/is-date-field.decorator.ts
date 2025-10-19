@@ -3,13 +3,7 @@ import { IsDate, IsOptional, } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DateComparison } from './date-comparison.decorator';
 import { ComparisonType } from '../types';
-
-interface dateOptions {
-    dateMessage: string;
-    isOptional?: boolean;
-    comparisonType?: string;
-    comparisonMessage?: string;
-}
+import { dateOptions } from '../interfaces';
 
 export function IsDateField({
     dateMessage,
@@ -19,16 +13,16 @@ export function IsDateField({
 }: dateOptions
 ) {
     const decorators: PropertyDecorator[] = [
-        Type(() => Date),
         IsDate({ message: dateMessage }),
+        Type(() => Date),
     ]
 
     if (isOptional) {
-        decorators.unshift(IsOptional());
+        decorators.push(IsOptional());
     }
 
     if (comparisonType) {
-        decorators.push(DateComparison(comparisonType as ComparisonType, { message: comparisonMessage }));
+        decorators.unshift(DateComparison(comparisonType as ComparisonType, { message: comparisonMessage }));
     }
 
     return applyDecorators(...decorators);

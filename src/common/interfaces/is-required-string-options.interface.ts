@@ -1,12 +1,6 @@
-export interface IsRequiredStringOptions {
+import { StringOptions } from "./string-options.interface";
+
+export interface IsRequiredStringOptions extends StringOptions {
     requiredMessage: string;
-    stringMessage: string;
-    isLowercase?: boolean;
-    isUppercase?: boolean;
     isUUID?: boolean;
-    minLength?: number;
-    maxLength?: number;
-    minLengthMessage?: string;
-    maxLengthMessage?: string;
-    matches?: { pattern: RegExp; message: string };
 }

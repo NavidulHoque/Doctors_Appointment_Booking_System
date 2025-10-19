@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { IsOptionalStringOptions } from '../interfaces';
-import { TransformAfterValidation } from './transform-after-validation.decorator';
+import { TransformInOrder } from './transform-in-order.decorator';
 
 export function IsOptionalString({
     stringMessage,
@@ -14,7 +14,7 @@ export function IsOptionalString({
     matches
 }: IsOptionalStringOptions) {
     const decorators: PropertyDecorator[] = [
-        TransformAfterValidation({ isLowercase, isUppercase }),
+        TransformInOrder({ isLowercase, isUppercase }),
         IsString({ message: stringMessage }),
         IsOptional(),
     ];

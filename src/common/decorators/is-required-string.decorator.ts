@@ -1,8 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
-import { IsNotEmpty, IsString, MinLength, MaxLength, Matches } from 'class-validator';
-import { IsUUID } from 'class-validator';
-import { TransformAfterValidation } from './transform-after-validation.decorator';
+import { IsNotEmpty, IsString, MinLength, MaxLength, Matches, IsUUID } from 'class-validator';
 import { IsRequiredStringOptions } from '../interfaces';
+import { TransformInOrder } from './transform-in-order.decorator';
 
 export function IsRequiredString({
     requiredMessage,
@@ -17,7 +16,7 @@ export function IsRequiredString({
     matches
 }: IsRequiredStringOptions) {
     const decorators: PropertyDecorator[] = [
-        TransformAfterValidation({ isLowercase, isUppercase }),
+        TransformInOrder({ isLowercase, isUppercase }),
         IsString({ message: stringMessage }),
         IsNotEmpty({ message: requiredMessage }),
     ];
