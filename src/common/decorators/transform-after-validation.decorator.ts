@@ -1,16 +1,11 @@
 import {
     registerDecorator,
     ValidationArguments,
-    ValidationOptions,
     ValidatorConstraint,
     ValidatorConstraintInterface,
 } from 'class-validator';
-import { transformStringValue } from '../utils/string-transform.util'; 
-
-interface TransformAfterValidationOptions extends ValidationOptions {
-    isLowercase: boolean;
-    isUppercase: boolean;
-}
+import { transformStringValue } from '../utils';
+import { TransformAfterValidationOptions } from '../interfaces';
 
 @ValidatorConstraint({ name: 'TransformAfterValidation', async: false })
 class TransformAfterValidationConstraint implements ValidatorConstraintInterface {

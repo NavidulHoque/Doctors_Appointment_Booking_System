@@ -1,13 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
-import { IsNumber, IsOptional, Max, MaxLength, Min, MinLength } from 'class-validator';
-
-interface IsOptionalNumberOptions {
-    numberMessage: string;
-    min?: number;
-    max?: number;
-    minMessage?: string;
-    maxMessage?: string;
-}
+import { IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { IsOptionalNumberOptions } from '../interfaces';
 
 export function IsOptionalNumber({
     numberMessage,
@@ -17,16 +10,16 @@ export function IsOptionalNumber({
     maxMessage,
 }: IsOptionalNumberOptions) {
     const decorators: PropertyDecorator[] = [
-        IsOptional(),
         IsNumber({}, { message: numberMessage }),
+        IsOptional(),
     ];
 
     if (min !== undefined) {
-        decorators.push(Min(min, { message: minMessage }));
+        decorators.unshift(Min(min, { message: minMessage }));
     }
 
     if (max !== undefined) {
-        decorators.push(Max(max, { message: maxMessage }));
+        decorators.unshift(Max(max, { message: maxMessage }));
     }
 
     return applyDecorators(...decorators);

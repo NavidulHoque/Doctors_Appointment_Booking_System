@@ -1,11 +1,14 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsEmail, IsOptional } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { TransformAfterValidation } from './transform-after-validation.decorator';
 
 export function IsOptionalEmail() {
     return applyDecorators(
-        IsOptional(),
+        TransformAfterValidation({
+            isLowercase: false,
+            isUppercase: false,
+        }),
         IsEmail({}, { message: 'Invalid email format' }),
-        Transform(({ value }) => value.trim()),
+        IsOptional(),
     );
 }

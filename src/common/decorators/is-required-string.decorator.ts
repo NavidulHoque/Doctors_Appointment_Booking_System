@@ -1,22 +1,8 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsNotEmpty, IsString, MinLength, MaxLength, Matches } from 'class-validator';
-import { Transform } from 'class-transformer';
-import { transformStringValue } from '../utils/string-transform.util';
 import { IsUUID } from 'class-validator';
 import { TransformAfterValidation } from './transform-after-validation.decorator';
-
-interface IsRequiredStringOptions {
-    requiredMessage: string;
-    stringMessage: string;
-    isLowercase?: boolean;
-    isUppercase?: boolean;
-    isUUID?: boolean;
-    minLength?: number;
-    maxLength?: number;
-    minLengthMessage?: string;
-    maxLengthMessage?: string;
-    matches?: { pattern: RegExp; message: string };
-}
+import { IsRequiredStringOptions } from '../interfaces';
 
 export function IsRequiredString({
     requiredMessage,
