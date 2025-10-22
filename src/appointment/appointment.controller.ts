@@ -14,7 +14,7 @@ import { CacheKeyHelper } from './helpers';
 import { UserDto } from 'src/user/dtos';
 import { AppointmentWithUser } from './types';
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentController {
     constructor(private readonly appointmentService: AppointmentService) { }

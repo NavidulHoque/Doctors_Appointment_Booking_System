@@ -13,7 +13,7 @@ import { UserDto } from 'src/user/dtos';
 import { PrismaService } from 'src/prisma';
 import { PaginationDto } from 'src/common/dtos';
 
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(CsrfGuard, AuthGuard, RolesGuard)
 @Controller('doctors')
 export class DoctorController {
 
