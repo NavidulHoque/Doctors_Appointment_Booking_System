@@ -4,7 +4,7 @@ A full-featured backend system for managing doctor appointments, payments and re
 
 ## ⚙️ Features
 
-- **💬 Real-Time Chat & Notifications**
+- **💬 Real-Time Chat & Notifications**<br>
 Built a high-performance WebSocket gateway powered by Redis and BullMQ, supporting 1,000+ concurrent users for real-time messaging and notifications between Doctors, Patients, and Admins.
 - 💬 Real-time messaging between **Doctor, Patient, and Admin**
 - 📡 Asynchronous message processing with **Kafka** for high throughput
