@@ -9,7 +9,7 @@ Built a high-performance **WebSocket** gateway powered by **Redis** and **BullMQ
 - **📡 Event-Driven Architecture with Kafka**<br>
 Implemented **Apache Kafka** for asynchronous and scalable data processing, efficiently handling 10,000+ daily messaging.
 - **🧾 Automated Workflows**<br>
-Utilized **BullMQ** and **Cron Jobs** for automated appointment updates, background processing, user activity tracking and deleting expired sessions — reducing manual effort by 30%.
+Utilized **BullMQ** and **Cron Jobs** for automated appointment updates, background processing, user activity tracking and cleanup of expired sessions — reducing manual effort by 30%.
 - **💳 Multi-Vendor Payments via Stripe Connect**<br>
 Integrated **Stripe Express Connect** for secure transactions and instant payouts to 50+ doctors, ensuring seamless payment flow.
 - **⚡ Performance Optimization**<br>
