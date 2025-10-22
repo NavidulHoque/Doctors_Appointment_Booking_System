@@ -4,7 +4,8 @@ A full-featured backend system for managing doctor appointments, payments and re
 
 ## ⚙️ Features
 
-- 🔔 Real-time notifications using **Redis + BullMQ + WebSocket**
+- **💬 Real-Time Chat & Notifications**
+Built a high-performance WebSocket gateway powered by Redis and BullMQ, supporting 1,000+ concurrent users for real-time messaging and notifications between Doctors, Patients, and Admins.
 - 💬 Real-time messaging between **Doctor, Patient, and Admin**
 - 📡 Asynchronous message processing with **Kafka** for high throughput
 - 🧾 Automated appointment status updates via **BullMQ**
@@ -17,12 +18,16 @@ A full-featured backend system for managing doctor appointments, payments and re
 ## 🛠️ Tech Stack
 
 - **Backend:** NestJS, TypeScript
-- **Database:** Prisma ORM + PostgreSQL
-- **Queue:** Redis + BullMQ
-- **Real-time:** WebSocket (Gateway)
+- **Database:** Prisma ORM, PostgreSQL
+- **Queue & Caching:** Redis, BullMQ
+- **Event Streaming:** Apache Kafka
+- **Real-Time Communication:** WebSocket (Gateway)
 - **Payments:** Stripe Express Connect
 - **File Uploads:** Multer + Cloudinary
 - **Containerization:** Docker
+- **Scheduling:** Cron Jobs
+- **AI Integration:** OpenAI
+- **Authentication:** JWT (JSON Web Token)
 
 ## 🐳 Dockerized Setup
 
