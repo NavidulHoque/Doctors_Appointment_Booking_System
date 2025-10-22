@@ -7,7 +7,7 @@ A full-featured backend system for managing doctor appointments, payments and re
 - **💬 Real-Time Chat & Notifications**<br>
 Built a high-performance **WebSocket** gateway powered by **Redis** and **BullMQ**, supporting 1,000+ concurrent users for real-time messaging between Doctors, Patients, Admins and notifications.
 - **📡 Event-Driven Architecture with Kafka**<br>
-Implemented **Apache Kafka** for asynchronous and scalable message processing, efficiently handling 10,000+ daily messaging.
+Implemented **Apache Kafka** for asynchronous and scalable data processing, efficiently handling 10,000+ daily messaging.
 - **🧾 Automated Workflows**<br>
 Utilized **BullMQ** and **Cron Jobs** for automated appointment updates, background processing, user activity tracking and deleting expired sessions — reducing manual effort by 30%.
 - **💳 Multi-Vendor Payments via Stripe Connect**<br>
