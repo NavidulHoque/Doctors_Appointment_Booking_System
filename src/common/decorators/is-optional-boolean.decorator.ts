@@ -9,7 +9,7 @@ export function IsOptionalBoolean({ booleanMessage }: { booleanMessage: string }
             if (value === 'false') return false;
             return value;
         }),
-        IsBoolean({ message: booleanMessage }),
         IsOptional(),
+        IsBoolean({ message: booleanMessage })
     );
 }

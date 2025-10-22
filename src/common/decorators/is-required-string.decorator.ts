@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsNotEmpty, IsString, MinLength, MaxLength, Matches, IsUUID } from 'class-validator';
 import { IsRequiredStringOptions } from '../interfaces';
-import { TransformInOrder } from './transform-in-order.decorator';
+import { TransformString } from './transform-string.decorator';
 
 export function IsRequiredString({
     requiredMessage,
@@ -16,25 +16,25 @@ export function IsRequiredString({
     matches
 }: IsRequiredStringOptions) {
     const decorators: PropertyDecorator[] = [
-        TransformInOrder({ isLowercase, isUppercase }),
-        IsString({ message: stringMessage }),
+        TransformString(isLowercase, isUppercase),
         IsNotEmpty({ message: requiredMessage }),
+        IsString({ message: stringMessage }),
     ];
 
     if (isUUID) {
-        decorators.unshift(IsUUID('4', { message: 'Invalid UUID format' }));
+        decorators.push(IsUUID('4', { message: 'Invalid UUID format' }));
     }
 
     if (minLength) {
-        decorators.unshift(MinLength(minLength, { message: minLengthMessage }));
+        decorators.push(MinLength(minLength, { message: minLengthMessage }));
     }
 
     if (maxLength) {
-        decorators.unshift(MaxLength(maxLength, { message: maxLengthMessage }));
+        decorators.push(MaxLength(maxLength, { message: maxLengthMessage }));
     }
 
     if (matches) {
-        decorators.unshift(Matches(matches.pattern, { message: matches.message }));
+        decorators.push(Matches(matches.pattern, { message: matches.message }));
     }
 
     return applyDecorators(...decorators);

@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsEnum, IsOptional } from 'class-validator';
 import { IsOptionalEnumOptions } from '../interfaces';
-import { TransformInOrder } from './transform-in-order.decorator';
+import { TransformString } from './transform-string.decorator';
 
 export function IsOptionalEnum({
     enumType,
@@ -10,8 +10,8 @@ export function IsOptionalEnum({
     isUppercase = false,
 }: IsOptionalEnumOptions) {
     return applyDecorators(
+        TransformString(isLowercase, isUppercase),
+        IsOptional(),
         IsEnum(enumType, { message }),
-        TransformInOrder({ isLowercase, isUppercase }),
-        IsOptional()
     );
 }

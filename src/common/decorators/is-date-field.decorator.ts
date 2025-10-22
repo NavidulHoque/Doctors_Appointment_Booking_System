@@ -13,16 +13,16 @@ export function IsDateField({
 }: dateOptions
 ) {
     const decorators: PropertyDecorator[] = [
-        IsDate({ message: dateMessage }),
         Type(() => Date),
+        IsDate({ message: dateMessage }),
     ]
 
     if (isOptional) {
-        decorators.push(IsOptional());
+        decorators.unshift(IsOptional());
     }
 
     if (comparisonType) {
-        decorators.unshift(DateComparison(comparisonType as ComparisonType, { message: comparisonMessage }));
+        decorators.push(DateComparison(comparisonType as ComparisonType, { message: comparisonMessage }));
     }
 
     return applyDecorators(...decorators);

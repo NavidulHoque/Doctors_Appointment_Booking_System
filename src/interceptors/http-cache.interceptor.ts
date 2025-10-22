@@ -7,9 +7,10 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable, map, tap, from, switchMap, of } from 'rxjs';
-import { RedisService } from 'src/redis'; 
-import { CACHE_KEY, CacheOptions } from 'src/common/decorators';
+import { RedisService } from 'src/redis';
 import { Request } from 'express';
+import { CACHE_KEY } from 'src/common/constants';
+import { CacheOptions } from 'src/common/interfaces';
 
 @Injectable()
 export class Http_CacheInterceptor<T> implements NestInterceptor<T, any> {

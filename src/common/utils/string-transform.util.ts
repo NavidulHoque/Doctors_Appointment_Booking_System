@@ -4,7 +4,7 @@ export function transformStringValue(value: string, isLowercase = false, isUpper
     if (isLowercase) return trimmed.toLowerCase();
     if (isUppercase) return trimmed.toUpperCase();
 
-    return trimmed;
+    return trimmed.length ? trimmed : undefined;
 }
 
 export function transformStringArray(value: string | string[], isLowercase = false, isUppercase = false) {

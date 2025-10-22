@@ -1,3 +1,5 @@
 export * from './request-with-trace.type'
 export * from './request-with-user.type'
 export * from './date-comparison.type'
+export * from './cache-key-fn.type'
+export * from './invalidate-fn.type'

@@ -11,16 +11,16 @@ export function IsRequiredNumber({
     maxMessage,
 }: IsRequiredNumberOptions) {
     const decorators: PropertyDecorator[] = [
-        IsNumber({}, { message: numberMessage }),
         IsNotEmpty({ message: requiredMessage }),
+        IsNumber({}, { message: numberMessage }),
     ];
 
     if (min !== undefined) {
-        decorators.unshift(Min(min, { message: minMessage }));
+        decorators.push(Min(min, { message: minMessage }));
     }
 
     if (max !== undefined) {
-        decorators.unshift(Max(max, { message: maxMessage }));
+        decorators.push(Max(max, { message: maxMessage }));
     }
 
     return applyDecorators(...decorators);

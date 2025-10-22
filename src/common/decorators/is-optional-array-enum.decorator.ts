@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { ArrayMaxSize, IsEnum, IsOptional } from 'class-validator';
-import { TransformInOrder } from './transform-in-order.decorator';
 import { IsOptionalArrayEnumOptions } from '../interfaces';
+import { TransformString } from './transform-string.decorator';
 
 export function IsOptionalArrayEnum({
     enumType,
@@ -12,16 +12,16 @@ export function IsOptionalArrayEnum({
     maxSizeMessage,
 }: IsOptionalArrayEnumOptions) {
     const decorators: PropertyDecorator[] = [
+        TransformString(isLowercase, isUppercase),
+        IsOptional(),
         IsEnum(enumType, {
             each: true,
             message,
-        }),
-        TransformInOrder({ isLowercase, isUppercase }),
-        IsOptional(),
+        })
     ];
 
     if (maxSize !== undefined) {
-        decorators.unshift(ArrayMaxSize(maxSize, { message: maxSizeMessage }));
+        decorators.push(ArrayMaxSize(maxSize, { message: maxSizeMessage }));
     }
 
     return applyDecorators(...decorators);
