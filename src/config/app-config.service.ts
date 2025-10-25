@@ -1,37 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { AppConfig } from './app.config';
+import { AppConfig } from './types';
 
 @Injectable()
 export class AppConfigService {
     constructor(private readonly config: ConfigService<AppConfig, true>) { }
 
-    get databaseUrl(): string {
-        return this.config.get('DATABASE_URL', { infer: true });
+    get jwt() {
+        return {
+            accessTokenSecret: this.config.get('ACCESS_TOKEN_SECRET', { infer: true }),
+            refreshTokenSecret: this.config.get('REFRESH_TOKEN_SECRET', { infer: true }),
+            accessTokenExpires: this.config.get('ACCESS_TOKEN_EXPIRES', { infer: true }),
+            refreshTokenExpires: this.config.get('REFRESH_TOKEN_EXPIRES', { infer: true }),
+        }
     }
 
-    get port(): number {
-        return this.config.get('PORT', { infer: true });
-    }
-
-    // JWT
-    get accessTokenSecret(): string {
-        return this.config.get('ACCESS_TOKEN_SECRET', { infer: true });
-    }
-
-    get refreshTokenSecret(): string {
-        return this.config.get('REFRESH_TOKEN_SECRET', { infer: true });
-    }
-
-    get accessTokenExpires(): `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}` {
-        return this.config.get('ACCESS_TOKEN_EXPIRES', { infer: true });
-    }
-
-    get refreshTokenExpires(): `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}` {
-        return this.config.get('REFRESH_TOKEN_EXPIRES', { infer: true });
-    }
-
-    // Cloudinary
     get cloudinary() {
         return {
             cloudName: this.config.get('CLOUDINARY_CLOUD_NAME', { infer: true }),
@@ -40,7 +23,17 @@ export class AppConfigService {
         };
     }
 
-    // Redis
+    get otpExpires() {
+        return this.config.get('OTP_EXPIRES', { infer: true });
+    }
+
+    get admin() {
+        return {
+            id: this.config.get('ADMIN_ID', { infer: true }),
+            email: this.config.get('ADMIN_EMAIL', { infer: true }),
+        };
+    }
+
     get redis() {
         return {
             host: this.config.get('REDIS_HOST', { infer: true }),
@@ -50,7 +43,6 @@ export class AppConfigService {
         };
     }
 
-    // Stripe
     get stripe() {
         return {
             secretKey: this.config.get('STRIPE_SECRET_KEY', { infer: true }),
@@ -58,7 +50,14 @@ export class AppConfigService {
         };
     }
 
-    // SMTP
+    get frontendUrl() {
+        return this.config.get('FRONTEND_URL', { infer: true });
+    }
+
+    get kafkaBroker() {
+        return this.config.get('KAFKA_BROKER', { infer: true });
+    }
+
     get smtp() {
         return {
             host: this.config.get('SMTP_HOST', { infer: true }),
@@ -69,7 +68,6 @@ export class AppConfigService {
         };
     }
 
-    // Twilio
     get twilio() {
         return {
             accountSid: this.config.get('TWILIO_ACCOUNT_SID', { infer: true }),
@@ -78,16 +76,15 @@ export class AppConfigService {
         };
     }
 
-    // Kafka
-    get kafkaBroker(): string {
-        return this.config.get('KAFKA_BROKER', { infer: true });
+    get nodeEnv() {
+        return this.config.get('NODE_ENV', { infer: true });
     }
 
-    // Gemini
     get gemini() {
         return {
             apiKey: this.config.get('GEMINI_API_KEY', { infer: true }),
             model: this.config.get('GEMINI_MODEL', { infer: true }),
+            mcpSecret: this.config.get('MCP_SECRET', { infer: true })
         };
     }
 }

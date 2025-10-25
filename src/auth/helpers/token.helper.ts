@@ -1,33 +1,24 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { AccessTokenPayload, RefreshTokenPayload } from "../interfaces";
+import { AppConfigService } from "src/config";
 
 @Injectable()
 export class TokenHelper {
-    private readonly ACCESS_TOKEN_SECRET: string;
-    private readonly REFRESH_TOKEN_SECRET: string;
-    public readonly ACCESS_TOKEN_EXPIRES: string;
-    public readonly REFRESH_TOKEN_EXPIRES: string;
 
     constructor(
-        private readonly config: ConfigService,
+        private readonly config: AppConfigService,
         private readonly jwtService: JwtService,
-    ) {
-        this.ACCESS_TOKEN_EXPIRES = this.config.get<string>('ACCESS_TOKEN_EXPIRES')!;
-        this.REFRESH_TOKEN_EXPIRES = this.config.get<string>('REFRESH_TOKEN_EXPIRES')!;
-        this.ACCESS_TOKEN_SECRET = this.config.get<string>('ACCESS_TOKEN_SECRET')!;
-        this.REFRESH_TOKEN_SECRET = this.config.get<string>('REFRESH_TOKEN_SECRET')!;
-    }
+    ) {}
 
     private generateToken(
         payload: Record<string, any>,
         type: 'access' | 'refresh'
     ) {
         const secret =
-            type === 'access' ? this.ACCESS_TOKEN_SECRET : this.REFRESH_TOKEN_SECRET;
+            type === 'access' ? this.config.jwt.accessTokenSecret : this.config.jwt.refreshTokenSecret;
         const expiresIn =
-            type === 'access' ? this.ACCESS_TOKEN_EXPIRES as any : this.REFRESH_TOKEN_EXPIRES;
+            type === 'access' ? this.config.jwt.accessTokenExpires : this.config.jwt.refreshTokenExpires;
 
         return this.jwtService.sign(payload, { secret, expiresIn });
     }
@@ -37,7 +28,7 @@ export class TokenHelper {
         type: 'access' | 'refresh'
     ): AccessTokenPayload | RefreshTokenPayload {
         const secret =
-            type === 'access' ? this.ACCESS_TOKEN_SECRET : this.REFRESH_TOKEN_SECRET;
+            type === 'access' ? this.config.jwt.accessTokenSecret : this.config.jwt.refreshTokenSecret;
 
         return this.jwtService.verify(token, { secret });
     }
