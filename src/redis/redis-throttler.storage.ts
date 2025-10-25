@@ -4,27 +4,17 @@ import { RedisService } from './redis.service';
 
 @Injectable()
 export class RedisThrottlerStorage implements ThrottlerStorage {
-  constructor(private readonly redis: RedisService) {}
+  constructor(private readonly redis: RedisService) { }
 
   async increment(
     key: string,
     ttl: number,
-    limit: number,
-    blockDuration: number
-  ): Promise<{
-    totalHits: number;
-    timeToExpire: number;
-    isBlocked: boolean;
-    timeToBlockExpire: number;
-  }> {
-    // ttl is in ms
+  ): Promise<{ totalHits: number; timeToExpire: number }> {
     const created = await this.redis.setNxPx(key, '1', ttl);
     if (created) {
       return {
         totalHits: 1,
         timeToExpire: ttl,
-        isBlocked: false,
-        timeToBlockExpire: 0,
       };
     }
 
@@ -36,14 +26,10 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
       pttl = Number(await this.redis.pttl(key));
     }
 
-    const isBlocked = totalHits > limit;
-    const timeToBlockExpire = isBlocked ? blockDuration : 0;
-
     return {
       totalHits,
       timeToExpire: Math.max(pttl, 0),
-      isBlocked,
-      timeToBlockExpire,
     };
   }
 }
+

@@ -27,7 +27,7 @@ export class TokenHelper {
         const secret =
             type === 'access' ? this.ACCESS_TOKEN_SECRET : this.REFRESH_TOKEN_SECRET;
         const expiresIn =
-            type === 'access' ? this.ACCESS_TOKEN_EXPIRES : this.REFRESH_TOKEN_EXPIRES;
+            type === 'access' ? this.ACCESS_TOKEN_EXPIRES as any : this.REFRESH_TOKEN_EXPIRES;
 
         return this.jwtService.sign(payload, { secret, expiresIn });
     }

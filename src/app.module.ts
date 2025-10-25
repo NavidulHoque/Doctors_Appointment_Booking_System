@@ -27,6 +27,7 @@ import { McpModule } from './mcp';
 import { OpenAiModule } from './gemini';
 import { CommonModule } from './common/services';
 import { AuthHelperModule } from './auth/helpers';
+import { appConfigSchema } from './config';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AuthHelperModule } from './auth/helpers';
     }),
     ConfigModule.forRoot({
       isGlobal: true,   // makes ConfigService global
+      validate: (env) => appConfigSchema.parse(env),
     }),
     ScheduleModule.forRoot(), // for cron jobs to run
     AuthModule,
