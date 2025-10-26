@@ -23,7 +23,7 @@ export class AppConfigService {
         };
     }
 
-    get otpExpires() {
+    get otp() {
         return this.config.get('OTP_EXPIRES', { infer: true });
     }
 

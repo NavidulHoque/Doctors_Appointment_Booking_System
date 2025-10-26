@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { AppConfigService } from "src/config";
 import { EmailService } from "src/email"
 import { NotificationService } from "src/notification";
 import { PrismaService } from "src/prisma";
@@ -11,19 +11,19 @@ export class WebhookService {
     private readonly logger = new Logger(WebhookService.name);
 
     constructor(
-        private readonly configService: ConfigService,
+        private readonly config: AppConfigService,
         private readonly prisma: PrismaService,
         private readonly notificationService: NotificationService,
         private readonly email: EmailService
     ) {
-        this.stripe = new Stripe(configService.get('STRIPE_SECRET_KEY')!, {
+        this.stripe = new Stripe(this.config.stripe.secretKey, {
             apiVersion: '2025-08-27.basil',
         });
     }
 
     async handleStripeEvent(body: string, signature: string, traceId: string) {
-        const endpointSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
-        const event = this.stripe.webhooks.constructEvent(body, signature, endpointSecret!);
+        const endpointSecret = this.config.stripe.webhookSecret;
+        const event = this.stripe.webhooks.constructEvent(body, signature, endpointSecret);
 
         switch (event.type) {
             case 'checkout.session.completed':

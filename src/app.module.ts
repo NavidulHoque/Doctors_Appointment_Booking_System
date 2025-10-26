@@ -27,7 +27,7 @@ import { McpModule } from './mcp';
 import { OpenAiModule } from './gemini';
 import { CommonModule } from './common/services';
 import { AuthHelperModule } from './auth/helpers';
-import { appConfigSchema } from './config';
+import { AppConfigModule, appConfigSchema } from './config';
 
 @Module({
   imports: [
@@ -73,7 +73,8 @@ import { appConfigSchema } from './config';
     CronModule,
     McpModule,
     OpenAiModule,
-    CommonModule
+    CommonModule,
+    AppConfigModule
   ],
   controllers: [AppController],
   providers: [

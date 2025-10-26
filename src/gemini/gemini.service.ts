@@ -5,12 +5,12 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { McpService } from 'src/mcp';
 import { tools } from './tools';
 import { CreateAppointmentDto, UpdateAppointmentDto } from 'src/appointment/dtos';
 import { GetScheduleDto } from 'src/mcp/dtos';
+import { AppConfigService } from 'src/config';
 
 @Injectable()
 export class GeminiService {
@@ -18,18 +18,17 @@ export class GeminiService {
   private readonly client: GoogleGenerativeAI;
 
   constructor(
-    private readonly config: ConfigService,
+    private readonly config: AppConfigService,
     private readonly mcpService: McpService,
   ) {
     this.client = new GoogleGenerativeAI(
-      this.config.get<string>('GEMINI_API_KEY')!,
+      this.config.gemini.apiKey,
     );
   }
 
   async processQuery(prompt: string, traceId: string) {
     try {
-      const modelName =
-        this.config.get<string>('GEMINI_MODEL') || 'gemini-2.5-pro';
+      const modelName = this.config.gemini.model || 'gemini-2.5-pro';
 
       const model = this.client.getGenerativeModel({
         model: modelName,

@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import Stripe from 'stripe';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from 'src/config';
 
 @Injectable()
 export class StripeService {
     private stripe: Stripe;
 
-    constructor(private configService: ConfigService) {
-        this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY') as string, {
+    constructor(private config: AppConfigService) {
+        this.stripe = new Stripe(this.config.stripe.secretKey, {
             apiVersion: '2025-08-27.basil',
         });
     }
@@ -28,8 +28,8 @@ export class StripeService {
                     quantity: 1,
                 },
             ],
-            success_url: `${this.configService.get('FRONTEND_URL')}/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${this.configService.get('FRONTEND_URL')}/cancel?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${this.config.frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${this.config.frontendUrl}/cancel?session_id={CHECKOUT_SESSION_ID}`,
             expires_at: Math.floor(Date.now() / 1000) + 60 * 30,
             metadata: {
                 appointmentId,

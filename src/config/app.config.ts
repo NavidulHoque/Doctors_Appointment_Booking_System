@@ -4,8 +4,8 @@ export const appConfigSchema = z.object({
   // JWT
   ACCESS_TOKEN_SECRET: z.string(),
   REFRESH_TOKEN_SECRET: z.string(),
-  ACCESS_TOKEN_EXPIRES: z.string().regex(/^\d+[smhdwySMHDWY]$/), // e.g. 7d, 15m, 30d
-  REFRESH_TOKEN_EXPIRES: z.string().regex(/^\d+[smhdwySMHDWY]$/),
+  ACCESS_TOKEN_EXPIRES: z.string().regex(/^\d+[smhdwy]$/i), // e.g. 7d, 15m, 30d
+  REFRESH_TOKEN_EXPIRES: z.string().regex(/^\d+[smhdwy]$/i),
 
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: z.string(),

@@ -1,16 +1,16 @@
 import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import { AppConfigService } from 'src/config';
 
 @Injectable()
 export class CloudinaryService {
     private readonly logger = new Logger(CloudinaryService.name);
 
-    constructor(private readonly configService: ConfigService) {
+    constructor(private readonly config: AppConfigService) {
         cloudinary.config({
-            cloud_name: this.configService.get<string>('CLOUDINARY_CLOUD_NAME'),
-            api_key: this.configService.get<string>('CLOUDINARY_API_KEY'),
-            api_secret: this.configService.get<string>('CLOUDINARY_API_SECRET'),
+            cloud_name: this.config.cloudinary.cloudName,
+            api_key: this.config.cloudinary.apiKey,
+            api_secret: this.config.cloudinary.apiSecret,
         });
     }
 
@@ -50,7 +50,7 @@ export class CloudinaryService {
             }
         } 
         
-        catch (error: any) {
+        catch (error) {
             this.logger.error(`Upload failed: ${error.message}`, error.stack);
             throw new InternalServerErrorException('Upload failed');
         }
@@ -65,7 +65,7 @@ export class CloudinaryService {
             await cloudinary.uploader.destroy(public_id, { resource_type });
         } 
         
-        catch (error: any) {
+        catch (error) {
             this.logger.error(`Delete failed: ${error.message}`, error.stack);
             throw new InternalServerErrorException('Delete from Cloudinary failed');
         }

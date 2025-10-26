@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { sessionSelect } from './prisma-selects';
 import { AuthNotificationHelper, CookieHelper, CryptoHelper, OtpHelper, SessionUserHelper, TokenHelper } from './helpers';
 import { HandleErrorsService } from 'src/common/services';
+import { AppConfigService } from 'src/config';
 
 @Injectable()
 export class AuthService {
@@ -23,7 +24,8 @@ export class AuthService {
     private readonly cookieHelper: CookieHelper,
     private readonly sessionUserHelper: SessionUserHelper,
     private readonly notificationHelper: AuthNotificationHelper,
-    private readonly handleErrorsService: HandleErrorsService
+    private readonly handleErrorsService: HandleErrorsService,
+    private readonly config: AppConfigService
   ) { }
 
   async register(dto: RegistrationDto) {
@@ -72,7 +74,7 @@ export class AuthService {
     })
 
     const hashedRefreshToken = await this.cryptoHelper.hashValue(refreshToken);
-    const refreshExpiresAt = new Date(Date.now() + this.cookieHelper.convertExpiryToMs(this.tokenHelper.REFRESH_TOKEN_EXPIRES));
+    const refreshExpiresAt = new Date(Date.now() + this.cookieHelper.convertExpiryToMs(this.config.jwt.refreshTokenExpires));
 
     const [_, session] = await this.prisma.$transaction([
       this.prisma.user.update({
@@ -109,7 +111,7 @@ export class AuthService {
     const user = await this.sessionUserHelper.fetchUserByEmail(email, "Invalid credentials")
 
     const { otp, hashedOtp } = await this.otpHelper.generateOtp()
-    const otpExpires = this.otpHelper.getOtpExpiryDate()
+    const otpExpires = this.otpHelper.otpExpiryDate
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -127,7 +129,7 @@ export class AuthService {
       this.sms
         .sendSms(
           user.phone,
-          `Your OTP code is ${otp}. It will expire in ${this.otpHelper.OTP_EXPIRES} minutes.`
+          `Your OTP code is ${otp}. It will expire in ${this.config.otp} minutes.`
         )
         .catch((error) =>
           this.notificationHelper.handleNotificationFailure('send otp via sms', error, user, traceId)
@@ -267,7 +269,7 @@ export class AuthService {
       where: { id: sessionId },
       data: {
         refreshToken: hashedNewRefreshToken,
-        expiresAt: new Date(Date.now() + this.cookieHelper.convertExpiryToMs(this.tokenHelper.REFRESH_TOKEN_EXPIRES))
+        expiresAt: new Date(Date.now() + this.cookieHelper.convertExpiryToMs(this.config.jwt.refreshTokenExpires))
       },
       select: sessionSelect
     })

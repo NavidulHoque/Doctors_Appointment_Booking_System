@@ -4,13 +4,13 @@ import { PrismaService } from 'src/prisma';
 import { doctorSelect } from './prisma-selects'; 
 import * as argon from "argon2";
 import Stripe from 'stripe';
-import { ConfigService } from '@nestjs/config';
 import { SocketGateway } from 'src/socket';
 import { PaginationDto } from 'src/common/dtos';
 import { Role, Status } from '@prisma/client';
 import { PaginationResponseDto } from 'src/common/dtos';
 import { plainToInstance } from 'class-transformer';
 import { HandleErrorsService } from 'src/common/services';
+import { AppConfigService } from 'src/config';
 
 @Injectable()
 export class DoctorService {
@@ -18,11 +18,11 @@ export class DoctorService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly configService: ConfigService,
+        private readonly config: AppConfigService,
         private readonly socketGateway: SocketGateway,
         private readonly handleErrorsService: HandleErrorsService
     ) {
-        this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY') as string, {
+        this.stripe = new Stripe(this.config.stripe.secretKey, {
             apiVersion: '2025-08-27.basil',
         });
     }
@@ -225,8 +225,8 @@ export class DoctorService {
 
         const link = await this.stripe.accountLinks.create({
             account: account.id,
-            refresh_url: `${this.configService.get('FRONTEND_URL')}/stripe/onboarding/refresh`,
-            return_url: `${this.configService.get('FRONTEND_URL')}/stripe/onboarding/return?accountId=${account.id}`,
+            refresh_url: `${this.config.frontendUrl}/stripe/onboarding/refresh`,
+            return_url: `${this.config.frontendUrl}/stripe/onboarding/return?accountId=${account.id}`,
             type: 'account_onboarding',
         });
 

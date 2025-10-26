@@ -1,26 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { AppConfigService } from 'src/config';
 
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
-  private readonly Otp_Expires_Minutes: number;
 
   constructor(
-    private readonly config: ConfigService,
+    private readonly config: AppConfigService,
   ) {
     this.transporter = nodemailer.createTransport({
-      host: this.config.get<string>('SMTP_HOST'),
-      port: this.config.get<number>('SMTP_PORT'),
-      secure: this.config.get<string>('SMTP_PORT') === '465', // true for 465, false for other ports
+      host: this.config.smtp.host,
+      port: this.config.smtp.port,
+      secure: this.config.smtp.port === 465,
       auth: {
-        user: this.config.get<string>('SMTP_USER'),
-        pass: this.config.get<string>('SMTP_PASS'),
+        user: this.config.smtp.user,
+        pass: this.config.smtp.pass,
       },
     });
-
-    this.Otp_Expires_Minutes = Number(this.config.get<string>('OTP_EXPIRES', "15"))
   }
 
   private async sendEmail(options: {
@@ -30,7 +27,7 @@ export class EmailService {
     html?: string;
   }) {
     await this.transporter.sendMail({
-      from: this.config.get<string>('SMTP_FROM'),
+      from: this.config.smtp.from,
       ...options,
     });
   }
@@ -39,8 +36,8 @@ export class EmailService {
     await this.sendEmail({
       to,
       subject: 'Your OTP Code',
-      text: `Your OTP is: ${otp}. It expires in ${this.Otp_Expires_Minutes} minutes.`,
-      html: `<p>Your OTP is: <b>${otp}</b></p><p>It expires in <b>${this.Otp_Expires_Minutes}</b> minutes.</p>`,
+      text: `Your OTP is: ${otp}. It expires in ${this.config.otp} minutes.`,
+      html: `<p>Your OTP is: <b>${otp}</b></p><p>It expires in <b>${this.config.otp}</b> minutes.</p>`,
     });
   }
 
@@ -54,7 +51,7 @@ export class EmailService {
   }
 
   async alertAdmin(subject: string, message: string) {
-    const adminEmail = this.config.get<string>('ADMIN_EMAIL');
+    const adminEmail = this.config.admin.email;
     if (!adminEmail) return;
 
     await this.sendEmail({

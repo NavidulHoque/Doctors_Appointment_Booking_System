@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma';
 import { AppointmentCountResponseDto, AppointmentResponseDto, CreateAppointmentDto, GetAppointmentsDto, UpdateAppointmentDto } from './dtos';
 import { appointmentSelect } from './prisma-selects';
-import { ConfigService } from '@nestjs/config';
 import { Method, Role, Status } from '@prisma/client';
 import { UserDto } from 'src/user/dtos';
 import { PaginationResponseDto } from 'src/common/dtos';
@@ -10,6 +9,7 @@ import { AppointmentHelper } from './helpers';
 import { AppointmentWithUser } from './types';
 import { AppointmentGraphResult } from './interfaces';
 import { HandleErrorsService } from 'src/common/services';
+import { AppConfigService } from 'src/config';
 
 @Injectable()
 export class AppointmentService {
@@ -17,7 +17,7 @@ export class AppointmentService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly config: ConfigService,
+        private readonly config: AppConfigService,
         private readonly appointmentHelper: AppointmentHelper,
         private readonly handleErrorsService: HandleErrorsService
     ) { }
@@ -59,7 +59,7 @@ export class AppointmentService {
             this.logger.log(`📢 Sending notification to admin about new appointment with traceId: ${traceId}`);
 
             this.appointmentHelper.sendNotificationWithFallback(
-                this.config.get('ADMIN_ID') as string,
+                this.config.admin.id,
                 `${patientName}'s appointment with ${doctorName} is booked for ${date}.`,
                 traceId,
                 { appointmentId: appointment.id },
