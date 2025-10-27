@@ -1,5 +1,4 @@
 export * from './cache.decorator'
-export * from './is-required-email.decorator'
 export * from './is-required-string.decorator'
 export * from './is-optional-string.decorator'
 export * from "./is-optional-enum.decorator"
@@ -11,3 +10,4 @@ export * from './is-optional-email.decorator'
 export * from './date-comparison.decorator'
 export * from './is-date-field.decorator'
 export * from './transform-string.decorator'
+export * from './string.decorator'

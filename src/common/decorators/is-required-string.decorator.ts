@@ -1,11 +1,12 @@
 import { applyDecorators } from '@nestjs/common';
-import { IsNotEmpty, IsString, MinLength, MaxLength, Matches, IsUUID } from 'class-validator';
-import { IsRequiredStringOptions } from '../interfaces';
+import { IsNotEmpty, IsString, MinLength, MaxLength, Matches, IsUUID, IsEmail } from 'class-validator';
 import { TransformString } from './transform-string.decorator';
+import { IsRequiredStringOptions } from '../types';
 
 export function IsRequiredString({
     requiredMessage,
     stringMessage,
+    isEmail = false,
     isLowercase = false,
     isUppercase = false,
     isUUID = false,
@@ -18,8 +19,13 @@ export function IsRequiredString({
     const decorators: PropertyDecorator[] = [
         TransformString(isLowercase, isUppercase),
         IsNotEmpty({ message: requiredMessage }),
-        IsString({ message: stringMessage }),
     ];
+
+    if (isEmail) {
+        decorators.push(IsEmail({}, { message: 'Invalid email format' }));
+    } else {
+        decorators.push(IsString({ message: stringMessage }));
+    }
 
     if (isUUID) {
         decorators.push(IsUUID('4', { message: 'Invalid UUID format' }));

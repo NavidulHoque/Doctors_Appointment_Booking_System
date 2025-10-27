@@ -1,14 +1,9 @@
 import { BaseAuthDto } from './base-auth.dto';
-import { IsOptionalString, IsRequiredString } from 'src/common/decorators';
+import { IsOptionalString, IsRequiredPassword } from 'src/common/decorators';
 
 export class LoginDto extends BaseAuthDto {
 
-    @IsRequiredString({ 
-        requiredMessage: 'Password is required', 
-        stringMessage: 'Password must be a string',
-        minLength: 8,
-        minLengthMessage: 'Password must be at least 8 characters long',
-    })
+    @IsRequiredPassword()
     readonly password: string;
 
     @IsOptionalString({ 

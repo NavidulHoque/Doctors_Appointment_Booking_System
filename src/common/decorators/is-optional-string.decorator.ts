@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
-import { IsOptionalStringOptions } from '../interfaces';
 import { TransformString } from './transform-string.decorator';
+import { IsOptionalStringOptions } from '../types';
 
 export function IsOptionalString({
     stringMessage,

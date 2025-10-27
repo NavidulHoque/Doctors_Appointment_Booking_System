@@ -1,10 +1,9 @@
-import { IsRequiredString } from "src/common/decorators";
+import { IsRequiredUUID } from "src/common/decorators";
 
 export class LogoutDto {
-  @IsRequiredString({ 
-    requiredMessage: "Session ID is required", 
-    stringMessage: "Session ID must be a string",
-    isUUID: true
+  @IsRequiredUUID({
+    requiredMessage: "Session ID is required",
+    stringMessage: "Session ID must be a string"
   })
   readonly sessionId: string
 }
