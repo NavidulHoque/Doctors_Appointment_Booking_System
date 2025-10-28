@@ -30,12 +30,13 @@ export class AppointmentController {
         @Req() request: RequestWithTrace,
         @User() user: UserDto
     ) {
-        return this.appointmentService.createAppointment({
-            ...dto,
-            patientId: user.role === Role.PATIENT ? user.id : dto.patientId
-        },
-            request.traceId
-        );
+        return dto
+        // return this.appointmentService.createAppointment({
+        //     ...dto,
+        //     patientId: user.role === Role.PATIENT ? user.id : dto.patientId
+        // },
+        //     request.traceId
+        // );
     }
 
     @Get()

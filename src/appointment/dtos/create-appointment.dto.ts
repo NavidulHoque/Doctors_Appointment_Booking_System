@@ -1,4 +1,4 @@
-import { IsOptionalString, IsRequiredString, IsDateField, IsRequiredUUID } from "src/common/decorators";
+import { IsOptionalString, IsDateField, IsRequiredUUID } from "src/common/decorators";
 
 export class CreateAppointmentDto {
   @IsOptionalString({ 

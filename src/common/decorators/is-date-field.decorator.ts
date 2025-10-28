@@ -2,15 +2,19 @@ import { applyDecorators } from '@nestjs/common';
 import { IsDate, IsOptional, } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DateComparison } from './date-comparison.decorator';
-import { ComparisonType } from '../types';
-import { dateOptions } from '../interfaces';
+import { DateOptions } from '../interfaces';
 
+/**
+ * Custom decorator for validating Date fields with optional comparison logic.
+ * Combines @IsOptional, @Type(() => Date), @IsDate, and custom @DateComparison.
+ */
 export function IsDateField({
     dateMessage,
     isOptional = false,
     comparisonType,
+    relatedField,
     comparisonMessage,
-}: dateOptions
+}: DateOptions
 ) {
     const decorators: PropertyDecorator[] = [
         Type(() => Date),
@@ -22,7 +26,11 @@ export function IsDateField({
     }
 
     if (comparisonType) {
-        decorators.push(DateComparison(comparisonType as ComparisonType, { message: comparisonMessage }));
+        decorators.push(
+            DateComparison(comparisonType, relatedField, {
+                message: comparisonMessage || `${comparisonType} date validation failed`,
+            }),
+        );
     }
 
     return applyDecorators(...decorators);

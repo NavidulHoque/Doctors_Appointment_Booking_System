@@ -1,1 +1,1 @@
-export type ComparisonType = 'future' | 'futureOrEqual' | 'past' | 'pastOrEqual';
+export type ComparisonType = 'future' | 'futureOrEqual' | 'past' | 'pastOrEqual' | 'afterField' | 'beforeField';
