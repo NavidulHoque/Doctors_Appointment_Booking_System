@@ -28,7 +28,7 @@ export function IsDateField({
     if (comparisonType) {
         decorators.push(
             DateComparison(comparisonType, relatedField, {
-                message: comparisonMessage || `${comparisonType} date validation failed`,
+                message: comparisonMessage
             }),
         );
     }

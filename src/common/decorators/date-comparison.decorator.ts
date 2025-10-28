@@ -25,12 +25,12 @@ class DateComparisonConstraint implements ValidatorConstraintInterface {
         if (!(value instanceof Date) || isNaN(value.getTime())) return false;
         const valInMs = value.getTime();
 
-        const [type, relatedField] = args.constraints;
+        const [type, relatedField] = args.constraints as [ComparisonType, string | undefined];
 
         if (type === 'afterField' || type === 'beforeField') {
             if (!relatedField || !(relatedField in args.object)) return false;
 
-            const relatedValue = args.object[relatedField];
+            const relatedValue = args.object[relatedField] as Date;
             if (!(relatedValue instanceof Date) || isNaN(relatedValue.getTime())) return false;
 
             const relatedMs = relatedValue.getTime();
@@ -42,14 +42,14 @@ class DateComparisonConstraint implements ValidatorConstraintInterface {
     }
 
     defaultMessage(args: ValidationArguments) {
-        const [type, field] = args.constraints;
+        const [type, relatedField] = args.constraints as [ComparisonType, string | undefined];
         switch (type) {
             case 'future': return `${args.property} must be in the future`;
             case 'futureOrEqual': return `${args.property} must be in the future or now`;
             case 'past': return `${args.property} must be in the past`;
             case 'pastOrEqual': return `${args.property} must be in the past or now`;
-            case 'afterField': return `${args.property} must be after ${field}`;
-            case 'beforeField': return `${args.property} must be before ${field}`;
+            case 'afterField': return `${args.property} must be after ${relatedField}`;
+            case 'beforeField': return `${args.property} must be before ${relatedField}`;
             default: return `${args.property} has invalid comparison type`;
         }
     }
