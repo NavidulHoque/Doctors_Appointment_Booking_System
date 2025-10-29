@@ -1,35 +1,7 @@
-import { applyDecorators } from '@nestjs/common';
-import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
-import { TransformString } from './transform-string.decorator';
-import { IsOptionalStringOptions } from '../types';
+import { applyDecorators } from "@nestjs/common";
+import { createStringDecorators } from "./shared-string.decorator";
+import { OptionalStringOptions } from "../types";
 
-export function IsOptionalString({
-    stringMessage,
-    isLowercase = false,
-    isUppercase = false,
-    minLength,
-    maxLength,
-    minLengthMessage,
-    maxLengthMessage,
-    matches
-}: IsOptionalStringOptions) {
-    const decorators: PropertyDecorator[] = [
-        TransformString(isLowercase, isUppercase),
-        IsOptional(),
-        IsString({ message: stringMessage }),
-    ];
-
-    if (minLength !== undefined) {
-        decorators.push(MinLength(minLength, { message: minLengthMessage }));
-    }
-
-    if (maxLength !== undefined) {
-        decorators.push(MaxLength(maxLength, { message: maxLengthMessage }));
-    }
-
-    if (matches) {
-        decorators.push(Matches(matches.pattern, { message: matches.message }));
-    }
-
-    return applyDecorators(...decorators);
+export function IsOptionalString(options: OptionalStringOptions) {
+  return applyDecorators(...createStringDecorators({ ...options, isOptional: true }));
 }

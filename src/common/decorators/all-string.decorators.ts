@@ -1,3 +1,4 @@
+import { IsOptionalString } from "./is-optional-string.decorator";
 import { IsRequiredString } from "./is-required-string.decorator";
 
 export function IsRequiredEmail() {
@@ -47,7 +48,7 @@ export function IsRequiredUUID({
     });
 }
 
-export function IsRequiredOtp() {
+export function IsRequiredOTP() {
     return IsRequiredString({
         requiredMessage: 'OTP is required',
         stringMessage: 'OTP must be a string',
@@ -55,5 +56,11 @@ export function IsRequiredOtp() {
             pattern: /^\d{6}$/,
             message: 'OTP must be a 6-digit number'
         }
+    });
+}
+
+export function IsOptionalEmail() {
+    return IsOptionalString({
+        isEmail: true,
     });
 }
