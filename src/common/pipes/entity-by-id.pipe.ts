@@ -5,21 +5,7 @@ import {
   Type,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma';
-
-type PrimaryKeys = {
-  [key: string]: string;
-};
-
-const PRIMARY_KEYS: PrimaryKeys = {
-  doctor: 'userId',
-  user: 'id',
-  appointment: 'id',
-  review: 'id',
-  message: 'id',
-  notification: 'id',
-  payment: 'id',
-  session: 'id',
-};
+import { PRIMARY_KEYS } from '../constants';
 
 export function EntityByIdPipe(
   modelName: keyof PrismaService,
