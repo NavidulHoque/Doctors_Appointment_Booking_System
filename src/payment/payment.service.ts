@@ -39,7 +39,7 @@ export class PaymentService {
       throw new ForbiddenException("Doctor's stripe account not activated, you cannot pay for this appointment online");
     }
 
-    const session = await this.stripeService.createCheckoutSession(amount, appointmentId, stripeAccountId!);
+    const session = await this.stripeService.createCheckoutSession(amount, appointmentId, stripeAccountId);
 
     await this.prisma.payment.create({
       data: {

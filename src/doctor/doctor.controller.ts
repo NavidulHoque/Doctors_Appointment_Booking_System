@@ -31,9 +31,7 @@ export class DoctorController {
     createDoctor(
         @Body() dto: CreateDoctorDto,
     ) {
-        // return this.doctorService.createDoctor(dto)
-        console.log(dto.fullName);
-        return "dto testing"
+        return this.doctorService.createDoctor(dto)
     }
 
     @Get()

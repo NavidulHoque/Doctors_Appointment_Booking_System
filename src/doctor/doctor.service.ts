@@ -207,7 +207,7 @@ export class DoctorService {
 
     async createStripeAccount(data: Record<string, any>, traceId: string) {
 
-        const { doctor, userId } = data
+        const { doctor } = data
 
         if (doctor.stripeAccountId) {
             throw new BadRequestException("Stripe account already exists")
@@ -230,12 +230,10 @@ export class DoctorService {
             type: 'account_onboarding',
         });
 
-        this.socketGateway.sendResponse(userId, {
-            traceId,
-            status: 'success',
-            message: 'Stripe account created successfully',
+        return {
             url: link.url,
-        })
+            message: "Stripe account created successfully",
+        };
     }
 
     async activateStripeAccount(data: Record<string, any>, traceId: string) {
