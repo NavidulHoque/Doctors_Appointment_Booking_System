@@ -4,7 +4,7 @@ import { OptionalStringOptions } from "../types";
 
 /**
  * Decorator that validates an optional string field with various constraints.
- * Supports transformations to lowercase/uppercase, length constraints, and pattern matching.
+ * Supports transformations to lowercase/uppercase, length constraints, pattern matching etc.
  * 
  * @param options - Configuration options for the string validation.
  * @returns A property decorator that applies the specified validations.

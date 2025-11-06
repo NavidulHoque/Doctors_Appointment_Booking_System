@@ -8,6 +8,9 @@ import { transformStringArray } from '../utils';
  * Example:
  *   "tag" -> ["tag"]
  *   ["TAG", "Example"] -> ["tag", "example"]
+ * @param isLowercase - Convert value to lowercase
+ * @param isUppercase - Convert value to uppercase
+ * @return A property decorator that transforms the string array.
  */
 export function TransformStringArray(
     isLowercase = false,
