@@ -1,5 +1,4 @@
-import { Gender } from "@prisma/client";
-import { IsOptionalEnum, IsOptionalNumber, IsOptionalString, IsRequiredNumber, IsRequiredString } from "src/common/decorators";
+import { IsOptionalString, IsRequiredString } from "src/common/decorators";
 
 export function IsOptionalEducation() {
     return IsOptionalString({
@@ -25,22 +24,6 @@ export function IsOptionalAboutMe() {
     })
 }
 
-export function IsOptionalExperience() {
-    return IsOptionalNumber({
-        numberMessage: 'Experience must be a number',
-        min: 1,
-        minMessage: 'Experience must be at least 1 year',
-    })
-}
-
-export function IsOptionalFees() {
-    return IsOptionalNumber({
-        numberMessage: 'Fees must be a number',
-        min: 20,
-        minMessage: 'Fees must be at least 20',
-    })
-}
-
 export function IsOptionalPhone() {
     return IsOptionalString({
         stringMessage: 'phone must be a string',
@@ -48,14 +31,6 @@ export function IsOptionalPhone() {
             pattern: /^\d{11}$/,
             message: 'Phone number must be exactly 11 digits',
         }
-    })
-}
-
-export function IsOptionalGender() {
-    return IsOptionalEnum({
-        enumType: Gender,
-        message: 'Gender must be male, female or other',
-        isUppercase: true
     })
 }
 
@@ -83,24 +58,6 @@ export function IsRequiredAboutMe() {
         stringMessage: 'About me must be a string',
         minLength: 10,
         minLengthMessage: 'About me must be at least 10 characters long',
-    })
-}
-
-export function IsRequiredExperience() {
-    return IsRequiredNumber({
-        requiredMessage: 'Experience is required',
-        numberMessage: 'Experience must be a number',
-        min: 1,
-        minMessage: 'Experience must be at least 1 year',
-    })
-}
-
-export function IsRequiredFees() {
-    return IsRequiredNumber({
-        requiredMessage: 'Fees is required',
-        numberMessage: 'Fees must be a number',
-        min: 20,
-        minMessage: 'Fees must be at least 20',
     })
 }
 

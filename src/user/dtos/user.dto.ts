@@ -14,43 +14,43 @@ export class UserDto {
 
     @IsString()
     @IsOptional()
-    id: string;
+    readonly id: string;
 
     @IsString()
     @MinLength(5, { message: 'Full name must be at least 5 characters long' })
     @Matches(/^[a-zA-Z. ]+$/, {
         message: 'Full name can only contain letters, spaces, and dots',
     })
-    fullName: string;
+    readonly fullName: string;
 
     @IsString()
     @IsEmail({}, { message: 'Invalid email format' })
-    email: string;
+    readonly email: string;
 
     @IsString()
     @IsEnum(Role, { message: 'Role must be patient, doctor or admin' })
-    role: Role;
+    readonly role: Role;
 
     @IsOptional()
     @IsString()
     @Matches(/^\d{11}$/, {
         message: 'Phone number must be exactly 11 digits',
     })
-    phone?: string | null;
+    readonly phone?: string | null;
 
     @IsOptional()
     @IsEnum(Gender, { message: 'Gender must be male, female or other' })
-    gender?: Gender | null;
+    readonly gender?: Gender | null;
 
     @IsOptional()
     @Type(() => Date)
     @IsDate({ message: 'Birth Date must be a valid date' })
-    birthDate?: Date | null;
+    readonly birthDate?: Date | null;
 
     @IsOptional()
     @IsString()
     @MinLength(5, { message: 'Address must be at least 5 characters long' })
-    address?: string;
+    readonly address?: string;
 
     @IsString()
     @MinLength(8, { message: 'Password must be at least 8 characters long' })
@@ -58,19 +58,19 @@ export class UserDto {
         message:
             'Password must contain at least one number and one special character',
     })
-    password: string;
+    readonly password: string;
 
     @IsString()
     @IsOptional()
-    refreshToken?: string;
+    readonly refreshToken?: string;
 
     @IsOptional()
     @Type(() => Date)
     @IsDate({ message: 'Created At must be a valid date' })
-    createdAt?: Date;
+    readonly createdAt?: Date;
 
     @IsOptional()
     @Type(() => Date)
     @IsDate({ message: 'Updated At must be a valid date' })
-    updatedAt?: Date;
+    readonly updatedAt?: Date;
 }
