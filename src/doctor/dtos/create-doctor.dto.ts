@@ -1,32 +1,14 @@
 import { IsString, IsArray, ArrayNotEmpty } from 'class-validator';
-import { IsRequiredEmail, IsRequiredNumber, IsRequiredString } from 'src/common/decorators';
+import { IsRequiredEmail, IsRequiredName, IsRequiredNumber, IsRequiredPassword, IsRequiredString } from 'src/common/decorators';
 
 export class CreateDoctorDto {
-    @IsRequiredString({
-        requiredMessage: 'Name is required',
-        stringMessage: 'Name must be a string',
-        minLength: 5,
-        minLengthMessage: 'Name must be at least 5 characters long',
-        matches: {
-            pattern: /^[a-zA-Z. ]+$/,
-            message: 'Name can only contain letters, spaces, and dots',
-        },
-    })
+    @IsRequiredName()
     readonly fullName: string;
 
     @IsRequiredEmail()
     readonly email: string;
 
-    @IsRequiredString({
-        requiredMessage: 'Password is required',
-        stringMessage: 'Password must be a string',
-        minLength: 8,
-        minLengthMessage: 'Password must be at least 8 characters long',
-        matches: {
-            pattern: /^(?=.*\d)(?=.*[\W_]).{8,}$/,
-            message: 'Password must contain at least one number and one special character',
-        },
-    })
+    @IsRequiredPassword()
     readonly password: string;
 
     @IsRequiredString({

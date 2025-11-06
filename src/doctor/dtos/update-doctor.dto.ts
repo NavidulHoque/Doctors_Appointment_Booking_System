@@ -5,19 +5,12 @@ import {
     IsOptionalNumber,
     IsOptionalString,
     IsOptionalEmail,
-    IsDateField
+    IsDateField,
+    IsOptionalName
 } from 'src/common/decorators';
 
 export class UpdateDoctorDto {
-    @IsOptionalString({
-        stringMessage: 'Full name must be a string',
-        minLength: 5,
-        minLengthMessage: 'Full name must be at least 5 characters long',
-        matches: {
-            pattern: /^[a-zA-Z. ]+$/,
-            message: 'Full name can only contain letters, spaces, and dots',
-        }
-    })
+    @IsOptionalName()
     readonly fullName?: string;
 
     @IsOptionalEmail()
