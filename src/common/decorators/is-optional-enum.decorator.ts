@@ -3,12 +3,22 @@ import { IsEnum, IsOptional } from 'class-validator';
 import { IsOptionalEnumOptions } from '../interfaces';
 import { TransformString } from './transform-string.decorator';
 
+/**
+ * Validates that a property is an optional enum value.
+ * Automatically transforms the string to lowercase or uppercase if specified.
+ * 
+ * @param enumType - The enum to validate against.
+ * @param message - Custom validation message if the value is invalid.
+ * @param isLowercase - Transform string to lowercase before validation (default: false).
+ * @param isUppercase - Transform string to uppercase before validation (default: false).
+ */
 export function IsOptionalEnum({
     enumType,
     message,
     isLowercase = false,
     isUppercase = false,
-}: IsOptionalEnumOptions) {
+}: IsOptionalEnumOptions
+) {
     return applyDecorators(
         TransformString(isLowercase, isUppercase),
         IsOptional(),

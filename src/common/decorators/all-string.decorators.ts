@@ -1,5 +1,8 @@
+import { Method, Status } from "@prisma/client";
 import { IsOptionalString } from "./is-optional-string.decorator";
 import { IsRequiredString } from "./is-required-string.decorator";
+import { IsOptionalArrayEnum } from "./is-optional-array-enum.decorator";
+import { IsOptionalEnum } from "./is-optional-enum.decorator";
 
 export function IsRequiredEmail() {
     return IsRequiredString({
@@ -63,4 +66,32 @@ export function IsOptionalEmail() {
     return IsOptionalString({
         isEmail: true,
     });
+}
+
+export function IsOptionaSearch() {
+    return IsOptionalString({
+        stringMessage: 'Search query must be a string',
+        minLength: 3,
+        minLengthMessage: 'Search query must be at least 3 characters long',
+    })
+}
+
+export function IsOptionalStatuses() {
+    return IsOptionalArrayEnum({
+        enumType: Status,
+        message: `Status must be one of: ${Object.values(Status).join(', ').toLowerCase()}`,
+        isUppercase: true,
+        minSize: 1,
+        minSizeMessage: 'You must select at least 1 status',
+        maxSize: 5,
+        maxSizeMessage: 'You can select up to 5 statuses'
+    })
+}
+
+export function IsOptionalPaymentMethod() {
+    return IsOptionalEnum({
+        enumType: Method,
+        message: `Payment must be one of: ${Object.values(Method).join(', ').toLowerCase()}`,
+        isUppercase: true
+    })
 }

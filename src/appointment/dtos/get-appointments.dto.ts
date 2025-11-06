@@ -1,14 +1,10 @@
-import { IsOptionalArrayEnum, IsOptionalBoolean, IsOptionalEnum, IsOptionalString } from 'src/common/decorators';
+import { IsOptionalBoolean, IsOptionalPaymentMethod, IsOptionalStatuses, IsOptionaSearch } from 'src/common/decorators';
 import { PaginationDto } from 'src/common/dtos';
 import { Method, Status } from '@prisma/client';
 
 export class GetAppointmentsDto extends PaginationDto {
 
-  @IsOptionalString({
-    stringMessage: 'Search query must be a string',
-    minLength: 3,
-    minLengthMessage: 'Search query must be at least 3 characters long',
-  })
+  @IsOptionaSearch()
   readonly search?: string;
 
   @IsOptionalBoolean({ 
@@ -31,19 +27,9 @@ export class GetAppointmentsDto extends PaginationDto {
   })
   readonly isFuture?: boolean
 
-  @IsOptionalArrayEnum({
-    enumType: Status,
-    message: `Status must be one of: ${Object.values(Status).join(', ').toLowerCase()}`,
-    isUppercase: true,
-    maxSize: 5,
-    maxSizeMessage: 'You can select up to 5 statuses'
-  })
+  @IsOptionalStatuses()
   readonly status?: Status[];
 
-  @IsOptionalEnum({
-    enumType: Method,
-    message: 'Payment method must be cash or online',
-    isUppercase: true
-  })
+  @IsOptionalPaymentMethod()
   readonly paymentMethod?: Method;
 }

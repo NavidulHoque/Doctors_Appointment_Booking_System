@@ -49,7 +49,8 @@ export class AppointmentController {
         @Query() query: GetAppointmentsDto,
         @User() user: UserDto
     ) {
-        return this.appointmentService.getAllAppointments(query, user);
+        return query
+        //return this.appointmentService.getAllAppointments(query, user);
     }
 
     @Get('count')
