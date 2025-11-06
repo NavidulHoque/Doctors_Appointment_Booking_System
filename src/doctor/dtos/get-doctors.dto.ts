@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import { IsOptional } from 'class-validator';
 import { IsOptionalBoolean, IsOptionalString } from 'src/common/decorators';
 import { PaginationDto } from 'src/common/dtos';
+import { IsOptionalSpecialization } from '../decorators';
 
 export class GetDoctorsDto extends PaginationDto {
 
@@ -20,11 +21,7 @@ export class GetDoctorsDto extends PaginationDto {
     @IsOptionalBoolean({ booleanMessage: 'isActive must be a boolean' })
     readonly isActive?: boolean;
 
-    @IsOptionalString({
-        stringMessage: 'Specialization must be a string',
-        minLength: 3,
-        minLengthMessage: 'Specialization must be at least 3 characters long',
-    })
+    @IsOptionalSpecialization()
     readonly specialization?: string;
 
     @IsOptionalString({

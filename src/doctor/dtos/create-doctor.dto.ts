@@ -1,5 +1,6 @@
 import { IsString, IsArray, ArrayNotEmpty } from 'class-validator';
 import { IsRequiredEmail, IsRequiredName, IsRequiredNumber, IsRequiredPassword, IsRequiredString } from 'src/common/decorators';
+import { IsRequiredAboutMe, IsRequiredEducation, IsRequiredExperience, IsRequiredFees, IsRequiredSpecialization } from '../decorators';
 
 export class CreateDoctorDto {
     @IsRequiredName()
@@ -11,44 +12,19 @@ export class CreateDoctorDto {
     @IsRequiredPassword()
     readonly password: string;
 
-    @IsRequiredString({
-        requiredMessage: 'Specialization is required',
-        stringMessage: 'Specialization must be a string',
-        minLength: 3,
-        minLengthMessage: 'Specialization must be at least 3 characters long',
-    })
+    @IsRequiredSpecialization()
     readonly specialization: string;
 
-    @IsRequiredString({
-        requiredMessage: 'Education is required',
-        stringMessage: 'Education must be a string',
-        minLength: 5,
-        minLengthMessage: 'Education must be at least 5 characters long',
-    })
+    @IsRequiredEducation()
     readonly education: string;
 
-    @IsRequiredNumber({
-        requiredMessage: 'Experience is required',
-        numberMessage: 'Experience must be a number',
-        min: 1,
-        minMessage: 'Experience must be at least 1 year',
-    })
+    @IsRequiredExperience()
     readonly experience: number;
 
-    @IsRequiredString({
-        requiredMessage: 'About me is required',
-        stringMessage: 'About me must be a string',
-        minLength: 10,
-        minLengthMessage: 'About me must be at least 10 characters long',
-    })
+    @IsRequiredAboutMe()
     readonly aboutMe: string;
 
-    @IsRequiredNumber({
-        requiredMessage: 'Fees is required',
-        numberMessage: 'Fees must be a number',
-        min: 20,
-        minMessage: 'Fees must be at least 20',
-    })
+    @IsRequiredFees() 
     readonly fees: number;
 
     @IsString({ each: true, message: 'Each available time must be a string' })

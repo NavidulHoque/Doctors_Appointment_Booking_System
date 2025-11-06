@@ -1,13 +1,20 @@
 import { Gender } from '@prisma/client';
 import {
     IsOptionalBoolean,
-    IsOptionalEnum,
-    IsOptionalNumber,
     IsOptionalString,
     IsOptionalEmail,
     IsDateField,
     IsOptionalName
 } from 'src/common/decorators';
+import {
+    IsOptionalAboutMe,
+    IsOptionalEducation,
+    IsOptionalExperience,
+    IsOptionalFees,
+    IsOptionalGender,
+    IsOptionalPhone,
+    IsOptionalSpecialization
+} from '../decorators';
 
 export class UpdateDoctorDto {
     @IsOptionalName()
@@ -16,55 +23,25 @@ export class UpdateDoctorDto {
     @IsOptionalEmail()
     readonly email?: string;
 
-    @IsOptionalString({
-        stringMessage: 'Education must be a string',
-        minLength: 5,
-        minLengthMessage: 'Education must be at least 5 characters long',
-    })
+    @IsOptionalEducation()
     readonly education?: string;
 
-    @IsOptionalString({
-        stringMessage: 'Specialization must be a string',
-        minLength: 3,
-        minLengthMessage: 'Specialization must be at least 3 characters long',
-    })
+    @IsOptionalSpecialization()
     readonly specialization?: string;
 
-    @IsOptionalNumber({
-        numberMessage: 'Experience must be a number',
-        min: 1,
-        minMessage: 'Experience must be at least 1 year',
-    })
+    @IsOptionalExperience()
     readonly experience?: number;
 
-    @IsOptionalString({
-        stringMessage: 'About me must be a string',
-        minLength: 10,
-        minLengthMessage: 'About me must be at least 10 characters long',
-    })
+    @IsOptionalAboutMe()
     readonly aboutMe?: string;
 
-    @IsOptionalNumber({
-        numberMessage: 'Fees must be a number',
-        min: 20,
-        minMessage: 'Fees must be at least 20',
-    })
+    @IsOptionalFees()
     readonly fees?: number;
 
-    @IsOptionalString({
-        stringMessage: 'phone must be a string',
-        matches: {
-            pattern: /^\d{11}$/,
-            message: 'Phone number must be exactly 11 digits',
-        }
-    })
+    @IsOptionalPhone()
     readonly phone?: string;
 
-    @IsOptionalEnum({
-        enumType: Gender,
-        message: 'Gender must be male, female or other',
-        isUppercase: true
-    })
+    @IsOptionalGender()
     readonly gender?: Gender;
 
     @IsDateField({
