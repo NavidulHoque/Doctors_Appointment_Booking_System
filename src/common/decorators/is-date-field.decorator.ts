@@ -7,6 +7,12 @@ import { DateOptions } from '../interfaces';
 /**
  * Custom decorator for validating Date fields with optional comparison logic.
  * Combines @IsOptional, @Type(() => Date), @IsDate, and custom @DateComparison.
+ * @param dateMessage - Custom error message for invalid date format.
+ * @param isOptional - Whether the date field is optional.
+ * @param comparisonType - Type of comparison (e.g., 'future', 'past', 'afterField', 'beforeField').
+ * @param relatedField - The field to compare against.
+ * @param comparisonMessage - Custom error message for comparison validation.
+ * @returns A property decorator that applies the specified validations.
  */
 export function IsDateField({
     dateMessage,

@@ -11,6 +11,7 @@ import { TransformString } from './transform-string.decorator';
  * @param message - Custom validation message if the value is invalid.
  * @param isLowercase - Transform string to lowercase before validation (default: false).
  * @param isUppercase - Transform string to uppercase before validation (default: false).
+ * @returns A property decorator that applies the specified validations.
  */
 export function IsOptionalEnum({
     enumType,

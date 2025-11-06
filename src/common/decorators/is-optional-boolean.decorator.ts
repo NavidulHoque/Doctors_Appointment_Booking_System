@@ -6,6 +6,8 @@ import { IsOptionalBooleanOptions } from '../interfaces';
 /**
  * Decorator that validates an optional boolean field.
  * It transforms string representations of booleans ('true', 'false', '1', '0') to actual boolean values.
+ * @param booleanMessage - Custom error message for invalid boolean values.
+ * @returns A property decorator that applies the specified validations.
  */
 export function IsOptionalBoolean({ booleanMessage }: IsOptionalBooleanOptions) {
     return applyDecorators(
