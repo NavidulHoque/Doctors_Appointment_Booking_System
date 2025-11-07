@@ -26,11 +26,18 @@ export function IsNumberArray({
     maxSizeMessage,
 }) {
     const decorators: PropertyDecorator[] = [
-        TransformNumberArray(),
-        isOptional ? IsOptional() : ArrayNotEmpty({ message: emptyMessage }),
-        IsArray({ message: arrayMessage }),
-        IsNumber({}, { each: true, message: eachNumberMessage })
+        TransformNumberArray()
     ]
+
+    if (isOptional) {
+        decorators.push(IsOptional());
+    }
+
+    decorators.push(
+        ArrayNotEmpty({ message: emptyMessage }),
+        IsArray({ message: arrayMessage }),
+        IsNumber({}, { each: true, message: eachNumberMessage }),
+    );
 
     if (minSize !== undefined) {
         decorators.push(ArrayMinSize(minSize, { message: minSizeMessage }));
