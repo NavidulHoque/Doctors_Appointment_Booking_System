@@ -1,4 +1,5 @@
-import { IsOptionalString, IsDateField, IsRequiredUUID } from "src/common/decorators";
+import { IsOptionalString, IsRequiredUUID } from "src/common/decorators";
+import { IsRequiredFutureDate } from "../decorators";
 
 export class CreateAppointmentDto {
   @IsOptionalString({ 
@@ -12,10 +13,6 @@ export class CreateAppointmentDto {
   })
   readonly doctorId: string;
 
-  @IsDateField({
-    dateMessage: "Date must be a valid date",
-    comparisonType: "future",
-    comparisonMessage: "Date must be in the future",
-  })
+  @IsRequiredFutureDate()
   readonly date: Date;
 }

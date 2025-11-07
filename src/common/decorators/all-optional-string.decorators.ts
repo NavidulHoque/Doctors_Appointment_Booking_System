@@ -18,18 +18,9 @@ export function IsOptionalName() {
     })
 }
 
-export function IsOptionaSearch() {
+export function IsOptionalSearch() {
     return IsOptionalString({
         stringMessage: 'Search query must be a string',
-        minLength: 3,
-        minLengthMessage: 'Search query must be at least 3 characters long',
-    })
-}
-
-export function IsOptionalCancellationReason() {
-    return IsOptionalString({ 
-        stringMessage: 'Cancellation reason must be a string',
-        minLength: 5,
-        minLengthMessage: 'Cancellation reason must be at least 5 characters long', 
+        isLowercase: true
     })
 }

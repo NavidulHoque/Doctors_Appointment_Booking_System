@@ -1,10 +1,11 @@
-import { IsOptionalBoolean, IsOptionalPaymentMethod, IsOptionalStatuses, IsOptionaSearch } from 'src/common/decorators';
+import { IsOptionalBoolean, IsOptionalSearch } from 'src/common/decorators';
 import { PaginationDto } from 'src/common/dtos';
 import { Method, Status } from '@prisma/client';
+import { IsOptionalPaymentMethod, IsOptionalStatuses } from '../decorators';
 
 export class GetAppointmentsDto extends PaginationDto {
 
-  @IsOptionaSearch()
+  @IsOptionalSearch()
   readonly search?: string;
 
   @IsOptionalBoolean({ 

@@ -1,5 +1,5 @@
 import { BaseAuthDto } from "./base-auth.dto";
-import { IsRequiredOTP } from "src/common/decorators";
+import { IsRequiredOTP } from "../decorators";
 
 export class VerifyOtpDto extends BaseAuthDto {
 

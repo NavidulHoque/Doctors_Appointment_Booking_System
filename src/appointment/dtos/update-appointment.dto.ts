@@ -1,5 +1,5 @@
 import { Status } from "@prisma/client";
-import { IsOptionalCancellationReason, IsOptionalStatus } from "src/common/decorators";
+import { IsOptionalCancellationReason, IsOptionalStatus } from "../decorators";
 
 export class UpdateAppointmentDto {
 

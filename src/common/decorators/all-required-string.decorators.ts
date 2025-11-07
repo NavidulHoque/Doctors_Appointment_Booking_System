@@ -1,8 +1,4 @@
-import { Method, Status } from "@prisma/client";
-import { IsOptionalString } from "./is-optional-string.decorator";
 import { IsRequiredString } from "./is-required-string.decorator";
-import { IsOptionalArrayEnum } from "./is-optional-array-enum.decorator";
-import { IsOptionalEnum } from "./is-optional-enum.decorator";
 
 export function IsRequiredEmail() {
     return IsRequiredString({
@@ -48,16 +44,5 @@ export function IsRequiredUUID({
         requiredMessage,
         stringMessage,
         isUUID: true,
-    });
-}
-
-export function IsRequiredOTP() {
-    return IsRequiredString({
-        requiredMessage: 'OTP is required',
-        stringMessage: 'OTP must be a string',
-        matches: {
-            pattern: /^\d{6}$/,
-            message: 'OTP must be a 6-digit number'
-        }
     });
 }

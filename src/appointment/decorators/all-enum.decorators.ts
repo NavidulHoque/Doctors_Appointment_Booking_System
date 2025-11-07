@@ -1,6 +1,5 @@
 import { Method, Status } from "@prisma/client"
-import { IsOptionalArrayEnum } from "./is-optional-array-enum.decorator"
-import { IsOptionalEnum } from "./is-optional-enum.decorator"
+import { IsOptionalArrayEnum, IsOptionalEnum } from "src/common/decorators"
 
 export function IsOptionalStatus() {
     return IsOptionalEnum({ 
