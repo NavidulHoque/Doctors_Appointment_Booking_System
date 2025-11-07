@@ -4,7 +4,8 @@ import {
     IsOptionalString,
     IsOptionalEmail,
     IsDateField,
-    IsOptionalName
+    IsOptionalName,
+    IsOptionalBirthDate
 } from 'src/common/decorators';
 import {
     IsOptionalAboutMe,
@@ -44,10 +45,7 @@ export class UpdateDoctorDto {
     @IsOptionalGender()
     readonly gender?: Gender;
 
-    @IsDateField({
-        dateMessage: 'Birth date must be a valid date',
-        isOptional: true
-    })
+    @IsOptionalBirthDate()
     readonly birthDate?: Date;
 
     @IsOptionalString({

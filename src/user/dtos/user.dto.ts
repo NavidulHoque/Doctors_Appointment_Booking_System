@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Gender, Role } from '@prisma/client';
+import { IsOptionalBirthDate } from 'src/common/decorators';
 
 export class UserDto {
 
@@ -42,10 +43,8 @@ export class UserDto {
     @IsEnum(Gender, { message: 'Gender must be male, female or other' })
     readonly gender?: Gender | null;
 
-    @IsOptional()
-    @Type(() => Date)
-    @IsDate({ message: 'Birth Date must be a valid date' })
-    readonly birthDate?: Date | null;
+    @IsOptionalBirthDate()
+    readonly birthDate?: Date;
 
     @IsOptional()
     @IsString()
