@@ -5,7 +5,8 @@ import {
     IsOptionalEmail,
     IsDateField,
     IsOptionalName,
-    IsOptionalBirthDate
+    IsOptionalBirthDate,
+    IsOptionalPassword
 } from 'src/common/decorators';
 import {
     IsOptionalAboutMe,
@@ -53,22 +54,10 @@ export class UpdateDoctorDto {
     })
     readonly address?: string;
 
-    @IsOptionalString({
-        stringMessage: 'currentPassword must be a string',
-        minLength: 8,
-        minLengthMessage: 'current password must be at least 8 characters long',
-    })
+    @IsOptionalPassword()
     readonly currentPassword?: string;
 
-    @IsOptionalString({
-        stringMessage: 'new password must be a string',
-        minLength: 8,
-        minLengthMessage: 'Password must be at least 8 characters long',
-        matches: {
-            pattern: /^(?=.*\d)(?=.*[\W_]).{8,}$/,
-            message: 'Password must contain at least one number and one special character',
-        }
-    })
+    @IsOptionalPassword()
     readonly newPassword?: string;
 
     @IsOptionalBoolean({

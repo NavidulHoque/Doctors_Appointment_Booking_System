@@ -18,6 +18,18 @@ export function IsOptionalName() {
     })
 }
 
+export function IsOptionalPassword() {
+    return IsOptionalString({
+        stringMessage: 'Password must be a string',
+        minLength: 8,
+        minLengthMessage: 'Password must be at least 8 characters long',
+        matches: {
+            pattern: /^(?=.*\d)(?=.*[\W_]).{8,}$/,
+            message: 'Password must contain at least one number and one special character',
+        }
+    })
+}
+
 export function IsOptionalSearch() {
     return IsOptionalString({
         stringMessage: 'Search query must be a string',
