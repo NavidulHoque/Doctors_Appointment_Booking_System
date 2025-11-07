@@ -8,9 +8,8 @@ export function transformStringValue(value: string, isLowercase = false, isUpper
 }
 
 export function transformStringArray(value: string | string[], isLowercase = false, isUppercase = false) {
-    if (Array.isArray(value)) {
-        return value.map((v) => transformStringValue(v, isLowercase, isUppercase));
-    }
 
-    return [transformStringValue(value, isLowercase, isUppercase)];
+    const arr = Array.isArray(value) ? value : [value];
+
+    return arr.map((v) => transformStringValue(v, isLowercase, isUppercase));
 }
