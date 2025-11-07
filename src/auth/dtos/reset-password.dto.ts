@@ -1,5 +1,5 @@
 import { BaseAuthDto } from "./base-auth.dto";
-import { IsRequiredPassword } from "src/common/decorators";
+import { IsRequiredPassword } from "src/common/decorators/string";
 
 export class ResetPasswordDto extends BaseAuthDto {
 

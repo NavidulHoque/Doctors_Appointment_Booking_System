@@ -1,4 +1,4 @@
-import { IsRequiredEmail } from 'src/common/decorators';
+import { IsRequiredEmail } from "src/common/decorators/string";
 
 export class BaseAuthDto {
 

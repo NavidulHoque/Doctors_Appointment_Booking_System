@@ -1,6 +1,6 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from "class-validator";
+import { StringOptions } from "src/common/types";
 import { TransformString } from "./transform-string.decorator";
-import { StringOptions } from "../types";
 
 /**
  * Creates string validation decorators based on the provided options.

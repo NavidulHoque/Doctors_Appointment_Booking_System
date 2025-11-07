@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import { CacheOptions } from '../interfaces';
-import { CACHE_KEY } from '../constants';
+import { CACHE_KEY } from 'src/common/constants';
+import { CacheOptions } from 'src/common/interfaces';
 
 export const Cache = (options: CacheOptions) => SetMetadata(CACHE_KEY, options);

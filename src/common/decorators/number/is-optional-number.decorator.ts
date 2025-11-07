@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsNumber, IsOptional, Max, Min } from 'class-validator';
-import { IsOptionalNumberOptions } from '../interfaces';
+import { IsOptionalNumberOptions } from 'src/common/interfaces';
 
 /**
  * Decorator that validates an optional number with specified constraints.

@@ -1,5 +1,5 @@
 import { ArrayMaxSize, ArrayMinSize, ArrayNotEmpty, IsArray, IsNumber, IsOptional, IsString } from "class-validator";
-import { NumberArrayOptions, StringArrayOptions } from "../interfaces";
+import { NumberArrayOptions, StringArrayOptions } from "../../interfaces";
 import { TransformNumberArray } from "./transform-number-array.decorator";
 import { TransformStringArray } from "./transform-string-array.decorator";
 

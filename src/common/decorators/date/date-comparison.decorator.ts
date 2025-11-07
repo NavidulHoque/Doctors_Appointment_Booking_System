@@ -5,7 +5,7 @@ import {
     ValidatorConstraintInterface,
     ValidatorConstraint
 } from 'class-validator';
-import { ComparisonType } from '../types';
+import { ComparisonType } from 'src/common/types';
 
 /**
  * Custom validator to compare date fields.

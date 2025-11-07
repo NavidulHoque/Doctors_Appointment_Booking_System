@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsNotEmpty, IsNumber, Max, Min } from 'class-validator';
-import { IsRequiredNumberOptions } from '../interfaces';
+import { IsRequiredNumberOptions } from 'src/common/interfaces';
 
 /**
  * Decorator that validates a required number field with optional min/max constraints.

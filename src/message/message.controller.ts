@@ -6,7 +6,7 @@ import { CreateMessageDto, UpdateMessageDto } from './dtos';
 import { Roles, User } from 'src/auth/decorators';
 import { Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
-import { Cache } from 'src/common/decorators';
+import { Cache } from 'src/common/decorators/cache';
 import { RequestWithTrace } from 'src/common/types';
 import { CacheKeyHelper } from './helpers';
 

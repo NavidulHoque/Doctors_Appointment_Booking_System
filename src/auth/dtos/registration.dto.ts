@@ -1,4 +1,4 @@
-import { IsRequiredEmail, IsRequiredName, IsRequiredPassword } from 'src/common/decorators';
+import { IsRequiredEmail, IsRequiredName, IsRequiredPassword } from 'src/common/decorators/string';
 
 export class RegistrationDto {
     @IsRequiredName()

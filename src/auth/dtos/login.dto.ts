@@ -1,5 +1,5 @@
 import { BaseAuthDto } from './base-auth.dto';
-import { IsOptionalString, IsRequiredPassword } from 'src/common/decorators';
+import { IsOptionalString, IsRequiredPassword } from 'src/common/decorators/string';
 
 export class LoginDto extends BaseAuthDto {
 

@@ -2,7 +2,7 @@ import { applyDecorators } from '@nestjs/common';
 import { IsDate, IsOptional, } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DateComparison } from './date-comparison.decorator';
-import { DateOptions } from '../interfaces';
+import { DateOptions } from '../../interfaces';
 
 /**
  * Custom decorator for validating Date fields with optional comparison logic.

@@ -2,7 +2,7 @@ import { Controller, Get, ParseIntPipe, Query, UseGuards } from '@nestjs/common'
 import { NotificationService } from './notification.service';
 import { AuthGuard, CsrfGuard, RolesGuard } from 'src/auth/guards';
 import { Role } from '@prisma/client';
-import { Cache } from 'src/common/decorators';
+import { Cache } from 'src/common/decorators/cache';
 import { CacheKeyHelper } from './helpers';
 import { Roles, User } from 'src/auth/decorators';
 

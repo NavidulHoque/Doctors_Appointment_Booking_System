@@ -1,4 +1,4 @@
-import { IsRequiredString } from "src/common/decorators";
+import { IsRequiredString } from "src/common/decorators/string";
 
 export function IsRequiredOTP() {
     return IsRequiredString({

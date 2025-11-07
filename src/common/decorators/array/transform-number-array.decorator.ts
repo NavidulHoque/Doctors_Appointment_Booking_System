@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { transformNumberArray } from '../utils';
+import { transformNumberArray } from 'src/common/utils';
 
 /**
  * Transforms array of numbers and convert strings to numbers.

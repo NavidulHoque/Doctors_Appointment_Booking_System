@@ -1,14 +1,14 @@
 import { applyDecorators } from "@nestjs/common";
 import { createStringDecorators } from "./shared-string.decorator";
-import { OptionalStringOptions } from "../types";
+import { RequiredStringOptions } from "src/common/types";
 
 /**
- * Decorator that validates an optional string field with various constraints.
+ * Decorator that validates an required string field with various constraints.
  * Supports transformations to lowercase/uppercase, length constraints, pattern matching etc.
  * 
  * @param options - Configuration options for the string validation.
  * @returns A property decorator that applies the specified validations.
  */
-export function IsOptionalString(options: OptionalStringOptions) {
-  return applyDecorators(...createStringDecorators({ ...options, isOptional: true }));
+export function IsRequiredString(options: RequiredStringOptions) {
+  return applyDecorators(...createStringDecorators(options));
 }

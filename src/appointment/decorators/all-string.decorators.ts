@@ -1,4 +1,4 @@
-import { IsOptionalString } from "src/common/decorators";
+import { IsOptionalString } from "src/common/decorators/string";
 
 export function IsOptionalCancellationReason() {
     return IsOptionalString({ 

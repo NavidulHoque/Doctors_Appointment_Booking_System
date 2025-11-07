@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { transformStringValue } from '../utils';
+import { transformStringValue } from 'src/common/utils';
 
 /**
  * Transforms string by applying lowercase or uppercase rules.

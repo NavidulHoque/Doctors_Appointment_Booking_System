@@ -1,5 +1,5 @@
 import { IsString, IsArray, ArrayNotEmpty } from 'class-validator';
-import { IsRequiredEmail, IsRequiredName, IsRequiredNumber, IsRequiredPassword, IsRequiredString } from 'src/common/decorators';
+import { IsRequiredEmail, IsRequiredName, IsRequiredPassword } from 'src/common/decorators/string';
 import { IsRequiredAboutMe, IsRequiredEducation, IsRequiredExperience, IsRequiredFees, IsRequiredSpecialization } from '../decorators';
 
 export class CreateDoctorDto {

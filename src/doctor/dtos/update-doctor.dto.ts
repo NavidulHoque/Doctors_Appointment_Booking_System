@@ -1,13 +1,10 @@
 import { Gender } from '@prisma/client';
 import {
-    IsOptionalBoolean,
     IsOptionalString,
     IsOptionalEmail,
-    IsDateField,
     IsOptionalName,
-    IsOptionalBirthDate,
     IsOptionalPassword
-} from 'src/common/decorators';
+} from 'src/common/decorators/string';
 import {
     IsOptionalAboutMe,
     IsOptionalEducation,
@@ -17,6 +14,8 @@ import {
     IsOptionalPhone,
     IsOptionalSpecialization
 } from '../decorators';
+import { IsOptionalBirthDate } from 'src/common/decorators/date';
+import { IsOptionalBoolean } from 'src/common/decorators/boolean';
 
 export class UpdateDoctorDto {
     @IsOptionalName()

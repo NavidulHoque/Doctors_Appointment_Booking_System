@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { transformStringArray } from '../utils';
+import { transformStringArray } from 'src/common/utils';
 
 /**
  * Transforms array of strings by trimming and applying lowercase/uppercase rules.

@@ -1,4 +1,4 @@
-import { IsOptionalString, IsRequiredUUID } from "src/common/decorators";
+import { IsOptionalString, IsRequiredUUID } from "src/common/decorators/string";
 import { IsRequiredFutureDate } from "../decorators";
 
 export class CreateAppointmentDto {

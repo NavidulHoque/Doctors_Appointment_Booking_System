@@ -1,4 +1,4 @@
-import { IsRequiredString } from 'src/common/decorators';
+import { IsRequiredString, IsRequiredUUID } from 'src/common/decorators/string';
 
 export class BaseMessageDto {
     @IsRequiredString({
@@ -7,9 +7,9 @@ export class BaseMessageDto {
     })
     readonly content: string;
 
-    @IsRequiredString({
+    @IsRequiredUUID({
         requiredMessage: 'Receiver ID is required',
-        stringMessage: 'Receiver ID must be a string',
+        stringMessage: 'Receiver ID must be a valid string',
     })
     readonly receiverId: string;
 }

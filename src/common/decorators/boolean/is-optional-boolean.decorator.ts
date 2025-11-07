@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
 import { IsOptional, IsBoolean } from 'class-validator';
-import { IsOptionalBooleanOptions } from '../interfaces';
+import { IsOptionalBooleanOptions } from 'src/common/interfaces';
 
 /**
  * Decorator that validates an optional boolean field.

@@ -1,4 +1,4 @@
-import { IsRequiredUUID } from "src/common/decorators";
+import { IsRequiredUUID } from "src/common/decorators/string";
 
 export class LogoutDto {
   @IsRequiredUUID({

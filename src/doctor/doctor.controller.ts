@@ -7,7 +7,7 @@ import { Prisma, Role } from '@prisma/client';
 import { EntityByIdPipe } from 'src/common/pipes';
 import { doctorSelect } from './prisma-selects';
 import { RequestWithTrace } from 'src/common/types';
-import { Cache } from 'src/common/decorators';
+import { Cache } from 'src/common/decorators/cache';
 import { CacheKeyHelper } from './helpers';
 import { UserDto } from 'src/user/dtos';
 import { PrismaService } from 'src/prisma';

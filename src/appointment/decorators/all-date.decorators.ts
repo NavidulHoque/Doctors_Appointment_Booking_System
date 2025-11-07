@@ -1,4 +1,4 @@
-import { IsDateField } from "src/common/decorators";
+import { IsDateField } from "src/common/decorators/date";
 
 export function IsRequiredFutureDate() {
     return IsDateField({

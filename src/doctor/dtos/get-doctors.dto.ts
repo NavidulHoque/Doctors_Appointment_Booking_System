@@ -1,8 +1,9 @@
 import { Transform } from 'class-transformer';
 import { IsOptional } from 'class-validator';
-import { IsOptionalBoolean, IsOptionalSearch } from 'src/common/decorators';
+import { IsOptionalBoolean } from 'src/common/decorators/boolean';
 import { PaginationDto } from 'src/common/dtos';
 import { IsOptionalSpecialization } from '../decorators';
+import { IsOptionalSearch } from 'src/common/decorators/string';
 
 export class GetDoctorsDto extends PaginationDto {
 

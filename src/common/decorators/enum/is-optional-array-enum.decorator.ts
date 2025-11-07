@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { ArrayMaxSize, ArrayMinSize, IsEnum, IsOptional } from 'class-validator';
-import { IsOptionalArrayEnumOptions } from '../interfaces';
-import { TransformStringArray } from './transform-string-array.decorator';
+import { IsOptionalArrayEnumOptions } from 'src/common/interfaces';
+import { TransformStringArray } from '../array';
 
 /**
  * Decorator for optional array enums with string transformation support.

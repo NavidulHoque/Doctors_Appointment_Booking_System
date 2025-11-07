@@ -1,4 +1,4 @@
-import { IsOptionalNumber, IsRequiredNumber } from "src/common/decorators";
+import { IsOptionalNumber, IsRequiredNumber } from "src/common/decorators/number";
 
 export function IsOptionalExperience() {
     return IsOptionalNumber({

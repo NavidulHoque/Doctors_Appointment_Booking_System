@@ -9,7 +9,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Gender, Role } from '@prisma/client';
-import { IsOptionalBirthDate } from 'src/common/decorators';
+import { IsOptionalBirthDate } from 'src/common/decorators/date';
 
 export class UserDto {
 

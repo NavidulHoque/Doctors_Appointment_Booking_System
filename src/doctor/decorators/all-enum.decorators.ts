@@ -1,5 +1,5 @@
 import { Gender } from "@prisma/client";
-import { IsOptionalEnum } from "src/common/decorators";
+import { IsOptionalEnum } from "src/common/decorators/enum";
 
 export function IsOptionalGender() {
     return IsOptionalEnum({

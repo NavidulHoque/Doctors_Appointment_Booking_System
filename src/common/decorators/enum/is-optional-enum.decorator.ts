@@ -1,7 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { IsEnum, IsOptional } from 'class-validator';
-import { IsOptionalEnumOptions } from '../interfaces';
-import { TransformString } from './transform-string.decorator';
+import { IsOptionalEnumOptions } from 'src/common/interfaces';
+import { TransformString } from '../string';
 
 /**
  * Validates that a property is an optional enum value.

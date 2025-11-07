@@ -1,4 +1,4 @@
-import { IsOptionalString, IsRequiredString } from "src/common/decorators";
+import { IsOptionalString, IsRequiredString } from "src/common/decorators/string";
 
 export function IsOptionalEducation() {
     return IsOptionalString({
