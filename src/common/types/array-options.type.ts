@@ -20,9 +20,9 @@ export type StringArrayOptions = BaseArrayOptions & {
 
 export type EnumArrayOptions = BaseArrayOptions & {
   enumType: object;
-  message?: string;
+  enumMessage?: string;
   isLowercase?: boolean;
   isUppercase?: boolean;
 };
 
-export type ArrayOptions = NumberArrayOptions | StringArrayOptions;
+export type ArrayOptions = NumberArrayOptions | StringArrayOptions | EnumArrayOptions;
