@@ -1,6 +1,6 @@
 import { applyDecorators } from "@nestjs/common";
 import { createArrayDecorators } from "./shared-array.decorator";
-import { NumberArrayOptions } from "src/common/interfaces";
+import { NumberArrayOptions } from "src/common/types";
 
 /**
  * Validates and transforms an array of numbers.

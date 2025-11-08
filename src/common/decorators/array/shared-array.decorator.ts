@@ -1,7 +1,7 @@
 import { ArrayMaxSize, ArrayMinSize, ArrayNotEmpty, IsArray, IsNumber, IsOptional, IsString } from "class-validator";
-import { NumberArrayOptions, StringArrayOptions } from "../../interfaces";
 import { TransformNumberArray } from "./transform-number-array.decorator";
 import { TransformStringArray } from "./transform-string-array.decorator";
+import { ArrayOptions, NumberArrayOptions, StringArrayOptions } from "src/common/types";
 
 /**
  * Internal factory to build array validators for both number and string arrays.
@@ -9,8 +9,8 @@ import { TransformStringArray } from "./transform-string-array.decorator";
  */
 export function createArrayDecorators(
     type: 'number' | 'string',
-    options: NumberArrayOptions | StringArrayOptions,
-): PropertyDecorator[] {
+    options: ArrayOptions,
+) {
     const {
         arrayMessage = 'Value must be an array',
         emptyMessage = 'Array cannot be empty',
@@ -26,8 +26,7 @@ export function createArrayDecorators(
     if (type === 'number') {
         decorators.push(TransformNumberArray());
     } else {
-        const { isLowercase = false, isUppercase = false } =
-            options as StringArrayOptions;
+        const { isLowercase = false, isUppercase = false } = options as StringArrayOptions;
         decorators.push(TransformStringArray(isLowercase, isUppercase));
     }
 
