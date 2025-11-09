@@ -15,7 +15,7 @@ import { TransformString } from '../string';
  */
 export function IsOptionalEnum({
     enumType,
-    message,
+    enumMessage,
     isLowercase = false,
     isUppercase = false,
 }: IsOptionalEnumOptions
@@ -23,6 +23,6 @@ export function IsOptionalEnum({
     return applyDecorators(
         TransformString(isLowercase, isUppercase),
         IsOptional(),
-        IsEnum(enumType, { message }),
+        IsEnum(enumType, { message: enumMessage }),
     );
 }

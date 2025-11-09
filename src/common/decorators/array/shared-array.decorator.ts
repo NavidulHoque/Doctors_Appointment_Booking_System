@@ -1,4 +1,4 @@
-import { ArrayMaxSize, ArrayMinSize, ArrayNotEmpty, IsArray, IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, ArrayNotEmpty, IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
 import { TransformNumberArray } from "./transform-number-array.decorator";
 import { TransformStringArray } from "./transform-string-array.decorator";
 import { ArrayOptions, EnumArrayOptions, NumberArrayOptions, StringArrayOptions } from "src/common/types";
@@ -14,7 +14,7 @@ export function createArrayDecorators(
     options: ArrayOptions,
 ) {
     const {
-        emptyMessage = 'Array cannot be empty',
+        emptyMessage,
         isOptional = false,
         minSize,
         minSizeMessage,

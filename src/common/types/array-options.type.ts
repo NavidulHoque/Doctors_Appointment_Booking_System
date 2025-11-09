@@ -1,6 +1,5 @@
 type BaseArrayOptions = {
-  arrayMessage?: string;
-  emptyMessage?: string;
+  emptyMessage: string;
   isOptional?: boolean;
   minSize?: number;
   minSizeMessage?: string;
@@ -8,21 +7,22 @@ type BaseArrayOptions = {
   maxSizeMessage?: string;
 }
 
+type transformationOptions = {
+  isLowercase?: boolean;
+  isUppercase?: boolean;
+}
+
 export type NumberArrayOptions = BaseArrayOptions & {
-  eachNumberMessage?: string;
+  eachNumberMessage: string;
 }
 
-export type StringArrayOptions = BaseArrayOptions & {
-  eachStringMessage?: string;
-  isLowercase?: boolean;
-  isUppercase?: boolean;
+export type StringArrayOptions = BaseArrayOptions & transformationOptions & {
+  eachStringMessage: string;
 }
 
-export type EnumArrayOptions = BaseArrayOptions & {
+export type EnumArrayOptions = BaseArrayOptions & transformationOptions & {
   enumType: object;
-  enumMessage?: string;
-  isLowercase?: boolean;
-  isUppercase?: boolean;
+  enumMessage: string;
 };
 
 export type ArrayOptions = NumberArrayOptions | StringArrayOptions | EnumArrayOptions;

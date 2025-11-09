@@ -1,18 +1,21 @@
 import { Method, Status } from "@prisma/client"
-import { IsOptionalArrayEnum, IsOptionalEnum } from "src/common/decorators/enum"
+import { IsEnumArray } from "src/common/decorators/array"
+import { IsOptionalEnum } from "src/common/decorators/enum"
 
 export function IsOptionalStatus() {
     return IsOptionalEnum({ 
         enumType: Status, 
-        message: `Status must be one of the following values: ${Object.values(Status).join(', ').toLowerCase()}`, 
+        enumMessage: `Status must be one of the following values: ${Object.values(Status).join(', ').toLowerCase()}`, 
         isUppercase: true 
     })
 }
 
 export function IsOptionalStatuses() {
-    return IsOptionalArrayEnum({
+    return IsEnumArray({
+        emptyMessage: 'Status array cannot be empty',
         enumType: Status,
-        message: `Status must be one of: ${Object.values(Status).join(', ').toLowerCase()}`,
+        enumMessage: `Status must be one of: ${Object.values(Status).join(', ').toLowerCase()}`,
+        isOptional: true,
         isUppercase: true,
         minSize: 1,
         minSizeMessage: 'You must select at least 1 status',
@@ -24,7 +27,7 @@ export function IsOptionalStatuses() {
 export function IsOptionalPaymentMethod() {
     return IsOptionalEnum({
         enumType: Method,
-        message: `Payment must be one of: ${Object.values(Method).join(', ').toLowerCase()}`,
+        enumMessage: `Payment must be one of: ${Object.values(Method).join(', ').toLowerCase()}`,
         isUppercase: true
     })
 }

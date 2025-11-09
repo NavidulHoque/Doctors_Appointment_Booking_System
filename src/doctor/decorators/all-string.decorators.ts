@@ -1,3 +1,4 @@
+import { IsStringArray } from "src/common/decorators/array";
 import { IsOptionalString, IsRequiredString } from "src/common/decorators/string";
 
 export function IsOptionalEducation() {
@@ -69,5 +70,12 @@ export function IsRequiredPhone() {
             pattern: /^\d{11}$/,
             message: 'Phone number must be exactly 11 digits',
         }
+    })
+}
+
+export function IsRequiredAvailableTimes() {
+    return IsStringArray({
+        emptyMessage: 'Available times array cannot be empty',
+        eachStringMessage: 'Each available time must be a string',
     })
 }

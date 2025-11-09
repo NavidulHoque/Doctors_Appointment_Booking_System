@@ -1,3 +1,6 @@
-import { EnumOptions } from "./enum-options.interface";
-
-export interface IsOptionalEnumOptions extends EnumOptions {}
+export interface IsOptionalEnumOptions {
+    enumType: object;
+    enumMessage: string;
+    isLowercase?: boolean;
+    isUppercase?: boolean;
+}
