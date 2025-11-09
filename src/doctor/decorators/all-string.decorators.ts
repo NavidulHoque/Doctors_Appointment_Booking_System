@@ -77,5 +77,6 @@ export function IsRequiredAvailableTimes() {
     return IsStringArray({
         emptyMessage: 'Available times array cannot be empty',
         eachStringMessage: 'Each available time must be a string',
+        isLowercase: true
     })
 }

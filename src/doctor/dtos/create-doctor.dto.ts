@@ -1,6 +1,12 @@
-import { IsString, IsArray, ArrayNotEmpty } from 'class-validator';
 import { IsRequiredEmail, IsRequiredName, IsRequiredPassword } from 'src/common/decorators/string';
-import { IsRequiredAboutMe, IsRequiredEducation, IsRequiredExperience, IsRequiredFees, IsRequiredSpecialization } from '../decorators';
+import {
+    IsRequiredAboutMe,
+    IsRequiredAvailableTimes,
+    IsRequiredEducation,
+    IsRequiredExperience,
+    IsRequiredFees,
+    IsRequiredSpecialization
+} from '../decorators';
 
 export class CreateDoctorDto {
     @IsRequiredName()
@@ -24,11 +30,9 @@ export class CreateDoctorDto {
     @IsRequiredAboutMe()
     readonly aboutMe: string;
 
-    @IsRequiredFees() 
+    @IsRequiredFees()
     readonly fees: number;
 
-    @IsString({ each: true, message: 'Each available time must be a string' })
-    @ArrayNotEmpty({ message: 'Available times cannot be empty' })
-    @IsArray({ message: 'Available times must be an array' })
+    @IsRequiredAvailableTimes()
     readonly availableTimes: string[];
 }

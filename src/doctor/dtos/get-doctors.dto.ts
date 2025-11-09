@@ -4,6 +4,7 @@ import { IsOptionalBoolean } from 'src/common/decorators/boolean';
 import { PaginationDto } from 'src/common/dtos';
 import { IsOptionalSpecialization } from '../decorators';
 import { IsOptionalSearch } from 'src/common/decorators/string';
+import { IsNumberArray } from 'src/common/decorators/array';
 
 export class GetDoctorsDto extends PaginationDto {
 
