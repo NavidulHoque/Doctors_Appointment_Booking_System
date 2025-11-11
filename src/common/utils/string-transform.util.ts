@@ -11,5 +11,8 @@ export function transformStringArray(value: string | string[], isLowercase = fal
 
     const arr = Array.isArray(value) ? value : [value];
 
-    return arr.map((v) => transformStringValue(v, isLowercase, isUppercase));
+    return arr.map((v) => {
+        if (typeof v !== 'string') return v;
+        return transformStringValue(v, isLowercase, isUppercase);
+    });
 }

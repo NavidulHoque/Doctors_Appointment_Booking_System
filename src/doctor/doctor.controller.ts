@@ -44,7 +44,8 @@ export class DoctorController {
     getAllDoctors(
         @Query() query: GetDoctorsDto
     ) {
-        return this.doctorService.getAllDoctors(query)
+        return query
+        //return this.doctorService.getAllDoctors(query)
     }
 
     @Get(":id")

@@ -11,6 +11,7 @@ import { PaginationResponseDto } from 'src/common/dtos';
 import { plainToInstance } from 'class-transformer';
 import { HandleErrorsService } from 'src/common/services';
 import { AppConfigService } from 'src/config';
+import { WeekDays } from './enums';
 
 @Injectable()
 export class DoctorService {
@@ -74,7 +75,7 @@ export class DoctorService {
      * GET ALL
      * ---------------------- */
     async getAllDoctors(queryParams: GetDoctorsDto) {
-        const { page, limit, search, specialization, experience, fees, weeks, isActive } = queryParams;
+        const { page, limit, search, specialization, experience, fees, weekDays, isActive } = queryParams;
 
         const query = this.buildDoctorQuery({ specialization, experience, fees, isActive });
 
@@ -87,7 +88,7 @@ export class DoctorService {
             throw new NotFoundException("Doctors not found");
         }
 
-        const filteredDoctors = this.filterDoctors(doctors, { search, weeks });
+        const filteredDoctors = this.filterDoctors(doctors, { search, weekDays });
 
         const sortedDoctors = await this.sortDoctors(filteredDoctors);
 
@@ -342,7 +343,7 @@ export class DoctorService {
         return query;
     }
 
-    private filterDoctors(doctors: any[], { search, weeks }: { search?: string; weeks?: string[] }) {
+    private filterDoctors(doctors: any[], { search, weekDays }: { search?: string; weekDays?: WeekDays[] }) {
         return doctors.filter((doctor) => {
             const specialization = doctor.specialization?.toLowerCase() || "";
             const education = doctor.education?.toLowerCase() || "";
@@ -360,8 +361,8 @@ export class DoctorService {
                 availableTimes.some((time) => time.includes(search))
                 : true;
 
-            const matchedWeeks = weeks
-                ? availableTimes.some((time) => weeks.some((week) => time.includes(week)))
+            const matchedWeeks = weekDays
+                ? availableTimes.some((time) => weekDays.some((day) => time.includes(day)))
                 : true;
 
             return matchedSearch && matchedWeeks;

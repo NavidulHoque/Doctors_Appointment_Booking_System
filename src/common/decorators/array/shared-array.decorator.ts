@@ -55,6 +55,7 @@ export function createArrayDecorators(
 
         case 'string': {
             const { eachStringMessage } = options as StringArrayOptions;
+            console.log(eachStringMessage);
             decorators.push(IsString({ each: true, message: eachStringMessage }));
             break;
         }

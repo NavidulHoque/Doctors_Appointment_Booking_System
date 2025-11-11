@@ -9,7 +9,7 @@ import {
     IsOptionalAboutMe,
     IsOptionalEducation,
     IsOptionalExperience,
-    IsOptionalFees,
+    IsOptionalFee,
     IsOptionalGender,
     IsOptionalPhone,
     IsOptionalSpecialization
@@ -36,7 +36,7 @@ export class UpdateDoctorDto {
     @IsOptionalAboutMe()
     readonly aboutMe?: string;
 
-    @IsOptionalFees()
+    @IsOptionalFee()
     readonly fees?: number;
 
     @IsOptionalPhone()

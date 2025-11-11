@@ -1,24 +1,19 @@
-import { Transform } from 'class-transformer';
-import { IsOptional } from 'class-validator';
 import { IsOptionalBoolean } from 'src/common/decorators/boolean';
 import { PaginationDto } from 'src/common/dtos';
-import { IsOptionalSpecialization } from '../decorators';
+import { IsOptionalExperiences, IsOptionalFees, IsOptionalSpecialization, IsOptionalWeekDays } from '../decorators';
 import { IsOptionalSearch } from 'src/common/decorators/string';
-import { IsNumberArray } from 'src/common/decorators/array';
+import { WeekDays } from '../enums';
 
 export class GetDoctorsDto extends PaginationDto {
 
-    @IsOptional()
-    @Transform(({ value }) => typeof value === 'string' ? [value].map(Number) : value.map(Number))
+    @IsOptionalExperiences()
     readonly experience?: number[];
 
-    @IsOptional()
-    @Transform(({ value }) => typeof value === 'string' ? [value].map(Number) : value.map(Number))
+    @IsOptionalFees() 
     readonly fees?: number[];
 
-    @IsOptional()
-    @Transform(({ value }) => typeof value === 'string' ? [value] : value)
-    readonly weeks?: string[];
+    @IsOptionalWeekDays()
+    readonly weekDays?: WeekDays[];
 
     @IsOptionalBoolean({ booleanMessage: 'isActive must be a boolean' })
     readonly isActive?: boolean;
