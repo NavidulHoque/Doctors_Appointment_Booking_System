@@ -7,29 +7,27 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Role, Gender } from 'src/common/enums';
+import { Role, Gender, Global } from 'src/common/enums';
 import { Doctor } from 'src/doctor'; 
 import { Message } from 'src/message';
 import { Appointment } from 'src/appointment';
 import { Review } from 'src/review';
 import { Notification } from 'src/notification';
 import { Payment } from 'src/payment';
+import { UuidBaseEntity } from 'src/common/entities';
 
-@Entity()
-export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column()
+@Entity({ name: Global.USERS, schema: Global.SCHEMA })
+export class User extends UuidBaseEntity {
+  @Column({ type: 'varchar', name: 'full_name' })
   fullName: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', name: 'email', unique: true })
   email: string;
 
   @Column({ type: 'enum', enum: Role, default: Role.PATIENT })
   role: Role;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', name: 'phone', nullable: true })
   phone: string;
 
   @Column({ type: 'enum', enum: Gender, nullable: true })
@@ -38,28 +36,28 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   birthDate: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', name: 'address', nullable: true })
   address: string;
 
-  @Column()
+  @Column({ type: 'varchar', name: 'password' })
   password: string;
 
-  @Column({ default: '' })
+  @Column({ type: 'varchar', name: 'avatar_image', nullable: true })
   avatarImage: string;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', name: 'is_online', default: false })
   isOnline: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', name: 'last_active_at', nullable: true })
   lastActiveAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', name: 'otp', nullable: true })
   otp: string;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', name: 'otp_expires', nullable: true })
   otpExpires: Date;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', name: 'is_otp_verified', default: false })
   isOtpVerified: boolean;
 
   @OneToOne(() => Doctor, doctor => doctor.user)
@@ -88,10 +86,4 @@ export class User {
 
   @OneToMany(() => Payment, payment => payment.user)
   onlinePayments: Payment[];
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }
