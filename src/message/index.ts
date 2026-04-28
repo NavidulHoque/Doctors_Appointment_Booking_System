@@ -1,6 +1,0 @@
-export * from './message.service'
-export * from './message.module'
-export * from './message.controller'
-export * from './message.consumer'
-export * from './message.producer.service'
-export * from './message.entity'

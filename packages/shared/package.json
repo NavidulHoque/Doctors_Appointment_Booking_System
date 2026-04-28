@@ -1,0 +1,16 @@
+{
+	"name": "@dab/shared",
+	"version": "0.0.1",
+	"private": true,
+	"main": "./dist/index.js",
+	"types": "./src/index.ts",
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src",
+		"typecheck": "tsc --noEmit",
+		"clean": "bunx rimraf node_modules .turbo dist *.tsbuildinfo"
+	},
+	"devDependencies": {
+		"typescript": "5.9.3"
+	}
+}

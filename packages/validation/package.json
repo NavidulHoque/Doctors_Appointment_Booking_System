@@ -1,0 +1,20 @@
+{
+	"name": "@dab/validation",
+	"version": "0.0.1",
+	"private": true,
+	"main": "./dist/index.js",
+	"types": "./src/index.ts",
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src",
+		"typecheck": "tsc --noEmit",
+		"clean": "bunx rimraf node_modules .turbo dist *.tsbuildinfo"
+	},
+	"dependencies": {
+		"@dab/shared": "workspace:*",
+		"zod": "3.25.76"
+	},
+	"devDependencies": {
+		"typescript": "5.9.3"
+	}
+}

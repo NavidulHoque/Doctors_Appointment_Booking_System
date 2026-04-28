@@ -1,64 +1,103 @@
-# 🩺 Doctor Appointment Management System
+# Doctor Appointment Booking System
 
-A full-featured backend system for managing doctor appointments, payments and real-time messaging — built with **NestJS**, **Prisma**, and **PostgreSQL**.
+A full-featured backend for managing doctor appointments, payments, and real-time messaging — built as a **Bun + Turborepo monorepo** with NestJS, Supabase, and TypeORM.
 
-## ⚙️ Features
+## Tech Stack
 
-- **💬 Real-Time Chat & Notifications**<br>
-Built a high-performance **WebSocket** gateway powered by **Redis** and **BullMQ**, supporting 1,000+ concurrent users for real-time messaging between Doctors, Patients, Admins and notifications.
-- **📡 Event-Driven Architecture with Kafka**<br>
-Implemented **Apache Kafka** for asynchronous and scalable data processing, efficiently handling 10,000+ daily messaging.
-- **🧾 Automated Workflows**<br>
-Utilized **BullMQ** and **Cron Jobs** for automated appointment updates, background processing, user activity tracking and cleanup of expired sessions — reducing manual effort by 30%.
-- **💳 Multi-Vendor Payments via Stripe Connect**<br>
-Integrated **Stripe Express Connect** for secure transactions and instant payouts to 50+ doctors, ensuring seamless payment flow.
-- **⚡ Performance Optimization**<br>
-Leveraged **Redis caching** and **rate limiting** to reduce API response times by 60%, improving scalability and user experience.
-- **📢 Engagement & Alerts**<br>
-Enhanced user engagement by adding email/SMS notifications, increasing response rates by 25%.
-- **🖼️ Secure File Uploads**<br>
-Implemented avatar uploads with **Multer** and **Cloudinary**, ensuring secure media storage.
-- **🔐 Access Control & Validation**<br>
-Role-based access system for Doctor, Patient, and Admin with robust validation using **NestJS Guards**.
-- **🤖 AI-Powered Assistance**<br>
-Integrated **OpenAI** (via MCP server) to enable AI-driven chat assistance, smart appointment recommendations, and automated responses.
-- **🐳 Containerization & Deployment**<br>
-Containerized the entire application with **Docker**, ensuring consistent environments for **Redis**, **PostgreSQL**, and **Kafka** services.
+| Concern | Technology |
+|---|---|
+| Runtime | Bun |
+| Framework | NestJS v11 + Fastify |
+| Monorepo | Turborepo |
+| Auth | Supabase Auth (JWT / Bearer tokens) |
+| Database | PostgreSQL + TypeORM (`synchronize: false`) |
+| Realtime | Supabase Realtime broadcast channels |
+| File Storage | Supabase Storage (signed URLs) |
+| Payments | Stripe Express Connect |
+| Email | Nodemailer (appointment reminders + admin alerts) |
+| Rate Limiting | `@nestjs/throttler` (in-memory) |
+| Scheduling | `@nestjs/schedule` cron decorators |
+| Validation | Zod (env) + class-validator (DTOs) |
+| API Docs | Swagger (`/docs`) |
 
-## 🛠️ Tech Stack
+## Monorepo Structure
 
-- **Backend:** NestJS, TypeScript
-- **Database:** Prisma ORM, PostgreSQL
-- **Queue & Caching:** Redis, BullMQ
-- **Event Streaming:** Apache Kafka
-- **Real-Time Communication:** WebSocket (Gateway)
-- **Payments:** Stripe Express Connect
-- **File Uploads:** Multer + Cloudinary
-- **Containerization:** Docker
-- **Scheduling:** Cron Jobs
-- **AI Integration:** OpenAI
-- **Authentication:** JWT (JSON Web Token)
-
-## 🐳 Dockerized Setup
-
-This project uses Docker to spin up **PostgreSQL**, **Redis**, **Kafka** containers for local development.
-
-### 📦 Run Redis + PostgreSQL + Kafka with Docker
-
-```bash
-docker-compose up
+```
+.
+├── apps/
+│   └── backend/          # NestJS + Fastify application
+│       └── src/
+│           └── modules/  # appointment, auth, doctor, user, payment,
+│                         # message, notification, review, uploads,
+│                         # realtime, webhook, cron, email, supabase
+├── packages/
+│   ├── shared/           # Enums and error codes
+│   ├── supabase/         # Admin + anon Supabase client factories
+│   ├── database/         # TypeORM entities
+│   └── validation/       # Zod env schema
+├── turbo.json
+├── bunfig.toml
+└── package.json
 ```
 
-Make sure your .env file matches the credentials and ports defined in your docker-compose.yml.
+## Features
 
-## 🚀 How to Run Locally
+- **Auth** — Supabase-managed registration, login (patient / doctor / admin), OTP-based password reset, and token refresh via Bearer tokens
+- **Real-time messaging & notifications** — Supabase Realtime broadcast channels (replaces Socket.io + Kafka)
+- **Appointments** — Full CRUD with role-based access, status management, and admin statistics
+- **Payments** — Stripe Express Connect checkout sessions with per-doctor payouts; payment history filterable by status
+- **File uploads** — Two-step signed URL flow via Supabase Storage (replaces Cloudinary + Multer)
+- **Email** — Appointment reminders and admin alert emails via Nodemailer; auth emails handled by Supabase
+- **Scheduled tasks** — Inactive user cleanup and expired session removal via cron decorators
+- **Rate limiting** — In-memory throttling on all routes
+- **Role-based access** — Doctor, Patient, and Admin guards on every protected route
+
+## Environment Variables
+
+Create a `.env` file in the root (or in `apps/backend/`):
+
+```env
+# App
+NODE_ENV=development
+PORT=3000
+
+# Supabase
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+
+# Database
+DATABASE_URL=
+
+# Stripe
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Email (SMTP)
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+
+# App config
+ADMIN_EMAIL=
+ADMIN_ID=
+OTP_EXPIRY_MINUTES=10
+FRONTEND_URL=
+CORS_ORIGIN=
+```
+
+## Running Locally
 
 ```bash
 git clone https://github.com/NavidulHoque/Doctors_Appointment_Booking_System.git
 cd Doctors_Appointment_Booking_System
-docker-compose up
-npm install
-npm run start:dev
+
+bun install
+bun run dev:backend
 ```
 
-⚠️ You'll need .env variables for DB, Redis, Stripe, Cloudinary, etc — not included here for security.
+No Docker required — Supabase provides Auth, Realtime, Storage, and the managed Postgres database.
+
+Swagger docs are available at `http://localhost:3000/docs` once the server is running.

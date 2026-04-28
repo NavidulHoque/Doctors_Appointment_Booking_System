@@ -1,0 +1,29 @@
+{
+	"name": "@dab/database",
+	"version": "0.0.1",
+	"private": true,
+	"main": "./dist/index.js",
+	"types": "./src/index.ts",
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src",
+		"typecheck": "tsc --noEmit",
+		"clean": "bunx rimraf node_modules .turbo dist *.tsbuildinfo",
+		"db:generate": "bun run scripts/db-generate.ts",
+		"db:migrate": "bun run scripts/db-migrate.ts",
+		"db:revert": "bun run scripts/db-revert.ts",
+		"db:status": "bun run scripts/db-status.ts",
+		"db:inspect": "bun run scripts/db-inspect.ts"
+	},
+	"dependencies": {
+		"@dab/shared": "workspace:*",
+		"cli-table3": "0.6.5",
+		"typeorm": "0.3.27",
+		"reflect-metadata": "0.2.2",
+		"pg": "8.16.0"
+	},
+	"devDependencies": {
+		"@types/node": "25.5.0",
+		"typescript": "5.9.3"
+	}
+}

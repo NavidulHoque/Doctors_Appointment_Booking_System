@@ -1,0 +1,70 @@
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+	ApiBearerAuth,
+	ApiCreatedResponse,
+	ApiForbiddenResponse,
+	ApiNotFoundResponse,
+	ApiOkResponse,
+	ApiOperation,
+	ApiParam,
+	ApiTags,
+	ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { AppointmentService } from '@backend/modules/appointment/appointment.service';
+import { CreateAppointmentDto } from '@backend/modules/appointment/dtos/create-appointment.dto';
+import { UpdateAppointmentDto } from '@backend/modules/appointment/dtos/update-appointment.dto';
+import { GetAppointmentsDto } from '@backend/modules/appointment/dtos/query-appointment.dto';
+import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import type { User } from '@dab/database';
+
+@ApiTags('appointments')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Invalid or missing token' })
+@Controller('appointments')
+export class AppointmentController {
+	constructor(private readonly appointmentService: AppointmentService) {}
+
+	@Post()
+	@ApiOperation({ summary: 'Create a new appointment' })
+	@ApiCreatedResponse({ description: 'Appointment created successfully' })
+	@ApiForbiddenResponse({ description: 'Only patients can create appointments' })
+	createAppointment(@Body() dto: CreateAppointmentDto) {
+		return this.appointmentService.createAppointment(dto);
+	}
+
+	@Get()
+	@ApiOperation({ summary: 'Get all appointments (results scoped by role)' })
+	@ApiOkResponse({ description: 'Paginated list of appointments' })
+	getAllAppointments(@Query() query: GetAppointmentsDto, @CurrentUser() user: User) {
+		return this.appointmentService.getAllAppointments(query, user);
+	}
+
+	@Get('counts')
+	@ApiOperation({ summary: 'Get appointment status counts (scoped by role)' })
+	@ApiOkResponse({ description: 'Counts by status returned' })
+	getAllAppointmentCount(@CurrentUser() user: User) {
+		return this.appointmentService.getAllAppointmentCount(user);
+	}
+
+	@Get('graph')
+	@ApiOperation({ summary: 'Get monthly appointment graph data' })
+	@ApiOkResponse({ description: 'Monthly appointment totals returned' })
+	getGraph(@CurrentUser() user: User) {
+		return this.appointmentService.getTotalAppointmentsGraph(user);
+	}
+
+	@Patch(':id')
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({ summary: 'Update appointment status or cancellation reason' })
+	@ApiParam({ name: 'id', description: 'Appointment UUID' })
+	@ApiOkResponse({ description: 'Appointment updated successfully' })
+	@ApiNotFoundResponse({ description: 'Appointment not found' })
+	@ApiForbiddenResponse({ description: 'Not authorised to update this appointment' })
+	updateAppointment(
+		@Param('id') id: string,
+		@Body() dto: UpdateAppointmentDto,
+		@CurrentUser() user: User,
+	) {
+		return this.appointmentService.updateAppointment(dto, id, user);
+	}
+}

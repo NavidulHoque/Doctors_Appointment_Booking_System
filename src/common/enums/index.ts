@@ -1,6 +1,0 @@
-export * from './gender.enum'
-export * from './payment-method.enum'
-export * from './payment-status.enum'
-export * from './role.enum'
-export * from './status.enum'
-export * from './global.enum'
