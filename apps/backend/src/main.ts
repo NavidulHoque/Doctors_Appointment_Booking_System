@@ -40,7 +40,7 @@ async function bootstrap() {
 
     // Register Scalar UI at /docs  ← this replaces SwaggerModule.setup()
     await fastify.register(fastifyScalar, {
-        routePrefix: '/docs',
+        routePrefix: '/api/docs',
         configuration: {
             sources: [{ spec: { url: '/spec.json' } }],
             theme: 'default',
