@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Review } from '@dab/database';
-import { ReviewService } from '@backend/modules/review/review.service';
+import { ReviewService } from '@dab/backend/modules/review/review.service';
 
 const mockRepo = () => ({ create: jest.fn(), save: jest.fn() });
 

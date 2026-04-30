@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { ErrorHandlerService } from '@backend/common/services/error-handler.service';
+import { ErrorHandlerService } from '@dab/backend/common/services/error-handler.service';
 
 describe('ErrorHandlerService', () => {
 	let service: ErrorHandlerService;

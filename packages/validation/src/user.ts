@@ -1,12 +1,11 @@
 import { z } from 'zod';
-import { genderSchema } from './enums';
 
-export const UpdateUserSchema = z.object({
-	fullName: z.string().optional(),
-	phone: z.string().optional(),
-	gender: genderSchema.optional(),
-	birthDate: z.string().date().optional(),
-	address: z.string().optional(),
+export const changePasswordSchema = z.object({
+	currentPassword: z.string().min(1),
+	newPassword: z.string().min(8),
 });
 
-export type TUpdateUser = z.infer<typeof UpdateUserSchema>;
+export const updateUserSchema = z.object({
+	fullName: z.string().min(1).max(255),
+});
+

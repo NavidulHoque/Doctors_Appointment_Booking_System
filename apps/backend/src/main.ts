@@ -7,9 +7,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ZodValidationPipe, patchNestJsSwagger } from 'nestjs-zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-import { AppModule }  from '@backend/app.module';
-import { EnvService } from '@backend/modules/config/env.service';
-import { buildFastifyAdapter } from '@backend/modules/config/fastify.adapter';
+import { AppModule }  from '@dab/backend/app.module';
+import { EnvService } from '@dab/backend/modules/config/env.service';
+import { buildFastifyAdapter } from '@dab/backend/modules/config/fastify.adapter';
 
 async function bootstrap() {
     patchNestJsSwagger();

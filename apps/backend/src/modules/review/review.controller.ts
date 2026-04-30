@@ -8,10 +8,10 @@ import {
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ReviewService } from '@backend/modules/review/review.service';
-import { CreateReviewDto } from '@backend/modules/review/dtos/review.dto';
-import { Roles } from '@backend/common/decorators/roles.decorator';
-import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import { ReviewService } from '@dab/backend/modules/review/review.service';
+import { CreateReviewDto } from '@dab/backend/modules/review/dtos/review.dto';
+import { Roles } from '@dab/backend/common/decorators/roles.decorator';
+import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import { Role } from '@dab/shared';
 import type { User } from '@dab/database';
 

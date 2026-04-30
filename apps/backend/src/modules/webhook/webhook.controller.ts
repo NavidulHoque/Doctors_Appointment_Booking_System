@@ -6,8 +6,8 @@ import {
 	ApiTags,
 } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
-import { WebhookService } from '@backend/modules/webhook/webhook.service';
-import { Public } from '@backend/common/decorators/public.decorator';
+import { WebhookService } from '@dab/backend/modules/webhook/webhook.service';
+import { Public } from '@dab/backend/common/decorators/public.decorator';
 
 @ApiTags('webhooks')
 @Controller('webhooks')

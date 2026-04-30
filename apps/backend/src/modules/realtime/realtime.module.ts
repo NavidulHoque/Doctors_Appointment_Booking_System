@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { RealtimeService } from '@backend/modules/realtime/realtime.service';
+import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
 
 @Module({
 	providers: [RealtimeService],

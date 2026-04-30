@@ -3,27 +3,27 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 
-import { AppConfigModule } from '@backend/modules/config/config.module';
-import { DatabaseModule } from '@backend/modules/database/database.module';
-import { SupabaseModule } from '@backend/modules/supabase/supabase.module';
-import { RealtimeModule } from '@backend/modules/realtime/realtime.module';
-import { EmailModule } from '@backend/modules/email/email.module';
+import { AppConfigModule } from '@dab/backend/modules/config/config.module';
+import { DatabaseModule } from '@dab/backend/modules/database/database.module';
+import { SupabaseModule } from '@dab/backend/modules/supabase/supabase.module';
+import { RealtimeModule } from '@dab/backend/modules/realtime/realtime.module';
+import { EmailModule } from '@dab/backend/modules/email/email.module';
 
-import { AuthModule } from '@backend/modules/auth/auth.module';
-import { UserModule } from '@backend/modules/user/user.module';
-import { DoctorModule } from '@backend/modules/doctor/doctor.module';
-import { AppointmentModule } from '@backend/modules/appointment/appointment.module';
-import { PaymentModule } from '@backend/modules/payment/payment.module';
-import { WebhookModule } from '@backend/modules/webhook/webhook.module';
-import { ReviewModule } from '@backend/modules/review/review.module';
-import { MessageModule } from '@backend/modules/message/message.module';
-import { NotificationModule } from '@backend/modules/notification/notification.module';
-import { UploadsModule } from '@backend/modules/uploads/uploads.module';
-import { CronModule } from '@backend/modules/cron/cron.module';
+import { AuthModule } from '@dab/backend/modules/auth/auth.module';
+import { UserModule } from '@dab/backend/modules/user/user.module';
+import { DoctorModule } from '@dab/backend/modules/doctor/doctor.module';
+import { AppointmentModule } from '@dab/backend/modules/appointment/appointment.module';
+import { PaymentModule } from '@dab/backend/modules/payment/payment.module';
+import { WebhookModule } from '@dab/backend/modules/webhook/webhook.module';
+import { ReviewModule } from '@dab/backend/modules/review/review.module';
+import { MessageModule } from '@dab/backend/modules/message/message.module';
+import { NotificationModule } from '@dab/backend/modules/notification/notification.module';
+import { UploadsModule } from '@dab/backend/modules/uploads/uploads.module';
+import { CronModule } from '@dab/backend/modules/cron/cron.module';
 
-import { GlobalExceptionFilter } from '@backend/common/filters/global-exception.filter';
-import { AuthGuard } from '@backend/common/guards/auth.guard';
-import { RolesGuard } from '@backend/common/guards/roles.guard';
+import { GlobalExceptionFilter } from '@dab/backend/common/filters/global-exception.filter';
+import { AuthGuard } from '@dab/backend/common/guards/auth.guard';
+import { RolesGuard } from '@dab/backend/common/guards/roles.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '@dab/database';
 

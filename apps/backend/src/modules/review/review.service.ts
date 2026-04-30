@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from '@dab/database';
-import type { CreateReviewDto } from '@backend/modules/review/dtos/review.dto';
+import type { CreateReviewDto } from '@dab/backend/modules/review/dtos/review.dto';
 
 @Injectable()
 export class ReviewService {

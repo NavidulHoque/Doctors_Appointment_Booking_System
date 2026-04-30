@@ -9,7 +9,7 @@ const config: Config = {
 	coverageDirectory: '../coverage',
 	testEnvironment: 'node',
 	moduleNameMapper: {
-		'^@backend/(.*)$': '<rootDir>/$1',
+		'^@dab/backend/(.*)$': '<rootDir>/$1',
 		'^@dab/database$': '<rootDir>/../../../packages/database/src',
 		'^@dab/shared$': '<rootDir>/../../../packages/shared/src',
 		'^@dab/supabase$': '<rootDir>/../../../packages/supabase/src',

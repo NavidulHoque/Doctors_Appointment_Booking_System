@@ -2,8 +2,8 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Message } from '@dab/database';
-import { MessageService } from '@backend/modules/message/message.service';
-import { RealtimeService } from '@backend/modules/realtime/realtime.service';
+import { MessageService } from '@dab/backend/modules/message/message.service';
+import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
 
 const mockRepo = () => ({
 	create: jest.fn(),

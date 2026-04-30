@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { StripeService } from '@backend/modules/payment/stripe.service';
-import { EnvService } from '@backend/modules/config/env.service';
+import { StripeService } from '@dab/backend/modules/payment/stripe.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
 
 const mockEnv = () => ({ stripe: { secretKey: 'sk_test_mock' } });
 

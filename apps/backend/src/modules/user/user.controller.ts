@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch } from '@nestjs/common';
 import {
 	ApiBearerAuth,
+	ApiBody,
+	ApiInternalServerErrorResponse,
 	ApiNotFoundResponse,
 	ApiOkResponse,
 	ApiOperation,
@@ -8,23 +10,25 @@ import {
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { UserService } from '@backend/modules/user/user.service';
-import { UpdateUserDto } from '@backend/modules/user/dtos/update-user.dto';
-import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import { UserService } from '@dab/backend/modules/user/user.service';
+import { UpdateUserDto } from '@dab/backend/modules/user/dtos/update-user.dto';
+import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import type { User } from '@dab/database';
+import { ChangePasswordDto } from './dtos/change-password.dto';
+import { MessageResponseDto } from '@dab/backend/common/dtos/response/message-response.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Invalid or missing token' })
 @Controller('users')
 export class UserController {
-	constructor(private readonly userService: UserService) {}
+	constructor(private readonly userService: UserService) { }
 
 	@Get('me')
 	@ApiOperation({ summary: 'Get current user profile' })
 	@ApiOkResponse({ description: 'Current user profile returned' })
 	getMe(@CurrentUser() user: User) {
-		return this.userService.getUser(user);
+		return this.userService.me(user.id);
 	}
 
 	@Patch('me')
@@ -32,7 +36,7 @@ export class UserController {
 	@ApiOperation({ summary: 'Update current user profile' })
 	@ApiOkResponse({ description: 'Profile updated successfully' })
 	updateMe(@Body() dto: UpdateUserDto, @CurrentUser() user: User) {
-		return this.userService.updateUser(dto, user.id);
+		return this.userService.updateMe(user.id, dto);
 	}
 
 	@Patch('activity/:id')
@@ -49,7 +53,25 @@ export class UserController {
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: 'Delete current user account' })
 	@ApiOkResponse({ description: 'Account deleted successfully' })
+	@ApiInternalServerErrorResponse({ description: 'Failed to delete account' })
 	deleteMe(@CurrentUser() user: User) {
-		return this.userService.deleteUser(user);
+		return this.userService.deleteAccount(user.id);
+	}
+
+	@Patch('change-password')
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({ summary: 'Change user password' })
+	@ApiBody({ type: ChangePasswordDto })
+	@ApiOkResponse({
+		description: 'Password changed successfully',
+		type: MessageResponseDto
+	})
+	@ApiUnauthorizedResponse({ description: 'Current password is incorrect' })
+	@ApiInternalServerErrorResponse({ description: 'Failed to change password' })
+	changePassword(
+		@CurrentUser() user: User,
+		@Body() dto: ChangePasswordDto,
+	) {
+		return this.userService.changePassword(user.id, dto);
 	}
 }

@@ -9,8 +9,8 @@ import {
 } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import { RequestAvatarUploadSchema, ConfirmAvatarUploadSchema } from '@dab/validation';
-import { UploadsService } from '@backend/modules/uploads/uploads.service';
-import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import { UploadsService } from '@dab/backend/modules/uploads/uploads.service';
+import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import type { User } from '@dab/database';
 
 class RequestAvatarUploadDto extends createZodDto(RequestAvatarUploadSchema) {}

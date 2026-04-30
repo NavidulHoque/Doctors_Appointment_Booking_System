@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '@dab/database';
-import { SupabaseService } from '@backend/modules/supabase/supabase.service';
+import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
 
 const ALLOWED_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 const AVATAR_BUCKET = 'avatars';

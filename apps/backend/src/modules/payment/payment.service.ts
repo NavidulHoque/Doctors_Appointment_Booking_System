@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment, Appointment, Doctor } from '@dab/database';
 import { PaymentStatus, type PaymentStatusType } from '@dab/shared';
-import { EnvService } from '@backend/modules/config/env.service';
-import { StripeService } from '@backend/modules/payment/stripe.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
+import { StripeService } from '@dab/backend/modules/payment/stripe.service';
 import type { User } from '@dab/database';
 
 @Injectable()

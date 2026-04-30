@@ -6,9 +6,9 @@ import {
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { NotificationService } from '@backend/modules/notification/notification.service';
-import { GetNotificationsDto } from '@backend/modules/notification/dtos/query-notification.dto';
-import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import { NotificationService } from '@dab/backend/modules/notification/notification.service';
+import { GetNotificationsDto } from '@dab/backend/modules/notification/dtos/query-notification.dto';
+import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import type { User } from '@dab/database';
 
 @ApiTags('notifications')

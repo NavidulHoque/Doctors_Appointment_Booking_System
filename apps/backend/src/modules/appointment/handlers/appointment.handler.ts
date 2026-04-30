@@ -4,8 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Appointment } from '@dab/database';
 import { AppointmentStatus, PaymentMethod, Role } from '@dab/shared';
-import { NotificationService } from '@backend/modules/notification/notification.service';
-import type { UpdateAppointmentDto } from '@backend/modules/appointment/dtos/update-appointment.dto';
+import { NotificationService } from '@dab/backend/modules/notification/notification.service';
+import type { UpdateAppointmentDto } from '@dab/backend/modules/appointment/dtos/update-appointment.dto';
 
 @Injectable()
 export class AppointmentHandler {

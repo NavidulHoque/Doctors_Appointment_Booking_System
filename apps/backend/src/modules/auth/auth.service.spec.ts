@@ -1,173 +1,281 @@
-import { BadRequestException, ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
+import {
+	ConflictException,
+	ForbiddenException,
+	InternalServerErrorException,
+	UnauthorizedException,
+} from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { User, Session } from '@dab/database';
-import { AuthService } from '@backend/modules/auth/auth.service';
-import { SupabaseService } from '@backend/modules/supabase/supabase.service';
+import { DataSource } from 'typeorm';
 
-jest.mock('argon2', () => ({
-	hash: jest.fn().mockResolvedValue('hashed'),
-	verify: jest.fn().mockResolvedValue(true),
+import { AuthService } from '@dab/backend/modules/auth/auth.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
+import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
+import { User } from '@dab/database';
+
+// ---------------------------------------------------------------------------
+// Supabase anon client mock
+// ---------------------------------------------------------------------------
+
+const mockSignInWithPassword = jest.fn();
+const mockRefreshSession = jest.fn();
+const mockResetPasswordForEmail = jest.fn();
+const mockResend = jest.fn();
+const mockSetSession = jest.fn();
+
+jest.mock('@dab/supabase', () => ({
+	createAnonClient: jest.fn(() => ({
+		auth: {
+			signInWithPassword: mockSignInWithPassword,
+			refreshSession: mockRefreshSession,
+			resetPasswordForEmail: mockResetPasswordForEmail,
+			resend: mockResend,
+			setSession: mockSetSession,
+		},
+	})),
 }));
 
-const mockUserRepo = () => ({
-	findOne: jest.fn(),
-	create: jest.fn(),
-	save: jest.fn(),
-	update: jest.fn(),
-	delete: jest.fn(),
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const makeSession = (overrides = {}) => ({
+	access_token: 'access_token',
+	refresh_token: 'refresh_token',
+	expires_in: 3600,
+	expires_at: 9999999999,
+	...overrides,
 });
 
-const mockSessionRepo = () => ({
-	create: jest.fn(),
-	save: jest.fn(),
-	update: jest.fn(),
-	delete: jest.fn(),
+const makeUser = (overrides = {}) => ({
+	id: 'u1',
+	email: 'alice@test.com',
+	email_confirmed_at: '2024-01-01T00:00:00Z',
+	user_metadata: {
+		fullName: 'Alice',
+		full_name: 'Alice',
+	},
+	...overrides,
 });
 
-const mockSupabase = () => ({
+// ---------------------------------------------------------------------------
+// Mock providers (NO TYPES, NO CASTING)
+// ---------------------------------------------------------------------------
+
+const mockEnvService = {
+	supabaseUrl: 'https://test.supabase.co',
+	supabasePublishableKey: 'anon-key',
+};
+
+const mockAdminAuth = {
+	createUser: jest.fn(),
+	deleteUser: jest.fn(),
+	updateUserById: jest.fn(),
+	signOut: jest.fn(),
+};
+
+// IMPORTANT: only include what service uses
+const mockSupabaseService = {
 	admin: {
 		auth: {
-			admin: {
-				createUser: jest.fn().mockResolvedValue({ error: null }),
-				updateUserById: jest.fn().mockResolvedValue({ error: null }),
-			},
+			admin: mockAdminAuth,
 		},
 	},
-	anon: {
-		auth: {
-			signInWithPassword: jest.fn(),
-			resetPasswordForEmail: jest.fn(),
-			verifyOtp: jest.fn(),
-			refreshSession: jest.fn(),
-		},
-	},
-});
+};
 
-const baseUser = { id: 'u1', email: 'alice@test.com', fullName: 'Alice', role: 'PATIENT', password: 'hashed', isOtpVerified: false } as User;
+const mockUserRepository = {
+	findOne: jest.fn(),
+	insert: jest.fn(),
+};
+
+const mockQueryBuilder = {
+	select: jest.fn().mockReturnThis(),
+	from: jest.fn().mockReturnThis(),
+	where: jest.fn().mockReturnThis(),
+	limit: jest.fn().mockReturnThis(),
+	getRawOne: jest.fn(),
+};
+
+const mockDataSource = {
+	createQueryBuilder: jest.fn(() => mockQueryBuilder),
+};
+
+// ---------------------------------------------------------------------------
+// Test Suite
+// ---------------------------------------------------------------------------
 
 describe('AuthService', () => {
 	let service: AuthService;
-	let userRepo: ReturnType<typeof mockUserRepo>;
-	let sessionRepo: ReturnType<typeof mockSessionRepo>;
-	let supabase: ReturnType<typeof mockSupabase>;
 
 	beforeEach(async () => {
-		const module = await Test.createTestingModule({
+		jest.clearAllMocks();
+
+		const module: TestingModule = await Test.createTestingModule({
 			providers: [
 				AuthService,
-				{ provide: getRepositoryToken(User), useFactory: mockUserRepo },
-				{ provide: getRepositoryToken(Session), useFactory: mockSessionRepo },
-				{ provide: SupabaseService, useFactory: mockSupabase },
+				{ provide: EnvService, useValue: mockEnvService },
+				{ provide: SupabaseService, useValue: mockSupabaseService },
+				{ provide: getRepositoryToken(User), useValue: mockUserRepository },
+				{ provide: DataSource, useValue: mockDataSource },
 			],
 		}).compile();
+
 		service = module.get(AuthService);
-		userRepo = module.get(getRepositoryToken(User));
-		sessionRepo = module.get(getRepositoryToken(Session));
-		supabase = module.get(SupabaseService) as unknown as ReturnType<typeof mockSupabase>;
 	});
+
+	// -------------------------------------------------------------------------
+	// register
+	// -------------------------------------------------------------------------
 
 	describe('register', () => {
-		it('registers a new user successfully', async () => {
-			userRepo.findOne.mockResolvedValue(null);
-			userRepo.create.mockReturnValue(baseUser);
-			userRepo.save.mockResolvedValue(baseUser);
+		const input = {
+			fullName: 'Alice',
+			email: 'alice@test.com',
+			password: 'password123',
+		};
 
-			const result = await service.register({ fullName: 'Alice', email: 'alice@test.com', password: 'pass' });
-			expect(result.message).toContain('Registration successful');
+		it('should register user successfully', async () => {
+			mockAdminAuth.createUser.mockResolvedValue({
+				data: { user: { id: 'u1' } },
+				error: null,
+			});
+
+			mockUserRepository.insert.mockResolvedValue(undefined);
+			mockResend.mockResolvedValue({ error: null });
+
+			const result = await service.register(input);
+
+			expect(result.message).toContain('Check your email');
+			expect(mockAdminAuth.createUser).toHaveBeenCalled();
+			expect(mockUserRepository.insert).toHaveBeenCalledWith({
+				id: 'u1',
+				fullName: 'Alice',
+			});
 		});
 
-		it('throws ConflictException for duplicate email', async () => {
-			userRepo.findOne.mockResolvedValue(baseUser);
-			await expect(service.register({ fullName: 'Alice', email: 'alice@test.com', password: 'pass' })).rejects.toThrow(ConflictException);
+		it('should throw ConflictException on duplicate email', async () => {
+			mockAdminAuth.createUser.mockResolvedValue({
+				data: {},
+				error: { code: 'email_exists' },
+			});
+
+			await expect(service.register(input)).rejects.toThrow(ConflictException);
 		});
 
-		it('rolls back DB user if Supabase auth fails', async () => {
-			userRepo.findOne.mockResolvedValue(null);
-			userRepo.create.mockReturnValue(baseUser);
-			userRepo.save.mockResolvedValue(baseUser);
-			supabase.admin.auth.admin.createUser.mockResolvedValue({ error: { message: 'Auth error' } });
+		it('should rollback user if DB insert fails', async () => {
+			mockAdminAuth.createUser.mockResolvedValue({
+				data: { user: { id: 'u1' } },
+				error: null,
+			});
 
-			await expect(service.register({ fullName: 'Alice', email: 'alice@test.com', password: 'pass' })).rejects.toThrow(BadRequestException);
-			expect(userRepo.delete).toHaveBeenCalledWith({ id: 'u1' });
+			mockUserRepository.insert.mockRejectedValue(new Error('DB error'));
+			mockAdminAuth.deleteUser.mockResolvedValue({ error: null });
+
+			await expect(service.register(input)).rejects.toThrow(
+				InternalServerErrorException,
+			);
+
+			expect(mockAdminAuth.deleteUser).toHaveBeenCalledWith('u1');
 		});
 	});
+
+	// -------------------------------------------------------------------------
+	// login
+	// -------------------------------------------------------------------------
 
 	describe('login', () => {
-		const session = { access_token: 'at', refresh_token: 'rt', expires_at: Math.floor(Date.now() / 1000) + 3600 };
+		const input = {
+			email: 'alice@test.com',
+			password: 'password123',
+		};
 
-		it('logs in successfully with correct role', async () => {
-			supabase.anon.auth.signInWithPassword.mockResolvedValue({ data: { user: baseUser, session }, error: null });
-			userRepo.findOne.mockResolvedValue(baseUser);
-			sessionRepo.create.mockReturnValue({});
-			sessionRepo.save.mockResolvedValue({});
-			userRepo.update.mockResolvedValue(undefined);
+		it('should login successfully', async () => {
+			const user = makeUser();
+			const session = makeSession();
 
-			const result = await service.patientLogin({ email: 'alice@test.com', password: 'pass' });
-			expect(result.data.accessToken).toBe('at');
+			mockSignInWithPassword.mockResolvedValue({
+				data: { session, user },
+				error: null,
+			});
+
+			mockUserRepository.findOne.mockResolvedValue({
+				fullName: 'Alice',
+			});
+
+			const result = await service.login(input);
+
+			expect(result.accessToken).toBe(session.access_token);
+			expect(result.user.fullName).toBe('Alice');
 		});
 
-		it('throws UnauthorizedException on Supabase auth failure', async () => {
-			supabase.anon.auth.signInWithPassword.mockResolvedValue({ data: { user: null, session: null }, error: { message: 'Invalid' } });
-			await expect(service.patientLogin({ email: 'x@x.com', password: 'wrong' })).rejects.toThrow(UnauthorizedException);
-		});
+		it('should throw ForbiddenException if email not confirmed', async () => {
+			mockSignInWithPassword.mockResolvedValue({
+				data: {},
+				error: { code: 'email_not_confirmed' },
+			});
 
-		it('throws ForbiddenException when role does not match login endpoint', async () => {
-			supabase.anon.auth.signInWithPassword.mockResolvedValue({ data: { user: baseUser, session }, error: null });
-			userRepo.findOne.mockResolvedValue({ ...baseUser, role: 'DOCTOR' });
-			await expect(service.patientLogin({ email: 'alice@test.com', password: 'pass' })).rejects.toThrow(ForbiddenException);
-		});
-	});
-
-	describe('forgotPassword', () => {
-		it('sends reset email and returns success', async () => {
-			userRepo.findOne.mockResolvedValue(baseUser);
-			supabase.anon.auth.resetPasswordForEmail.mockResolvedValue({ error: null });
-			const result = await service.forgotPassword('alice@test.com');
-			expect(result.message).toContain('Password reset email sent');
-		});
-
-		it('throws NotFoundException when user not found', async () => {
-			userRepo.findOne.mockResolvedValue(null);
-			await expect(service.forgotPassword('x@x.com')).rejects.toThrow(NotFoundException);
+			await expect(service.login(input)).rejects.toThrow(ForbiddenException);
 		});
 	});
 
-	describe('verifyOtp', () => {
-		it('verifies OTP and marks user as verified', async () => {
-			supabase.anon.auth.verifyOtp.mockResolvedValue({ error: null });
-			userRepo.update.mockResolvedValue(undefined);
-			const result = await service.verifyOtp('alice@test.com', '123456');
-			expect(result.message).toBe('OTP verified successfully');
-		});
-
-		it('throws BadRequestException on OTP failure', async () => {
-			supabase.anon.auth.verifyOtp.mockResolvedValue({ error: { message: 'Invalid OTP' } });
-			await expect(service.verifyOtp('alice@test.com', 'wrong')).rejects.toThrow(BadRequestException);
-		});
-	});
-
-	describe('resetPassword', () => {
-		it('resets password for OTP-verified user', async () => {
-			userRepo.findOne.mockResolvedValue({ ...baseUser, isOtpVerified: true });
-			supabase.admin.auth.admin.updateUserById.mockResolvedValue({ error: null });
-			userRepo.update.mockResolvedValue(undefined);
-			const result = await service.resetPassword({ email: 'alice@test.com', newPassword: 'newpass' });
-			expect(result.message).toBe('Password reset successfully');
-		});
-
-		it('throws ForbiddenException when OTP not verified', async () => {
-			userRepo.findOne.mockResolvedValue(null);
-			await expect(service.resetPassword({ email: 'alice@test.com', newPassword: 'newpass' })).rejects.toThrow(ForbiddenException);
-		});
-	});
+	// -------------------------------------------------------------------------
+	// logout
+	// -------------------------------------------------------------------------
 
 	describe('logout', () => {
-		it('deletes session and sets user offline', async () => {
-			sessionRepo.delete.mockResolvedValue(undefined);
-			userRepo.update.mockResolvedValue(undefined);
-			const result = await service.logout('u1', 'rt');
-			expect(result.message).toBe('Logged out successfully');
+		it('should logout successfully', async () => {
+			mockAdminAuth.signOut.mockResolvedValue({ error: null });
+
+			const res = await service.logout('token');
+
+			expect(res.message).toBe('Logged out successfully');
+		});
+
+		it('should throw on logout failure', async () => {
+			mockAdminAuth.signOut.mockResolvedValue({
+				error: { message: 'fail' },
+			});
+
+			await expect(service.logout('token')).rejects.toThrow(
+				InternalServerErrorException,
+			);
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// refresh token
+	// -------------------------------------------------------------------------
+
+	describe('refreshToken', () => {
+		it('should refresh session', async () => {
+			const session = makeSession();
+			const user = makeUser();
+
+			mockRefreshSession.mockResolvedValue({
+				data: { session, user },
+				error: null,
+			});
+
+			mockUserRepository.findOne.mockResolvedValue({
+				fullName: 'Alice',
+			});
+
+			const res = await service.refreshToken({
+				refreshToken: 'token',
+			});
+
+			expect(res.accessToken).toBe(session.access_token);
+		});
+
+		it('should throw on invalid token', async () => {
+			mockRefreshSession.mockResolvedValue({
+				data: {},
+				error: { message: 'invalid' },
+			});
+
+			await expect(
+				service.refreshToken({ refreshToken: 'bad' }),
+			).rejects.toThrow(UnauthorizedException);
 		});
 	});
 });

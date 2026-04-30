@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import Stripe from 'stripe';
-import { EnvService } from '@backend/modules/config/env.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
 
 @Injectable()
 export class StripeService {

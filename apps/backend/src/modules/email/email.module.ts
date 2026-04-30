@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { EmailService } from '@backend/modules/email/email.service';
+import { EmailService } from '@dab/backend/modules/email/email.service';
 
 @Module({
 	providers: [EmailService],

@@ -2,10 +2,10 @@ import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User, Appointment } from '@dab/database';
-import { AppointmentService } from '@backend/modules/appointment/appointment.service';
-import { NotificationService } from '@backend/modules/notification/notification.service';
-import { EnvService } from '@backend/modules/config/env.service';
-import { AppointmentHandler } from '@backend/modules/appointment/handlers/appointment.handler';
+import { AppointmentService } from '@dab/backend/modules/appointment/appointment.service';
+import { NotificationService } from '@dab/backend/modules/notification/notification.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
+import { AppointmentHandler } from '@dab/backend/modules/appointment/handlers/appointment.handler';
 
 const mockRepo = () => ({
 	findOne: jest.fn(),

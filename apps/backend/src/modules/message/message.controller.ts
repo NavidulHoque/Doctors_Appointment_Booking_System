@@ -9,10 +9,10 @@ import {
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { MessageService } from '@backend/modules/message/message.service';
-import { CreateMessageDto } from '@backend/modules/message/dtos/create-message.dto';
-import { UpdateMessageDto } from '@backend/modules/message/dtos/update-message.dto';
-import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import { MessageService } from '@dab/backend/modules/message/message.service';
+import { CreateMessageDto } from '@dab/backend/modules/message/dtos/create-message.dto';
+import { UpdateMessageDto } from '@dab/backend/modules/message/dtos/update-message.dto';
+import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import type { User } from '@dab/database';
 
 @ApiTags('messages')

@@ -2,9 +2,9 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import { Message } from '@dab/database';
-import { RealtimeService } from '@backend/modules/realtime/realtime.service';
-import type { CreateMessageDto } from '@backend/modules/message/dtos/create-message.dto';
-import type { UpdateMessageDto } from '@backend/modules/message/dtos/update-message.dto';
+import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
+import type { CreateMessageDto } from '@dab/backend/modules/message/dtos/create-message.dto';
+import type { UpdateMessageDto } from '@dab/backend/modules/message/dtos/update-message.dto';
 
 @Injectable()
 export class MessageService {

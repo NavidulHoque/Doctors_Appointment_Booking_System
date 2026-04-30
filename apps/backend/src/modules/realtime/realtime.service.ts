@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import type { RealtimeChannel } from '@dab/supabase';
-import { SupabaseService } from '@backend/modules/supabase/supabase.service';
+import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
 
 @Injectable()
 export class RealtimeService implements OnModuleInit {

@@ -1,4 +1,4 @@
 import { createZodDto } from 'nestjs-zod';
-import { LoginSchema } from '@dab/validation';
+import { loginSchema } from '@dab/validation';
 
-export class LoginDto extends createZodDto(LoginSchema) {}
+export class LoginDto extends createZodDto(loginSchema) {}

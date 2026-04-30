@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User, Doctor, Review, Appointment } from '@dab/database';
-import { RealtimeModule } from '@backend/modules/realtime/realtime.module';
-import { DoctorService } from '@backend/modules/doctor/doctor.service';
-import { DoctorController } from '@backend/modules/doctor/doctor.controller';
+import { RealtimeModule } from '@dab/backend/modules/realtime/realtime.module';
+import { DoctorService } from '@dab/backend/modules/doctor/doctor.service';
+import { DoctorController } from '@dab/backend/modules/doctor/doctor.controller';
 
 @Module({
 	imports: [

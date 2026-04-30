@@ -2,11 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '@dab/database';
-import { RealtimeService } from '@backend/modules/realtime/realtime.service';
-import { EmailService } from '@backend/modules/email/email.service';
-import { EnvService } from '@backend/modules/config/env.service';
-import { PaginationResponseDto } from '@backend/common/dtos/pagination.dto';
-import type { GetNotificationsDto } from '@backend/modules/notification/dtos/query-notification.dto';
+import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
+import { EmailService } from '@dab/backend/modules/email/email.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
+import { PaginationResponseDto } from '@dab/backend/common/dtos/pagination.dto';
+import type { GetNotificationsDto } from '@dab/backend/modules/notification/dtos/query-notification.dto';
 
 @Injectable()
 export class NotificationService {

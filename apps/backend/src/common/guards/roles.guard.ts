@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { FastifyRequest } from 'fastify';
-import { ROLES_KEY } from '@backend/common/decorators/roles.decorator';
+import { ROLES_KEY } from '@dab/backend/common/decorators/roles.decorator';
 import type { User } from '@dab/database';
 import type { RoleType } from '@dab/shared';
 

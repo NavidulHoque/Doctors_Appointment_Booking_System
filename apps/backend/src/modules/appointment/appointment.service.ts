@@ -4,13 +4,13 @@ import { Brackets, Repository } from 'typeorm';
 import { DateTime } from 'luxon';
 import { User, Appointment } from '@dab/database';
 import { AppointmentStatus, PaymentMethod, Role } from '@dab/shared';
-import { EnvService } from '@backend/modules/config/env.service';
-import { NotificationService } from '@backend/modules/notification/notification.service';
-import { PaginationResponseDto } from '@backend/common/dtos/pagination.dto';
-import type { CreateAppointmentDto } from '@backend/modules/appointment/dtos/create-appointment.dto';
-import type { UpdateAppointmentDto } from '@backend/modules/appointment/dtos/update-appointment.dto';
-import type { GetAppointmentsDto } from '@backend/modules/appointment/dtos/query-appointment.dto';
-import { AppointmentHandler } from '@backend/modules/appointment/handlers/appointment.handler';
+import { EnvService } from '@dab/backend/modules/config/env.service';
+import { NotificationService } from '@dab/backend/modules/notification/notification.service';
+import { PaginationResponseDto } from '@dab/backend/common/dtos/pagination.dto';
+import type { CreateAppointmentDto } from '@dab/backend/modules/appointment/dtos/create-appointment.dto';
+import type { UpdateAppointmentDto } from '@dab/backend/modules/appointment/dtos/update-appointment.dto';
+import type { GetAppointmentsDto } from '@dab/backend/modules/appointment/dtos/query-appointment.dto';
+import { AppointmentHandler } from '@dab/backend/modules/appointment/handlers/appointment.handler';
 
 const TZ = 'Asia/Dhaka';
 

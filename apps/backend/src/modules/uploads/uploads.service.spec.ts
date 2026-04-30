@@ -2,8 +2,8 @@ import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '@dab/database';
-import { UploadsService } from '@backend/modules/uploads/uploads.service';
-import { SupabaseService } from '@backend/modules/supabase/supabase.service';
+import { UploadsService } from '@dab/backend/modules/uploads/uploads.service';
+import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
 
 const mockRepo = () => ({ update: jest.fn() });
 

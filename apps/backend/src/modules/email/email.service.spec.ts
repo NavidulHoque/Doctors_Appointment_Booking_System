@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { EmailService } from '@backend/modules/email/email.service';
-import { EnvService } from '@backend/modules/config/env.service';
+import { EmailService } from '@dab/backend/modules/email/email.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
 
 const mockEnv = () => ({
 	smtp: { host: 'smtp.test.com', port: 587, user: 'u', pass: 'p', from: 'noreply@test.com' },

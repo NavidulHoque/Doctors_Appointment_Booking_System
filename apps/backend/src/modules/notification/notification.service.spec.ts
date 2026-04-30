@@ -1,10 +1,10 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Notification } from '@dab/database';
-import { NotificationService } from '@backend/modules/notification/notification.service';
-import { RealtimeService } from '@backend/modules/realtime/realtime.service';
-import { EmailService } from '@backend/modules/email/email.service';
-import { EnvService } from '@backend/modules/config/env.service';
+import { NotificationService } from '@dab/backend/modules/notification/notification.service';
+import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
+import { EmailService } from '@dab/backend/modules/email/email.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
 
 const mockRepo = () => ({
 	create: jest.fn(),

@@ -1,4 +1,4 @@
 import { createZodDto } from 'nestjs-zod';
-import { RefreshTokenSchema } from '@dab/validation';
+import { refreshTokenSchema } from '@dab/validation';
 
-export class RefreshTokenDto extends createZodDto(RefreshTokenSchema) {}
+export class RefreshTokenDto extends createZodDto(refreshTokenSchema) {}

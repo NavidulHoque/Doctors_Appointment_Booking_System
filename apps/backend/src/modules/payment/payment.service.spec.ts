@@ -2,9 +2,9 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Payment, Appointment, Doctor, User } from '@dab/database';
-import { PaymentService } from '@backend/modules/payment/payment.service';
-import { StripeService } from '@backend/modules/payment/stripe.service';
-import { EnvService } from '@backend/modules/config/env.service';
+import { PaymentService } from '@dab/backend/modules/payment/payment.service';
+import { StripeService } from '@dab/backend/modules/payment/stripe.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
 
 const mockRepo = () => ({ create: jest.fn(), save: jest.fn(), find: jest.fn(), findOne: jest.fn() });
 const mockStripe = () => ({ createCheckoutSession: jest.fn() });

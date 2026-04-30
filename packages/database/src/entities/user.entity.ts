@@ -2,7 +2,6 @@ import {
 	Column,
 	CreateDateColumn,
 	Entity,
-	Index,
 	OneToMany,
 	OneToOne,
 	PrimaryGeneratedColumn,
@@ -26,10 +25,6 @@ export class User {
 	@Column({ type: 'varchar', name: 'fullName' })
 	fullName: string;
 
-	@Index('idx_user__email', { unique: true })
-	@Column({ type: 'varchar', name: 'email', unique: true })
-	email: string;
-
 	@Column({ type: 'varchar', name: 'role', default: Role.PATIENT })
 	role: string;
 
@@ -45,9 +40,6 @@ export class User {
 	@Column({ type: 'varchar', name: 'address', nullable: true })
 	address: string | null;
 
-	@Column({ type: 'varchar', name: 'password' })
-	password: string;
-
 	@Column({ type: 'varchar', name: 'avatarImage', default: '' })
 	avatarImage: string;
 
@@ -56,15 +48,6 @@ export class User {
 
 	@Column({ type: 'timestamp', name: 'lastActiveAt', nullable: true })
 	lastActiveAt: Date | null;
-
-	@Column({ type: 'varchar', name: 'otp', nullable: true })
-	otp: string | null;
-
-	@Column({ type: 'timestamp', name: 'otpExpires', nullable: true })
-	otpExpires: Date | null;
-
-	@Column({ type: 'boolean', name: 'isOtpVerified', default: false })
-	isOtpVerified: boolean;
 
 	@CreateDateColumn({ name: 'createdAt' })
 	createdAt: Date;

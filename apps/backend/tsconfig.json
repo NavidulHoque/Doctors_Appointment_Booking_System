@@ -6,7 +6,7 @@
 		"strictPropertyInitialization": false,
 		"types": ["node", "jest"],
 		"paths": {
-			"@backend/*": ["./src/*"],
+			"@dab/backend/*": ["./src/*"],
 			"@dab/*": ["../../packages/*/src"]
 		}
 	},

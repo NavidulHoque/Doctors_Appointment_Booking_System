@@ -4,8 +4,8 @@ import { Repository } from 'typeorm';
 import Stripe from 'stripe';
 import { Payment, Appointment } from '@dab/database';
 import { PaymentStatus } from '@dab/shared';
-import { EnvService } from '@backend/modules/config/env.service';
-import { NotificationService } from '@backend/modules/notification/notification.service';
+import { EnvService } from '@dab/backend/modules/config/env.service';
+import { NotificationService } from '@dab/backend/modules/notification/notification.service';
 
 @Injectable()
 export class WebhookService {

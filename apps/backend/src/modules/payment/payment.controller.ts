@@ -9,10 +9,10 @@ import {
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { PaymentService } from '@backend/modules/payment/payment.service';
-import { CreatePaymentSessionDto } from '@backend/modules/payment/dtos/create-payment.dto';
-import { GetPaymentHistoryDto } from '@backend/modules/payment/dtos/get-payment-history.dto';
-import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import { PaymentService } from '@dab/backend/modules/payment/payment.service';
+import { CreatePaymentSessionDto } from '@dab/backend/modules/payment/dtos/create-payment.dto';
+import { GetPaymentHistoryDto } from '@dab/backend/modules/payment/dtos/get-payment-history.dto';
+import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import type { User } from '@dab/database';
 
 @ApiTags('payments')

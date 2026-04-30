@@ -1,15 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import type { SupabaseClient } from '@dab/supabase';
-import { createAdminClient, createAnonClient } from '@dab/supabase';
-import { EnvService } from '@backend/modules/config/env.service';
 
+import type { SupabaseClient } from '@dab/supabase';
+import { createAdminClient } from '@dab/supabase';
+
+import { EnvService } from '@dab/backend/modules/config/env.service';
+
+// auth-only admin client — used for token validation and user management
 @Injectable()
 export class SupabaseService {
 	readonly admin: SupabaseClient;
-	readonly anon: SupabaseClient;
 
 	constructor(private readonly env: EnvService) {
-		this.admin = createAdminClient({ url: env.supabaseUrl, key: env.supabaseSecretKey });
-		this.anon = createAnonClient({ url: env.supabaseUrl, key: env.supabasePublishableKey });
+		this.admin = createAdminClient({
+			url: this.env.supabaseUrl,
+			key: this.env.supabaseSecretKey,
+		});
 	}
 }

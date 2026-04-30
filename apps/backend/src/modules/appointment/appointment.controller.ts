@@ -10,11 +10,11 @@ import {
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AppointmentService } from '@backend/modules/appointment/appointment.service';
-import { CreateAppointmentDto } from '@backend/modules/appointment/dtos/create-appointment.dto';
-import { UpdateAppointmentDto } from '@backend/modules/appointment/dtos/update-appointment.dto';
-import { GetAppointmentsDto } from '@backend/modules/appointment/dtos/query-appointment.dto';
-import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import { AppointmentService } from '@dab/backend/modules/appointment/appointment.service';
+import { CreateAppointmentDto } from '@dab/backend/modules/appointment/dtos/create-appointment.dto';
+import { UpdateAppointmentDto } from '@dab/backend/modules/appointment/dtos/update-appointment.dto';
+import { GetAppointmentsDto } from '@dab/backend/modules/appointment/dtos/query-appointment.dto';
+import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import type { User } from '@dab/database';
 
 @ApiTags('appointments')

@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { FastifyRequest } from 'fastify';
-import { IS_PUBLIC_KEY } from '@backend/common/decorators/public.decorator';
-import { SupabaseService } from '@backend/modules/supabase/supabase.service';
+import { IS_PUBLIC_KEY } from '@dab/backend/common/decorators/public.decorator';
+import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '@dab/database';

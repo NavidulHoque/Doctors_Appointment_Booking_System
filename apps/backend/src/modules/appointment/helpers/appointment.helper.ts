@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { Role } from '@dab/shared';
 import type { User } from '@dab/database';
-import type { GetAppointmentsDto } from '@backend/modules/appointment/dtos/query-appointment.dto';
+import type { GetAppointmentsDto } from '@dab/backend/modules/appointment/dtos/query-appointment.dto';
 
 const TZ = 'Asia/Dhaka';
 

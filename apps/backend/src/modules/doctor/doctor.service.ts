@@ -5,13 +5,13 @@ import * as argon2 from 'argon2';
 import Stripe from 'stripe';
 import { User, Doctor, Review, Appointment } from '@dab/database';
 import { Role, AppointmentStatus } from '@dab/shared';
-import { EnvService } from '@backend/modules/config/env.service';
-import { RealtimeService } from '@backend/modules/realtime/realtime.service';
-import { SupabaseService } from '@backend/modules/supabase/supabase.service';
-import { PaginationDto, PaginationResponseDto } from '@backend/common/dtos/pagination.dto';
-import type { CreateDoctorDto } from '@backend/modules/doctor/dtos/create-doctor.dto';
-import type { UpdateDoctorDto } from '@backend/modules/doctor/dtos/update-doctor.dto';
-import type { GetDoctorsDto } from '@backend/modules/doctor/dtos/query-doctor.dto';
+import { EnvService } from '@dab/backend/modules/config/env.service';
+import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
+import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
+import { PaginationDto, PaginationResponseDto } from '@dab/backend/common/dtos/pagination.dto';
+import type { CreateDoctorDto } from '@dab/backend/modules/doctor/dtos/create-doctor.dto';
+import type { UpdateDoctorDto } from '@dab/backend/modules/doctor/dtos/update-doctor.dto';
+import type { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-doctor.dto';
 import type { WeekDayType } from '@dab/shared';
 
 @Injectable()
@@ -35,12 +35,8 @@ export class DoctorService {
 	}
 
 	async createDoctor(dto: CreateDoctorDto) {
-		const hashedPassword = await argon2.hash(dto.password);
-
 		const user = this.userRepo.create({
 			fullName: dto.fullName,
-			email: dto.email,
-			password: hashedPassword,
 			role: Role.DOCTOR,
 		});
 		await this.userRepo.save(user);
@@ -66,7 +62,7 @@ export class DoctorService {
 
 		return {
 			message: 'Doctor created successfully',
-			data: { ...doctor, user: { id: user.id, fullName: user.fullName, email: user.email } },
+			data: { ...doctor, user: { id: user.id, fullName: user.fullName } },
 		};
 	}
 
@@ -178,47 +174,6 @@ export class DoctorService {
 		};
 	}
 
-	async updateDoctor(dto: UpdateDoctorDto, doctorId: string) {
-		if (dto.currentPassword && dto.newPassword) {
-			await this.updatePassword(doctorId, dto.currentPassword, dto.newPassword);
-		}
-
-		// Update user profile fields
-		const userUpdate: Partial<User> = {};
-		if (dto.fullName) userUpdate.fullName = dto.fullName;
-		if (dto.email) {
-			const existing = await this.userRepo.findOne({ where: { email: dto.email } });
-			if (existing && existing.id !== doctorId) throw new BadRequestException('Email already exists');
-			userUpdate.email = dto.email;
-		}
-		if (Object.keys(userUpdate).length) await this.userRepo.update({ id: doctorId }, userUpdate);
-
-		// Update doctor profile fields
-		const doctor = await this.doctorRepo.findOne({ where: { userId: doctorId } });
-		if (!doctor) throw new NotFoundException('Doctor not found');
-
-		const doctorUpdate: Partial<Doctor> = {};
-		if (dto.specialization) doctorUpdate.specialization = dto.specialization;
-		if (dto.education) doctorUpdate.education = dto.education;
-		if (dto.experience !== undefined) doctorUpdate.experience = dto.experience;
-		if (dto.aboutMe) doctorUpdate.aboutMe = dto.aboutMe;
-		if (dto.fees !== undefined) doctorUpdate.fees = dto.fees;
-		if (dto.isActive !== undefined) doctorUpdate.isActive = dto.isActive;
-
-		if (dto.addAvailableTime) {
-			doctorUpdate.availableTimes = [...doctor.availableTimes, dto.addAvailableTime];
-		}
-		if (dto.removeAvailableTime) {
-			doctorUpdate.availableTimes = doctor.availableTimes.filter((t) => t !== dto.removeAvailableTime);
-		}
-
-		if (Object.keys(doctorUpdate).length) {
-			await this.doctorRepo.update({ userId: doctorId }, doctorUpdate);
-		}
-
-		return { message: "Doctor's profile updated successfully" };
-	}
-
 	async createStripeAccount(doctorUserId: string) {
 		const doctor = await this.doctorRepo.findOne({
 			where: { userId: doctorUserId },
@@ -229,7 +184,6 @@ export class DoctorService {
 
 		const account = await this.stripe.accounts.create({
 			type: 'express',
-			email: doctor.user.email,
 		});
 
 		await this.doctorRepo.update({ userId: doctorUserId }, { stripeAccountId: account.id });
@@ -263,21 +217,6 @@ export class DoctorService {
 		});
 
 		return { message: 'Stripe account activated successfully' };
-	}
-
-	async deleteDoctor(doctorUserId: string, adminId: string) {
-		const doctor = await this.doctorRepo.findOne({ where: { userId: doctorUserId } });
-		if (!doctor) throw new NotFoundException('Doctor not found');
-
-		await this.doctorRepo.delete({ userId: doctorUserId });
-
-		await this.realtime.broadcastEvent('doctor_deleted', {
-			doctorId: doctorUserId,
-			adminId,
-			message: 'Doctor deleted successfully',
-		});
-
-		return { message: 'Doctor deleted successfully' };
 	}
 
 	private async sortDoctors(doctors: Doctor[]) {
@@ -315,7 +254,6 @@ export class DoctorService {
 					doc.education?.toLowerCase().includes(search) ||
 					doc.aboutMe?.toLowerCase().includes(search) ||
 					user?.fullName?.toLowerCase().includes(search) ||
-					user?.email?.toLowerCase().includes(search) ||
 					times.some((t) => t.includes(search))
 				: true;
 
@@ -325,19 +263,5 @@ export class DoctorService {
 
 			return matchSearch && matchDays;
 		});
-	}
-
-	private async updatePassword(doctorId: string, currentPassword: string, newPassword: string) {
-		const user = await this.userRepo.findOne({ where: { id: doctorId } });
-		if (!user) throw new NotFoundException('User not found');
-
-		const isMatch = await argon2.verify(user.password, currentPassword);
-		if (!isMatch) throw new BadRequestException('Current password is incorrect');
-
-		const hashed = await argon2.hash(newPassword);
-		await this.userRepo.update({ id: doctorId }, { password: hashed });
-
-		// Also update in Supabase Auth
-		await this.supabase.admin.auth.admin.updateUserById(doctorId, { password: newPassword });
 	}
 }

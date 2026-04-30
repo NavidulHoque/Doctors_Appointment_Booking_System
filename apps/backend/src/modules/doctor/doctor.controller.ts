@@ -10,13 +10,13 @@ import {
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { DoctorService } from '@backend/modules/doctor/doctor.service';
-import { CreateDoctorDto } from '@backend/modules/doctor/dtos/create-doctor.dto';
-import { UpdateDoctorDto } from '@backend/modules/doctor/dtos/update-doctor.dto';
-import { GetDoctorsDto } from '@backend/modules/doctor/dtos/query-doctor.dto';
-import { PaginationDto } from '@backend/common/dtos/pagination.dto';
-import { Roles } from '@backend/common/decorators/roles.decorator';
-import { CurrentUser } from '@backend/common/decorators/current-user.decorator';
+import { DoctorService } from '@dab/backend/modules/doctor/doctor.service';
+import { CreateDoctorDto } from '@dab/backend/modules/doctor/dtos/create-doctor.dto';
+import { UpdateDoctorDto } from '@dab/backend/modules/doctor/dtos/update-doctor.dto';
+import { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-doctor.dto';
+import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
+import { Roles } from '@dab/backend/common/decorators/roles.decorator';
+import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import { Role } from '@dab/shared';
 import type { User } from '@dab/database';
 
@@ -53,16 +53,6 @@ export class DoctorController {
 	}
 
 	@Roles(Role.DOCTOR)
-	@Patch('me')
-	@HttpCode(HttpStatus.OK)
-	@ApiOperation({ summary: 'Doctor: update own profile' })
-	@ApiOkResponse({ description: 'Profile updated successfully' })
-	@ApiForbiddenResponse({ description: 'Doctor role required' })
-	updateDoctor(@Body() dto: UpdateDoctorDto, @CurrentUser() user: User) {
-		return this.doctorService.updateDoctor(dto, user.id);
-	}
-
-	@Roles(Role.DOCTOR)
 	@Post('stripe/account')
 	@ApiOperation({ summary: 'Doctor: create Stripe Connect account' })
 	@ApiCreatedResponse({ description: 'Stripe account created, onboarding URL returned' })
@@ -79,17 +69,5 @@ export class DoctorController {
 	@ApiForbiddenResponse({ description: 'Doctor role required' })
 	activateStripeAccount(@CurrentUser() user: User) {
 		return this.doctorService.activateStripeAccount(user.id);
-	}
-
-	@Roles(Role.ADMIN)
-	@Delete(':id')
-	@HttpCode(HttpStatus.OK)
-	@ApiOperation({ summary: 'Admin: delete a doctor account' })
-	@ApiParam({ name: 'id', description: 'Doctor user UUID' })
-	@ApiOkResponse({ description: 'Doctor deleted successfully' })
-	@ApiNotFoundResponse({ description: 'Doctor not found' })
-	@ApiForbiddenResponse({ description: 'Admin role required' })
-	deleteDoctor(@Param('id') doctorId: string, @CurrentUser() user: User) {
-		return this.doctorService.deleteDoctor(doctorId, user.id);
 	}
 }
