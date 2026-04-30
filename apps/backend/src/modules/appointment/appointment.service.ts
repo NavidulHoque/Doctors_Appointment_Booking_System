@@ -83,8 +83,8 @@ export class AppointmentService {
 
 		if (query.status) qb.andWhere('appt.status = :status', { status: query.status });
 
-		if (query.date) {
-			qb.andWhere('appt.date = :date', { date: new Date(query.date) });
+		if (query?.date) {
+			qb.andWhere('appt.date = :date', { date: new Date(query?.date || new Date().toISOString()) });
 		} else if (query.isToday) {
 			const today = DateTime.now().setZone(TZ);
 			qb.andWhere('appt.date >= :start AND appt.date <= :end', {

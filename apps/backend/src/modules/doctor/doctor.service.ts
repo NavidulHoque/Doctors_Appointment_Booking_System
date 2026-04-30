@@ -168,7 +168,7 @@ export class DoctorService {
 				reviews,
 			},
 			relatedDoctors: sortedRelated,
-			bookedAppointmentDates: bookedDates.map((a) => a.date),
+			bookedAppointmentDates: bookedDates.map((a) => a?.date || new Date().toISOString()),
 			pagination: new PaginationResponseDto(totalReviews, page, limit),
 			message: 'Doctor fetched successfully',
 		};

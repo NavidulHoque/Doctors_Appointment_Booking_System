@@ -23,7 +23,7 @@ export class AppointmentHandler {
 
 		await this.appointmentRepo.update({ id: appointment.id }, { status: AppointmentStatus.CONFIRMED });
 
-		const delay = new Date(appointment.date).getTime() - Date.now();
+		const delay = new Date(appointment?.date || new Date().toISOString()).getTime() - Date.now();
 		if (delay > 0) {
 			const timeoutId = setTimeout(async () => {
 				try {

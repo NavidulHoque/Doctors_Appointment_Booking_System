@@ -17,8 +17,8 @@ export class AppointmentHelper {
 
 		if (query.status) where['status'] = query.status;
 
-		if (query.date) {
-			where['date'] = new Date(query.date);
+		if (query?.date) {
+			where['date'] = new Date(query?.date || new Date().toISOString());
 		} else if (query.isToday) {
 			const today = DateTime.now().setZone(TZ);
 			where['dateFrom'] = today.startOf('day').toJSDate();
