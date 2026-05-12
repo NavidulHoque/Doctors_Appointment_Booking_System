@@ -45,7 +45,7 @@ export class AuthController {
 	@Post('login')
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: 'Login to account' })
-	@ApiOkResponse({ description: 'Access and refresh tokens returned' })
+	@ApiOkResponse({ description: 'Logged in successfully' })
 	@ApiUnauthorizedResponse({ description: 'Invalid credentials or email not verified' })
 	login(@Body() dto: LoginDto): Promise<AuthSession> {
 		return this.authService.login(dto);

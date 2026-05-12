@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query 
 import {
 	ApiBearerAuth,
 	ApiCreatedResponse,
+	ApiExtraModels,
 	ApiForbiddenResponse,
 	ApiNotFoundResponse,
 	ApiOkResponse,
@@ -16,17 +17,21 @@ import { UpdateAppointmentDto } from '@dab/backend/modules/appointment/dtos/upda
 import { GetAppointmentsDto } from '@dab/backend/modules/appointment/dtos/query-appointment.dto';
 import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import type { User } from '@dab/database';
+import { CreateAppointmentResponseDto } from '@dab/backend/modules/appointment/dtos/response/create-appointment-response.dto';
 
 @ApiTags('appointments')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Invalid or missing token' })
 @Controller('appointments')
 export class AppointmentController {
-	constructor(private readonly appointmentService: AppointmentService) {}
+	constructor(private readonly appointmentService: AppointmentService) { }
 
 	@Post()
 	@ApiOperation({ summary: 'Create a new appointment' })
-	@ApiCreatedResponse({ description: 'Appointment created successfully' })
+	@ApiCreatedResponse({
+		type: CreateAppointmentResponseDto,
+		description: 'Appointment created successfully'
+	})
 	@ApiForbiddenResponse({ description: 'Only patients can create appointments' })
 	createAppointment(@Body() dto: CreateAppointmentDto) {
 		return this.appointmentService.createAppointment(dto);

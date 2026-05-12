@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as argon2 from 'argon2';
 import Stripe from 'stripe';
 import { User, Doctor, Review, Appointment } from '@dab/database';
 import { Role, AppointmentStatus } from '@dab/shared';
@@ -10,7 +9,6 @@ import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service'
 import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
 import { PaginationDto, PaginationResponseDto } from '@dab/backend/common/dtos/pagination.dto';
 import type { CreateDoctorDto } from '@dab/backend/modules/doctor/dtos/create-doctor.dto';
-import type { UpdateDoctorDto } from '@dab/backend/modules/doctor/dtos/update-doctor.dto';
 import type { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-doctor.dto';
 import type { WeekDayType } from '@dab/shared';
 
