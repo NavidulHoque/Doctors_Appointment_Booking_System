@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import { DateTime } from 'luxon';
@@ -26,7 +26,7 @@ export class AppointmentService {
 		private readonly env: EnvService,
 		private readonly notificationService: NotificationService,
 		private readonly handler: AppointmentHandler,
-	) {}
+	) { }
 
 	async createAppointment(dto: CreateAppointmentDto) {
 		const { patientId, doctorId, date } = dto;
@@ -36,7 +36,7 @@ export class AppointmentService {
 			this.userRepo.findOne({ where: { id: doctorId }, select: ['role', 'fullName'] }),
 		]);
 
-		if (!patient || !doctor) throw new BadRequestException('Patient or Doctor not found');
+		if (!patient || !doctor) throw new NotFoundException('Patient or Doctor not found');
 
 		if (patient.role !== Role.PATIENT || doctor.role !== Role.DOCTOR) {
 			throw new BadRequestException('Invalid roles');
@@ -46,17 +46,19 @@ export class AppointmentService {
 			const appointment = this.appointmentRepo.create({ patientId, doctorId, date: new Date(date) });
 			await this.appointmentRepo.save(appointment);
 
-			this.notificationService
-				.sendNotification(
-					this.env.adminId,
-					`${patient.fullName}'s appointment with ${doctor.fullName} is booked for ${date}.`,
-				)
-				.catch((err) => this.logger.error('Failed to notify admin about new appointment:', err));
+			// this.notificationService
+			// 	.sendNotification(
+			// 		this.env.adminId,
+			// 		`${patient.fullName}'s appointment with ${doctor.fullName} is booked for ${date}.`,
+			// 	)
+			// 	.catch((err) => this.logger.error('Failed to notify admin about new appointment:', err));
 
 			return { appointment, message: 'Appointment created successfully' };
 		} catch (error: unknown) {
 			if (this.isUniqueConstraintError(error)) {
-				throw new BadRequestException('Appointment already exists for this date');
+				throw new ConflictException(
+					'Appointment already exists for this date',
+				);
 			}
 			throw error;
 		}

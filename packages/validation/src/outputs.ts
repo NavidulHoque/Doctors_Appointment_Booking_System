@@ -50,8 +50,19 @@ export const appointmentOutputSchema = z.object({
 
 export const createAppointmentResponseSchema = messageOutputSchema.merge(appointmentOutputSchema);
 
+// ─── Doctors ───────────────────────────────────────────────────────────────────
+
+export const doctorOutputSchema = z.object({
+	id: z.string(),
+	fullName: z.string(),
+	email: z.string(),
+	specialization: z.string(),
+	education: z.string(),
+});
+
 export type MessageOutput = z.infer<typeof messageOutputSchema>;
 export type AuthUser = z.infer<typeof authUserSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type UserOutput = z.infer<typeof userOutputSchema>;
 export type AppointmentOutput = z.infer<typeof appointmentOutputSchema>;
+export type DoctorOutput = z.infer<typeof doctorOutputSchema>;

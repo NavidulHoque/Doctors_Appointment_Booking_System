@@ -1,8 +1,9 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import {
+	ApiBadRequestResponse,
 	ApiBearerAuth,
+	ApiConflictResponse,
 	ApiCreatedResponse,
-	ApiExtraModels,
 	ApiForbiddenResponse,
 	ApiNotFoundResponse,
 	ApiOkResponse,
@@ -18,21 +19,27 @@ import { GetAppointmentsDto } from '@dab/backend/modules/appointment/dtos/query-
 import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import type { User } from '@dab/database';
 import { CreateAppointmentResponseDto } from '@dab/backend/modules/appointment/dtos/response/create-appointment-response.dto';
+import { Roles } from '@dab/backend/common/decorators/roles.decorator';
+import { Role } from '@dab/shared';
 
 @ApiTags('appointments')
 @ApiBearerAuth()
-@ApiUnauthorizedResponse({ description: 'Invalid or missing token' })
+@ApiUnauthorizedResponse({ description: 'Invalid or expired token' })
 @Controller('appointments')
 export class AppointmentController {
 	constructor(private readonly appointmentService: AppointmentService) { }
 
 	@Post()
+	@Roles(Role.PATIENT, Role.ADMIN)
 	@ApiOperation({ summary: 'Create a new appointment' })
 	@ApiCreatedResponse({
 		type: CreateAppointmentResponseDto,
 		description: 'Appointment created successfully'
 	})
-	@ApiForbiddenResponse({ description: 'Only patients can create appointments' })
+	@ApiNotFoundResponse({ description: 'Patient or Doctor not found' })
+	@ApiBadRequestResponse({ description: 'Invalid roles or Appointment already exists for this date' })
+	@ApiForbiddenResponse({ description: 'You are not authorized to perform this action' })
+	@ApiConflictResponse({ description: 'Appointment already exists for this date' })
 	createAppointment(@Body() dto: CreateAppointmentDto) {
 		return this.appointmentService.createAppointment(dto);
 	}

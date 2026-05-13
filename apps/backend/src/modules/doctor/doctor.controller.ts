@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import {
 	ApiBearerAuth,
 	ApiCreatedResponse,
@@ -12,7 +12,6 @@ import {
 } from '@nestjs/swagger';
 import { DoctorService } from '@dab/backend/modules/doctor/doctor.service';
 import { CreateDoctorDto } from '@dab/backend/modules/doctor/dtos/create-doctor.dto';
-import { UpdateDoctorDto } from '@dab/backend/modules/doctor/dtos/update-doctor.dto';
 import { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-doctor.dto';
 import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
 import { Roles } from '@dab/backend/common/decorators/roles.decorator';
@@ -22,7 +21,7 @@ import type { User } from '@dab/database';
 
 @ApiTags('doctors')
 @ApiBearerAuth()
-@ApiUnauthorizedResponse({ description: 'Invalid or missing token' })
+@ApiUnauthorizedResponse({ description: 'Invalid or expired token' })
 @Controller('doctors')
 export class DoctorController {
 	constructor(private readonly doctorService: DoctorService) {}
@@ -31,7 +30,7 @@ export class DoctorController {
 	@Post()
 	@ApiOperation({ summary: 'Admin: create a doctor account' })
 	@ApiCreatedResponse({ description: 'Doctor account created successfully' })
-	@ApiForbiddenResponse({ description: 'Admin role required' })
+	@ApiForbiddenResponse({ description: 'you are not authorized to perform this action' })
 	createDoctor(@Body() dto: CreateDoctorDto) {
 		return this.doctorService.createDoctor(dto);
 	}
