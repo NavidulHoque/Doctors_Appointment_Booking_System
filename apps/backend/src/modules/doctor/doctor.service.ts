@@ -59,8 +59,7 @@ export class DoctorService {
 		});
 
 		return {
-			message: 'Doctor created successfully',
-			data: { ...doctor, user: { id: user.id, fullName: user.fullName } },
+			message: 'Doctor created successfully'
 		};
 	}
 

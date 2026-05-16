@@ -5,15 +5,16 @@ import { PaginationSchema } from './common';
 export const CreateAppointmentSchema = z.object({
 	patientId: z.string().uuid(),
 	doctorId: z.string().uuid(),
-	date: z
-		.string()
-		.describe("Date in DD-MM-YYYY format (e.g. 12-12-2000)")
-		.regex(
-			/^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/,
-			{
-				message: "Date must be in DD-MM-YYYY format",
-			}
-		),
+	date: z.coerce
+		.date()
+		.refine((date) => {
+			// normalize minutes and seconds
+			date.setMinutes(0, 0, 0);
+
+			return date > new Date();
+		}, {
+			message: "Date must be in the future",
+		}),
 });
 
 export const UpdateAppointmentSchema = z.object({

@@ -31,7 +31,7 @@ export class DatabaseService {
 	/**
 	 * Execute raw query
 	 */
-	async query(query: string, parameters?: any[]): Promise<any> {
+	async query(query: string, parameters?: unknown[]): Promise<unknown> {
 		return this.dataSource.query(query, parameters);
 	}
 

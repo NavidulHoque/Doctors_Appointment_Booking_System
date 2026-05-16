@@ -43,15 +43,15 @@ export class AppointmentService {
 		}
 
 		try {
-			const appointment = this.appointmentRepo.create({ patientId, doctorId, date: new Date(date) });
+			const appointment = this.appointmentRepo.create({ patientId, doctorId, date });
 			await this.appointmentRepo.save(appointment);
 
-			// this.notificationService
-			// 	.sendNotification(
-			// 		this.env.adminId,
-			// 		`${patient.fullName}'s appointment with ${doctor.fullName} is booked for ${date}.`,
-			// 	)
-			// 	.catch((err) => this.logger.error('Failed to notify admin about new appointment:', err));
+			this.notificationService
+				.sendNotification(
+					this.env.adminId,
+					`${patient.fullName}'s appointment with ${doctor.fullName} is booked for ${date}.`,
+				)
+				.catch((err) => this.logger.error('Failed to notify admin about new appointment:', err));
 
 			return { appointment, message: 'Appointment created successfully' };
 		} catch (error: unknown) {

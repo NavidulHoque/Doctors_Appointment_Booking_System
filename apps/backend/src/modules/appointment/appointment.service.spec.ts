@@ -1,4 +1,8 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+	BadRequestException,
+	ConflictException,
+	NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User, Appointment } from '@dab/database';
@@ -6,6 +10,7 @@ import { AppointmentService } from '@dab/backend/modules/appointment/appointment
 import { NotificationService } from '@dab/backend/modules/notification/notification.service';
 import { EnvService } from '@dab/backend/modules/config/env.service';
 import { AppointmentHandler } from '@dab/backend/modules/appointment/handlers/appointment.handler';
+import { Role } from '@dab/shared';
 
 const mockRepo = () => ({
 	findOne: jest.fn(),
@@ -16,13 +21,36 @@ const mockRepo = () => ({
 	query: jest.fn(),
 });
 
-const mockNotification = () => ({ sendNotification: jest.fn().mockResolvedValue(undefined) });
-const mockEnv = () => ({ adminId: 'admin1' });
-const mockHandler = () => ({ prepareUpdate: jest.fn().mockResolvedValue({}) });
+const mockNotification = () => ({
+	sendNotification: jest.fn().mockResolvedValue(undefined),
+});
 
-const patient = { id: 'p1', role: 'PATIENT', fullName: 'Alice' } as User;
-const doctor = { id: 'd1', role: 'DOCTOR', fullName: 'Dr. Bob' } as User;
-const appointment = { id: 'appt1', patientId: 'p1', doctorId: 'd1', date: new Date() } as Appointment;
+const mockEnv = () => ({
+	adminId: 'admin1',
+});
+
+const mockHandler = () => ({
+	prepareUpdate: jest.fn().mockResolvedValue({}),
+});
+
+const patient = {
+	id: 'p1',
+	role: Role.PATIENT,
+	fullName: 'Alice',
+} as User;
+
+const doctor = {
+	id: 'd1',
+	role: Role.DOCTOR,
+	fullName: 'Dr. Bob',
+} as User;
+
+const appointment = {
+	id: 'appt1',
+	patientId: 'p1',
+	doctorId: 'd1',
+	date: new Date(),
+} as Appointment;
 
 describe('AppointmentService', () => {
 	let service: AppointmentService;
@@ -40,6 +68,7 @@ describe('AppointmentService', () => {
 				{ provide: AppointmentHandler, useFactory: mockHandler },
 			],
 		}).compile();
+
 		service = module.get(AppointmentService);
 		userRepo = module.get(getRepositoryToken(User));
 		appointmentRepo = module.get(getRepositoryToken(Appointment));
@@ -47,29 +76,63 @@ describe('AppointmentService', () => {
 
 	describe('createAppointment', () => {
 		it('creates an appointment successfully', async () => {
-			userRepo.findOne.mockResolvedValueOnce(patient).mockResolvedValueOnce(doctor);
+			userRepo.findOne
+				.mockResolvedValueOnce(patient)
+				.mockResolvedValueOnce(doctor);
+
 			appointmentRepo.create.mockReturnValue(appointment);
 			appointmentRepo.save.mockResolvedValue(appointment);
 
-			const result = await service.createAppointment({ patientId: 'p1', doctorId: 'd1', date: new Date().toISOString() });
+			const result = await service.createAppointment({
+				patientId: 'p1',
+				doctorId: 'd1',
+				date: new Date(),
+			});
+
 			expect(result.message).toBe('Appointment created successfully');
 		});
 
-		it('throws BadRequestException when patient or doctor not found', async () => {
+		it('throws NotFoundException when patient or doctor not found', async () => {
 			userRepo.findOne.mockResolvedValue(null);
-			await expect(service.createAppointment({ patientId: 'p1', doctorId: 'd1', date: new Date().toISOString() })).rejects.toThrow(BadRequestException);
+
+			await expect(
+				service.createAppointment({
+					patientId: 'p1',
+					doctorId: 'd1',
+					date: new Date(),
+				}),
+			).rejects.toThrow(NotFoundException);
 		});
 
 		it('throws BadRequestException for invalid roles', async () => {
-			userRepo.findOne.mockResolvedValueOnce({ ...patient, role: 'DOCTOR' }).mockResolvedValueOnce(doctor);
-			await expect(service.createAppointment({ patientId: 'p1', doctorId: 'd1', date: new Date().toISOString() })).rejects.toThrow(BadRequestException);
+			userRepo.findOne
+				.mockResolvedValueOnce({ ...patient, role: Role.DOCTOR })
+				.mockResolvedValueOnce(doctor);
+
+			await expect(
+				service.createAppointment({
+					patientId: 'p1',
+					doctorId: 'd1',
+					date: new Date(),
+				}),
+			).rejects.toThrow(BadRequestException);
 		});
 
-		it('throws BadRequestException on unique constraint violation', async () => {
-			userRepo.findOne.mockResolvedValueOnce(patient).mockResolvedValueOnce(doctor);
+		it('throws ConflictException on unique constraint violation', async () => {
+			userRepo.findOne
+				.mockResolvedValueOnce(patient)
+				.mockResolvedValueOnce(doctor);
+
 			appointmentRepo.create.mockReturnValue(appointment);
 			appointmentRepo.save.mockRejectedValue({ code: '23505' });
-			await expect(service.createAppointment({ patientId: 'p1', doctorId: 'd1', date: new Date().toISOString() })).rejects.toThrow(BadRequestException);
+
+			await expect(
+				service.createAppointment({
+					patientId: 'p1',
+					doctorId: 'd1',
+					date: new Date(),
+				}),
+			).rejects.toThrow(ConflictException);
 		});
 	});
 
@@ -77,13 +140,22 @@ describe('AppointmentService', () => {
 		it('updates appointment successfully', async () => {
 			appointmentRepo.findOne.mockResolvedValue(appointment);
 			appointmentRepo.update.mockResolvedValue(undefined);
-			const result = await service.updateAppointment({}, 'appt1', { ...patient, role: 'PATIENT' } as User);
+
+			const result = await service.updateAppointment(
+				{},
+				'appt1',
+				patient,
+			);
+
 			expect(result.message).toBe('Appointment updated successfully');
 		});
 
 		it('throws BadRequestException when appointment not found', async () => {
 			appointmentRepo.findOne.mockResolvedValue(null);
-			await expect(service.updateAppointment({}, 'appt1', patient)).rejects.toThrow(BadRequestException);
+
+			await expect(
+				service.updateAppointment({}, 'appt1', patient),
+			).rejects.toThrow(BadRequestException);
 		});
 	});
 });

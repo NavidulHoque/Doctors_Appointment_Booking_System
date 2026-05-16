@@ -37,7 +37,7 @@ export class AppointmentController {
 		description: 'Appointment created successfully'
 	})
 	@ApiNotFoundResponse({ description: 'Patient or Doctor not found' })
-	@ApiBadRequestResponse({ description: 'Invalid roles or Appointment already exists for this date' })
+	@ApiBadRequestResponse({ description: 'Invalid roles' })
 	@ApiForbiddenResponse({ description: 'You are not authorized to perform this action' })
 	@ApiConflictResponse({ description: 'Appointment already exists for this date' })
 	createAppointment(@Body() dto: CreateAppointmentDto) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import {
 	ApiBearerAuth,
 	ApiCreatedResponse,
@@ -18,6 +18,7 @@ import { Roles } from '@dab/backend/common/decorators/roles.decorator';
 import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import { Role } from '@dab/shared';
 import type { User } from '@dab/database';
+import { MessageResponseDto } from '@dab/backend/common/dtos/response/message-response.dto';
 
 @ApiTags('doctors')
 @ApiBearerAuth()
@@ -29,7 +30,10 @@ export class DoctorController {
 	@Roles(Role.ADMIN)
 	@Post()
 	@ApiOperation({ summary: 'Admin: create a doctor account' })
-	@ApiCreatedResponse({ description: 'Doctor account created successfully' })
+	@ApiCreatedResponse({ 
+		description: 'Doctor account created successfully',
+		type: MessageResponseDto
+	})
 	@ApiForbiddenResponse({ description: 'you are not authorized to perform this action' })
 	createDoctor(@Body() dto: CreateDoctorDto) {
 		return this.doctorService.createDoctor(dto);
