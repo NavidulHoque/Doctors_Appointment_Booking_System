@@ -5,10 +5,12 @@ import {
 	ApiConflictResponse,
 	ApiCreatedResponse,
 	ApiForbiddenResponse,
+	ApiInternalServerErrorResponse,
 	ApiNotFoundResponse,
 	ApiOkResponse,
 	ApiOperation,
 	ApiParam,
+	ApiQuery,
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -20,17 +22,18 @@ import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorat
 import type { User } from '@dab/database';
 import { CreateAppointmentResponseDto } from '@dab/backend/modules/appointment/dtos/response/create-appointment-response.dto';
 import { Roles } from '@dab/backend/common/decorators/roles.decorator';
-import { Role } from '@dab/shared';
+import { AppointmentStatus, Role } from '@dab/shared';
 
 @ApiTags('appointments')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Invalid or expired token' })
+@ApiInternalServerErrorResponse({ description: 'Internal server error' })
 @Controller('appointments')
 export class AppointmentController {
 	constructor(private readonly appointmentService: AppointmentService) { }
 
-	@Post()
 	@Roles(Role.PATIENT, Role.ADMIN)
+	@Post()
 	@ApiOperation({ summary: 'Create a new appointment' })
 	@ApiCreatedResponse({
 		type: CreateAppointmentResponseDto,
@@ -44,13 +47,22 @@ export class AppointmentController {
 		return this.appointmentService.createAppointment(dto);
 	}
 
+	@Roles(Role.PATIENT, Role.ADMIN, Role.DOCTOR)
 	@Get()
-	@ApiOperation({ summary: 'Get all appointments (results scoped by role)' })
+	@ApiOperation({ summary: 'Get all appointments' })
+	@ApiQuery({ name: 'page', required: true, type: Number })
+	@ApiQuery({ name: 'limit', required: true, type: Number })
+	@ApiQuery({ name: 'status', required: false, enum: AppointmentStatus })
+	@ApiQuery({ name: 'search', required: false, type: String })
+	@ApiQuery({ name: 'isToday', required: false, type: Boolean })
+	@ApiQuery({ name: 'isPast', required: false, type: Boolean })
+	@ApiQuery({ name: 'isFuture', required: false, type: Boolean })
 	@ApiOkResponse({ description: 'Paginated list of appointments' })
 	getAllAppointments(@Query() query: GetAppointmentsDto, @CurrentUser() user: User) {
 		return this.appointmentService.getAllAppointments(query, user);
 	}
 
+	@Roles(Role.PATIENT, Role.ADMIN, Role.DOCTOR)
 	@Get('counts')
 	@ApiOperation({ summary: 'Get appointment status counts (scoped by role)' })
 	@ApiOkResponse({ description: 'Counts by status returned' })
@@ -58,6 +70,7 @@ export class AppointmentController {
 		return this.appointmentService.getAllAppointmentCount(user);
 	}
 
+	@Roles(Role.PATIENT, Role.ADMIN, Role.DOCTOR)
 	@Get('graph')
 	@ApiOperation({ summary: 'Get monthly appointment graph data' })
 	@ApiOkResponse({ description: 'Monthly appointment totals returned' })
@@ -65,6 +78,7 @@ export class AppointmentController {
 		return this.appointmentService.getTotalAppointmentsGraph(user);
 	}
 
+	@Roles(Role.PATIENT, Role.ADMIN, Role.DOCTOR)
 	@Patch(':id')
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: 'Update appointment status or cancellation reason' })

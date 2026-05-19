@@ -13,12 +13,12 @@ import {
 import { DoctorService } from '@dab/backend/modules/doctor/doctor.service';
 import { CreateDoctorDto } from '@dab/backend/modules/doctor/dtos/create-doctor.dto';
 import { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-doctor.dto';
-import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
 import { Roles } from '@dab/backend/common/decorators/roles.decorator';
 import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
 import { Role } from '@dab/shared';
 import type { User } from '@dab/database';
 import { MessageResponseDto } from '@dab/backend/common/dtos/response/message-response.dto';
+import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
 
 @ApiTags('doctors')
 @ApiBearerAuth()

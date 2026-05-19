@@ -11,7 +11,6 @@ import type { Relation } from 'typeorm';
 import { Role } from '@dab/shared';
 import { Session } from './session.entity';
 import { Doctor } from './doctor.entity';
-import { Appointment } from './appointment.entity';
 import { Message } from './message.entity';
 import { Notification } from './notification.entity';
 import { Payment } from './payment.entity';
@@ -66,12 +65,6 @@ export class User {
 
 	@OneToMany(() => Message, (msg: Message) => msg.receiver)
 	receivedMessages: Relation<Message[]>;
-
-	@OneToMany(() => Appointment, (appt: Appointment) => appt.patient)
-	patientAppointments: Relation<Appointment[]>;
-
-	@OneToMany(() => Appointment, (appt: Appointment) => appt.doctor)
-	doctorAppointments: Relation<Appointment[]>;
 
 	@OneToMany(() => Review, (r: Review) => r.patient)
 	patientReviews: Relation<Review[]>;

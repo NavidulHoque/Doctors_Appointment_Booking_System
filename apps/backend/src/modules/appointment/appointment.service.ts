@@ -6,13 +6,12 @@ import { User, Appointment } from '@dab/database';
 import { AppointmentStatus, PaymentMethod, Role } from '@dab/shared';
 import { EnvService } from '@dab/backend/modules/config/env.service';
 import { NotificationService } from '@dab/backend/modules/notification/notification.service';
-import { PaginationResponseDto } from '@dab/backend/common/dtos/pagination.dto';
+import { PaginatedOutputDto } from '@dab/backend/common/dtos/response/paginated-output.dto';
 import type { CreateAppointmentDto } from '@dab/backend/modules/appointment/dtos/create-appointment.dto';
 import type { UpdateAppointmentDto } from '@dab/backend/modules/appointment/dtos/update-appointment.dto';
 import type { GetAppointmentsDto } from '@dab/backend/modules/appointment/dtos/query-appointment.dto';
 import { AppointmentHandler } from '@dab/backend/modules/appointment/handlers/appointment.handler';
-
-const TZ = 'Asia/Dhaka';
+import { TZ } from '@dab/backend/modules/appointment/constants/time-zone';
 
 @Injectable()
 export class AppointmentService {
@@ -85,9 +84,7 @@ export class AppointmentService {
 
 		if (query.status) qb.andWhere('appt.status = :status', { status: query.status });
 
-		if (query?.date) {
-			qb.andWhere('appt.date = :date', { date: new Date(query?.date || new Date().toISOString()) });
-		} else if (query.isToday) {
+		if (query.isToday) {
 			const today = DateTime.now().setZone(TZ);
 			qb.andWhere('appt.date >= :start AND appt.date <= :end', {
 				start: today.startOf('day').toJSDate(),
@@ -111,10 +108,7 @@ export class AppointmentService {
 
 		const [appointments, total] = await qb.getManyAndCount();
 
-		return {
-			appointments,
-			pagination: new PaginationResponseDto(total, page, limit),
-		};
+		return new PaginatedOutputDto<Appointment>(appointments, total, page, limit)
 	}
 
 	async getAllAppointmentCount(user: User) {

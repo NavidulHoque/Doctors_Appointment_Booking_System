@@ -5,7 +5,7 @@ import { Notification } from '@dab/database';
 import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
 import { EmailService } from '@dab/backend/modules/email/email.service';
 import { EnvService } from '@dab/backend/modules/config/env.service';
-import { PaginationResponseDto } from '@dab/backend/common/dtos/pagination.dto';
+import { PaginatedOutputDto } from '@dab/backend/common/dtos/response/paginated-output.dto';
 import type { GetNotificationsDto } from '@dab/backend/modules/notification/dtos/query-notification.dto';
 
 @Injectable()
@@ -54,10 +54,6 @@ export class NotificationService {
 			take: limit,
 		});
 
-		return {
-			notifications,
-			pagination: new PaginationResponseDto(total, page, limit),
-			message: 'Notifications fetched successfully',
-		};
+		return new PaginatedOutputDto<Notification>(notifications, total, page, limit)
 	}
 }

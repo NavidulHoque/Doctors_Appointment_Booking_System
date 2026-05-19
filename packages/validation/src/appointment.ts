@@ -25,7 +25,6 @@ export const UpdateAppointmentSchema = z.object({
 export const QueryAppointmentSchema = PaginationSchema.extend({
 	status: appointmentStatusSchema.optional(),
 	search: z.string().optional(),
-	date: z.string().date().optional(),
 	isToday: z.coerce.boolean().optional(),
 	isPast: z.coerce.boolean().optional(),
 	isFuture: z.coerce.boolean().optional(),

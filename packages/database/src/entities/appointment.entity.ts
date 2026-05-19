@@ -51,11 +51,11 @@ export class Appointment {
 	@UpdateDateColumn({ name: 'updatedAt' })
 	updatedAt: Date;
 
-	@ManyToOne(() => User, (user: User) => user.patientAppointments)
+	@ManyToOne(() => User)
 	@JoinColumn({ name: 'patientId', foreignKeyConstraintName: 'FK_appointment__patientId' })
 	patient: Relation<User>;
 
-	@ManyToOne(() => User, (user: User) => user.doctorAppointments)
+	@ManyToOne(() => User)
 	@JoinColumn({ name: 'doctorId', foreignKeyConstraintName: 'FK_appointment__doctorId' })
 	doctor: Relation<User>;
 

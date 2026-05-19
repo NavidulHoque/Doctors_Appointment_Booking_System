@@ -7,10 +7,11 @@ import { Role, AppointmentStatus } from '@dab/shared';
 import { EnvService } from '@dab/backend/modules/config/env.service';
 import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
 import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
-import { PaginationDto, PaginationResponseDto } from '@dab/backend/common/dtos/pagination.dto';
 import type { CreateDoctorDto } from '@dab/backend/modules/doctor/dtos/create-doctor.dto';
 import type { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-doctor.dto';
 import type { WeekDayType } from '@dab/shared';
+import { PaginatedOutputDto } from '@dab/backend/common/dtos/response/paginated-output.dto';
+import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
 
 @Injectable()
 export class DoctorService {
@@ -108,11 +109,7 @@ export class DoctorService {
 		const skip = (page - 1) * limit;
 		const paginatedItems = sortedDoctors.slice(skip, skip + limit);
 
-		return {
-			doctors: paginatedItems,
-			pagination: new PaginationResponseDto(totalItems, page, limit),
-			message: 'Doctors fetched successfully',
-		};
+		return new PaginatedOutputDto<Doctor>(paginatedItems, totalItems, page, limit)
 	}
 
 	async getADoctor(doctorUserId: string, queryParams: PaginationDto) {
@@ -166,7 +163,7 @@ export class DoctorService {
 			},
 			relatedDoctors: sortedRelated,
 			bookedAppointmentDates: bookedDates.map((a) => a?.date || new Date().toISOString()),
-			pagination: new PaginationResponseDto(totalReviews, page, limit),
+			pagination: new PaginatedOutputDto([], totalReviews, page, limit),
 			message: 'Doctor fetched successfully',
 		};
 	}
