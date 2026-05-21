@@ -30,15 +30,17 @@ export const UpdateDoctorSchema = z.object({
 });
 
 const toArray = <T>(schema: z.ZodType<T>) =>
-	z.preprocess((v) => (Array.isArray(v) ? v : v !== undefined ? [v] : undefined), z.array(schema).optional());
+  z.preprocess((v) => {
+    if (v === null || v === undefined) return undefined; 
+    return Array.isArray(v) ? v : [v];
+  }, z.array(schema).optional());
 
 export const QueryDoctorSchema = PaginationSchema.extend({
 	search: z.string().optional(),
-	specialization: z.string().optional(),
+	specialization: toArray(z.string()),
 	experience: toArray(z.coerce.number().int()),
 	fees: toArray(z.coerce.number().int()),
-	weekDays: toArray(weekDaysSchema),
-	isActive: z.coerce.boolean().optional(),
+	weekDays: toArray(weekDaysSchema)
 });
 
 export type TCreateDoctor = z.infer<typeof CreateDoctorSchema>;

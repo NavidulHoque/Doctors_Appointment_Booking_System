@@ -1,21 +1,15 @@
 import {
 	Column,
-	CreateDateColumn,
 	Entity,
 	Index,
 	JoinColumn,
 	ManyToOne,
-	PrimaryGeneratedColumn,
-	UpdateDateColumn,
 } from 'typeorm';
-import type { Relation } from 'typeorm';
 import { User } from './user.entity';
+import { BaseGeneratedUUIDEntity } from './base-uuid.entity';
 
 @Entity('Message')
-export class Message {
-	@PrimaryGeneratedColumn('uuid')
-	id: string;
-
+export class Message extends BaseGeneratedUUIDEntity {
 	@Column({ type: 'varchar', name: 'content' })
 	content: string;
 
@@ -27,17 +21,11 @@ export class Message {
 	@Column({ type: 'uuid', name: 'receiverId' })
 	receiverId: string;
 
-	@CreateDateColumn({ name: 'createdAt' })
-	createdAt: Date;
-
-	@UpdateDateColumn({ name: 'updatedAt' })
-	updatedAt: Date;
-
-	@ManyToOne(() => User, (user: User) => user.sentMessages)
+	@ManyToOne(() => User)
 	@JoinColumn({ name: 'senderId', foreignKeyConstraintName: 'FK_message__senderId' })
-	sender: Relation<User>;
+	sender: User;
 
-	@ManyToOne(() => User, (user: User) => user.receivedMessages)
+	@ManyToOne(() => User)
 	@JoinColumn({ name: 'receiverId', foreignKeyConstraintName: 'FK_message__receiverId' })
-	receiver: Relation<User>;
+	receiver: User;
 }

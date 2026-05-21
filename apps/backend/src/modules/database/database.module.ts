@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
-	User, Session, Doctor, Appointment, Payment, Message, Notification, Review,
+	User, Doctor, Appointment, Payment, Message, Notification, Review,
 } from '@dab/database';
 import { EnvService } from '@dab/backend/modules/config/env.service';
 import { DatabaseService } from '@dab/backend/modules/database/database.service';
@@ -14,7 +14,7 @@ import { DatabaseService } from '@dab/backend/modules/database/database.service'
 				type: 'postgres',
 				url: env.databaseUrl,
 				synchronize: false,
-				entities: [User, Session, Doctor, Appointment, Payment, Message, Notification, Review],
+				entities: [User, Doctor, Appointment, Payment, Message, Notification, Review],
 			}),
 		}),
 	],

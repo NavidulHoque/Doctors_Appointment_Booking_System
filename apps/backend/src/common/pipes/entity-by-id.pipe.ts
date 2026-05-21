@@ -9,8 +9,7 @@ const PRIMARY_KEYS: Record<string, string> = {
 	review: 'id',
 	message: 'id',
 	notification: 'id',
-	payment: 'id',
-	session: 'id',
+	payment: 'id'
 };
 
 @Injectable()

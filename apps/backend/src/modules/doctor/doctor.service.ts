@@ -9,9 +9,9 @@ import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service'
 import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
 import type { CreateDoctorDto } from '@dab/backend/modules/doctor/dtos/create-doctor.dto';
 import type { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-doctor.dto';
-import type { WeekDayType } from '@dab/shared';
-import { PaginatedOutputDto } from '@dab/backend/common/dtos/response/paginated-output.dto';
 import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
+import { PaginatedOutputDto } from '@dab/backend/common/dtos/response/paginated-output.dto';
+import { SelectQueryBuilder } from 'typeorm/browser';
 
 @Injectable()
 export class DoctorService {
@@ -34,14 +34,32 @@ export class DoctorService {
 	}
 
 	async createDoctor(dto: CreateDoctorDto) {
+		// 1. Create Supabase Auth user FIRST (source of truth for ID)
+		const { data, error } =
+			await this.supabase.admin.auth.admin.createUser({
+				email: dto.email,
+				password: dto.password,
+				email_confirm: true,
+			});
+
+		if (error || !data.user) {
+			throw new Error(error?.message || 'Failed to create Supabase user');
+		}
+
+		const userId = data.user.id;
+
+		// 2. Save in your DB using manual primary key
 		const user = this.userRepo.create({
+			id: userId,
 			fullName: dto.fullName,
 			role: Role.DOCTOR,
 		});
+
 		await this.userRepo.save(user);
 
+		// 3. Create doctor profile
 		const doctor = this.doctorRepo.create({
-			userId: user.id,
+			userId: userId,
 			specialization: dto.specialization,
 			education: dto.education,
 			experience: dto.experience,
@@ -49,59 +67,29 @@ export class DoctorService {
 			fees: dto.fees,
 			availableTimes: dto.availableTimes,
 		});
+
 		await this.doctorRepo.save(doctor);
 
-		// Create Supabase Auth user with matching UUID — doctors are pre-confirmed by admin
-		await this.supabase.admin.auth.admin.createUser({
-			id: user.id,
-			email: dto.email,
-			password: dto.password,
-			email_confirm: true,
-		});
-
 		return {
-			message: 'Doctor created successfully'
+			message: 'Doctor created successfully',
 		};
 	}
 
 	async getAllDoctors(queryParams: GetDoctorsDto) {
-		const { page, limit, search, specialization, experience, fees, weekDays, isActive } = queryParams;
+		const { page, limit, weekDays } = queryParams;
 
-		const query: Record<string, unknown> = {};
-		if (specialization) query['specialization'] = specialization;
-		if (isActive !== undefined) query['isActive'] = isActive;
-		if (experience?.length) {
-			query['experienceMin'] = experience[0];
-			if (experience.length > 1) query['experienceMax'] = experience[1];
-		}
-		if (fees?.length) {
-			query['feesMax'] = fees[0];
-			if (fees.length > 1) { query['feesMin'] = fees[0]; query['feesMax'] = fees[1]; }
-		}
-
-		let qb = this.doctorRepo
+		const qb = this.doctorRepo
 			.createQueryBuilder('doctor')
 			.leftJoinAndSelect('doctor.user', 'user');
 
-		if (specialization) {
-			qb = qb.andWhere('LOWER(doctor.specialization) LIKE LOWER(:spec)', { spec: `%${specialization}%` });
-		}
-		if (isActive !== undefined) qb = qb.andWhere('doctor.isActive = :isActive', { isActive });
-		if (experience?.length === 1) qb = qb.andWhere('doctor.experience >= :expMin', { expMin: experience[0] });
-		if (experience?.length === 2) {
-			qb = qb.andWhere('doctor.experience BETWEEN :expMin AND :expMax', { expMin: experience[0], expMax: experience[1] });
-		}
-		if (fees?.length === 1) qb = qb.andWhere('doctor.fees <= :feesMax', { feesMax: fees[0] });
-		if (fees?.length === 2) {
-			qb = qb.andWhere('doctor.fees BETWEEN :feesMin AND :feesMax', { feesMin: fees[0], feesMax: fees[1] });
-		}
+		this.applyDoctorFilters(qb, queryParams);
 
 		let doctors = await qb.getMany();
 
 		if (!doctors.length) throw new NotFoundException('Doctors not found');
 
 		// In-memory filter for search and weekDays
-		doctors = this.filterDoctors(doctors, { search, weekDays });
+		doctors = this.filterDoctors(doctors, { weekDays });
 
 		const sortedDoctors = await this.sortDoctors(doctors);
 
@@ -137,7 +125,7 @@ export class DoctorService {
 				.where('r.doctorId = :id', { id: doctorUserId })
 				.getRawOne<{ avg: string | null }>(),
 			this.doctorRepo.find({
-				where: { specialization: doctor.specialization, isActive: true },
+				where: { specialization: doctor.specialization },
 				relations: ['user'],
 				take: 5,
 			}),
@@ -213,6 +201,7 @@ export class DoctorService {
 		return { message: 'Stripe account activated successfully' };
 	}
 
+	// ----------------------- PRIVATE METHODS ----------------------
 	private async sortDoctors(doctors: Doctor[]) {
 		const withRatings = await Promise.all(
 			doctors.map(async (doc) => {
@@ -237,25 +226,64 @@ export class DoctorService {
 
 	private filterDoctors(
 		doctors: Doctor[],
-		{ search, weekDays }: { search?: string; weekDays?: WeekDayType[] },
+		{ weekDays }: { weekDays?: WeekDayType[] },
 	): Doctor[] {
 		return doctors.filter((doc) => {
-			const user = doc.user as unknown as User;
 			const times = doc.availableTimes?.map((t) => t.toLowerCase()) ?? [];
-
-			const matchSearch = search
-				? doc.specialization?.toLowerCase().includes(search) ||
-					doc.education?.toLowerCase().includes(search) ||
-					doc.aboutMe?.toLowerCase().includes(search) ||
-					user?.fullName?.toLowerCase().includes(search) ||
-					times.some((t) => t.includes(search))
-				: true;
 
 			const matchDays = weekDays?.length
 				? times.some((t) => weekDays.some((day) => t.includes(day)))
 				: true;
 
-			return matchSearch && matchDays;
+			return matchDays;
 		});
+	}
+
+	private applyDoctorFilters(qb: SelectQueryBuilder<Doctor>, queryParams: GetDoctorsDto) {
+		const { specialization, experience, fees, search } = queryParams;
+
+		if (specialization?.length) {
+			qb.andWhere('doctor.specialization IN (:...specs)', {
+				specs: specialization,
+			});
+		}
+
+		if (experience?.length === 1) {
+			qb.andWhere('doctor.experience >= :expMin', {
+				expMin: experience[0],
+			});
+		}
+
+		if (experience?.length === 2) {
+			qb.andWhere('doctor.experience BETWEEN :expMin AND :expMax', {
+				expMin: experience[0],
+				expMax: experience[1],
+			});
+		}
+
+		if (fees?.length === 1) {
+			qb.andWhere('doctor.fees <= :feesMax', {
+				feesMax: fees[0],
+			});
+		}
+
+		if (fees?.length === 2) {
+			qb.andWhere('doctor.fees BETWEEN :feesMin AND :feesMax', {
+				feesMin: fees[0],
+				feesMax: fees[1],
+			});
+		}
+
+		if (search !== undefined) {
+			qb.andWhere(
+				`(
+			        LOWER(doctor.specialization) LIKE :search OR
+			        LOWER(doctor.education) LIKE :search OR
+			        LOWER(doctor.aboutMe) LIKE :search OR
+			        LOWER(user.fullName) LIKE :search
+		        )`,
+				{ search: `%${search.toLowerCase()}%` },
+			);
+		}
 	}
 }

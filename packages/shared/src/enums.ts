@@ -48,4 +48,12 @@ export const WeekDays = {
 	SUNDAY: 'sunday',
 } as const;
 
-export type WeekDayType = (typeof WeekDays)[keyof typeof WeekDays];
+export type WeekDaysType = (typeof WeekDays)[keyof typeof WeekDays];
+
+export enum MessageStatus {
+  SENT = 'SENT',
+  DELIVERED = 'DELIVERED',
+  READ = 'READ',
+}
+
+export type MessageStatusType = (typeof MessageStatus)[keyof typeof MessageStatus];

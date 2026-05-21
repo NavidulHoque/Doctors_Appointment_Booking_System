@@ -1,26 +1,18 @@
 import {
 	Column,
-	CreateDateColumn,
 	Entity,
 	OneToMany,
 	OneToOne,
-	PrimaryGeneratedColumn,
-	UpdateDateColumn,
 } from 'typeorm';
-import type { Relation } from 'typeorm';
 import { Role } from '@dab/shared';
-import { Session } from './session.entity';
 import { Doctor } from './doctor.entity';
 import { Message } from './message.entity';
 import { Notification } from './notification.entity';
-import { Payment } from './payment.entity';
 import { Review } from './review.entity';
+import { BaseUUIDEntity } from './base-uuid.entity';
 
 @Entity('User')
-export class User {
-	@PrimaryGeneratedColumn('uuid')
-	id: string;
-
+export class User extends BaseUUIDEntity {
 	@Column({ type: 'varchar', name: 'fullName' })
 	fullName: string;
 
@@ -48,33 +40,23 @@ export class User {
 	@Column({ type: 'timestamp', name: 'lastActiveAt', nullable: true })
 	lastActiveAt: Date | null;
 
-	@CreateDateColumn({ name: 'createdAt' })
-	createdAt: Date;
-
-	@UpdateDateColumn({ name: 'updatedAt' })
-	updatedAt: Date;
-
-	@OneToOne(() => Doctor, (doctor: Doctor) => doctor.user)
-	doctor: Relation<Doctor>;
-
-	@OneToMany(() => Session, (session: Session) => session.user)
-	sessions: Relation<Session[]>;
+	@OneToOne(() => Doctor, {
+		cascade: ['insert', 'update'],
+	})
+	doctor: Doctor;
 
 	@OneToMany(() => Message, (msg: Message) => msg.sender)
-	sentMessages: Relation<Message[]>;
+	sentMessages: Message[];
 
 	@OneToMany(() => Message, (msg: Message) => msg.receiver)
-	receivedMessages: Relation<Message[]>;
+	receivedMessages: Message[];
 
 	@OneToMany(() => Review, (r: Review) => r.patient)
-	patientReviews: Relation<Review[]>;
+	patientReviews: Review[];
 
 	@OneToMany(() => Review, (r: Review) => r.doctor)
-	doctorReviews: Relation<Review[]>;
+	doctorReviews: Review[];
 
 	@OneToMany(() => Notification, (n: Notification) => n.user)
-	notifications: Relation<Notification[]>;
-
-	@OneToMany(() => Payment, (p: Payment) => p.user)
-	onlinePayments: Relation<Payment[]>;
+	notifications: Notification[];
 }

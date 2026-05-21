@@ -1,23 +1,18 @@
 import {
 	Column,
-	CreateDateColumn,
 	Entity,
 	Index,
 	JoinColumn,
 	ManyToOne,
 	OneToOne,
-	PrimaryGeneratedColumn,
 } from 'typeorm';
-import type { Relation } from 'typeorm';
 import { PaymentStatus } from '@dab/shared';
 import { User } from './user.entity';
 import { Appointment } from './appointment.entity';
+import { BaseGeneratedUUIDEntity } from './base-uuid.entity';
 
 @Entity('Payment')
-export class Payment {
-	@PrimaryGeneratedColumn('uuid')
-	id: string;
-
+export class Payment extends BaseGeneratedUUIDEntity {
 	@Index('idx_payment__userId')
 	@Column({ type: 'uuid', name: 'userId' })
 	userId: string;
@@ -34,14 +29,11 @@ export class Payment {
 	@Column({ type: 'varchar', name: 'status', default: PaymentStatus.PENDING })
 	status: string;
 
-	@CreateDateColumn({ name: 'createdAt' })
-	createdAt: Date;
-
-	@ManyToOne(() => User, (user: User) => user.onlinePayments)
+	@ManyToOne(() => User)
 	@JoinColumn({ name: 'userId', foreignKeyConstraintName: 'FK_payment__userId' })
-	user: Relation<User>;
+	user: User;
 
-	@OneToOne(() => Appointment, (appt: Appointment) => appt.onlinePayment)
+	@OneToOne(() => Appointment)
 	@JoinColumn({ name: 'appointmentId', foreignKeyConstraintName: 'FK_payment__appointmentId' })
-	appointment: Relation<Appointment>;
+	appointment: Appointment;
 }

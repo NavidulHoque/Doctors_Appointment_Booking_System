@@ -1,20 +1,15 @@
 import {
 	Column,
-	CreateDateColumn,
 	Entity,
 	Index,
 	JoinColumn,
 	ManyToOne,
-	PrimaryGeneratedColumn,
 } from 'typeorm';
-import type { Relation } from 'typeorm';
 import { User } from './user.entity';
+import { BaseGeneratedUUIDEntity } from './base-uuid.entity';
 
 @Entity('Notification')
-export class Notification {
-	@PrimaryGeneratedColumn('uuid')
-	id: string;
-
+export class Notification extends BaseGeneratedUUIDEntity {
 	@Column({ type: 'varchar', name: 'content' })
 	content: string;
 
@@ -22,10 +17,7 @@ export class Notification {
 	@Column({ type: 'uuid', name: 'userId' })
 	userId: string;
 
-	@CreateDateColumn({ name: 'createdAt' })
-	createdAt: Date;
-
 	@ManyToOne(() => User, (user: User) => user.notifications)
 	@JoinColumn({ name: 'userId', foreignKeyConstraintName: 'FK_notification__userId' })
-	user: Relation<User>;
+	user: User;
 }

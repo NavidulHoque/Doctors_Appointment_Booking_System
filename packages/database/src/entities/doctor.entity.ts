@@ -1,18 +1,18 @@
 import {
 	Column,
-	CreateDateColumn,
 	Entity,
 	Index,
 	JoinColumn,
+	OneToMany,
 	OneToOne,
-	PrimaryColumn,
-	UpdateDateColumn,
+	PrimaryColumn
 } from 'typeorm';
-import type { Relation } from 'typeorm';
 import { User } from './user.entity';
+import { DoctorWorkingDay } from './doctor-working-day.entity';
+import { BaseTimestampEntity } from './base-timestamp.entity';
 
 @Entity('Doctor')
-export class Doctor {
+export class Doctor extends BaseTimestampEntity {
 	@PrimaryColumn({ type: 'uuid', name: 'userId' })
 	userId: string;
 
@@ -23,23 +23,19 @@ export class Doctor {
 	@Column({ type: 'varchar', name: 'education' })
 	education: string;
 
+	@Index('idx_doctor_experience')
 	@Column({ type: 'int', name: 'experience' })
 	experience: number;
 
 	@Column({ type: 'varchar', name: 'aboutMe' })
 	aboutMe: string;
 
+	@Index('idx_doctor_fees')
 	@Column({ type: 'int', name: 'fees' })
 	fees: number;
 
 	@Column({ type: 'int', name: 'revenue', default: 0 })
 	revenue: number;
-
-	@Column({ type: 'text', name: 'availableTimes', array: true })
-	availableTimes: string[];
-
-	@Column({ type: 'boolean', name: 'isActive', default: false })
-	isActive: boolean;
 
 	@Column({ type: 'varchar', name: 'stripeAccountId', nullable: true, unique: true })
 	stripeAccountId: string | null;
@@ -47,13 +43,14 @@ export class Doctor {
 	@Column({ type: 'boolean', name: 'isStripeAccountActive', default: false })
 	isStripeAccountActive: boolean;
 
-	@CreateDateColumn({ name: 'createdAt' })
-	createdAt: Date;
-
-	@UpdateDateColumn({ name: 'updatedAt' })
-	updatedAt: Date;
-
-	@OneToOne(() => User, (user: User) => user.doctor)
+	@OneToOne(() => User, (user: User) => user.doctor, {
+		onDelete: 'CASCADE',
+	})
 	@JoinColumn({ name: 'userId', foreignKeyConstraintName: 'FK_doctor__userId' })
-	user: Relation<User>;
+	user: User;
+
+	@OneToMany(() => DoctorWorkingDay, (wd) => wd.doctor, {
+		cascade: ['insert', 'update']
+	})
+	workingDays: DoctorWorkingDay[];
 }

@@ -50,6 +50,33 @@ export const appointmentOutputSchema = z.object({
 
 export const createAppointmentResponseSchema = messageOutputSchema.merge(appointmentOutputSchema);
 
+export const appointmentCountOutputSchema = messageOutputSchema.extend({
+	count: z.object({
+		totalAppointments: z.number(),
+
+		totalUniquePatientsCount: z.number(),
+		totalUniqueDoctorsCount: z.number(),
+
+		totalPendingAppointments: z.number(),
+		totalConfirmedAppointments: z.number(),
+		totalRunningAppointments: z.number(),
+		totalCompletedAppointments: z.number(),
+		totalCancelledAppointments: z.number(),
+
+		totalPaidAppointments: z.number(),
+		totalUnPaidAppointments: z.number(),
+
+		totalCashPaidAppointments: z.number(),
+		totalOnlinePaidAppointments: z.number(),
+	})
+});
+
+export const appointmentGraphOutputSchema = z.object({
+	year: z.number(),
+	month: z.string(),
+	total: z.number(),
+});
+
 // ─── Doctors ───────────────────────────────────────────────────────────────────
 
 export const doctorOutputSchema = z.object({
@@ -66,3 +93,5 @@ export type AuthSession = z.infer<typeof authSessionSchema>;
 export type UserOutput = z.infer<typeof userOutputSchema>;
 export type AppointmentOutput = z.infer<typeof appointmentOutputSchema>;
 export type DoctorOutput = z.infer<typeof doctorOutputSchema>;
+export type AppointmentCountOutput = z.infer<typeof appointmentCountOutputSchema>;
+export type AppointmentGraphOutput = z.infer<typeof appointmentGraphOutputSchema>;

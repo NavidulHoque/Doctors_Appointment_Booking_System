@@ -5,12 +5,13 @@ import { PaginationSchema } from './common';
 export const CreateAppointmentSchema = z.object({
 	patientId: z.string().uuid(),
 	doctorId: z.string().uuid(),
-	date: z.coerce
-		.date()
+	date: z.coerce.date()
 		.refine((date) => {
-			// normalize minutes and seconds
+			if (!(date instanceof Date) || isNaN(date.getTime())) {
+				return false;
+			}
+			// normalize to start of minute
 			date.setMinutes(0, 0, 0);
-
 			return date > new Date();
 		}, {
 			message: "Date must be in the future",

@@ -3,10 +3,12 @@ import {
 	ApiBearerAuth,
 	ApiCreatedResponse,
 	ApiForbiddenResponse,
+	ApiInternalServerErrorResponse,
 	ApiNotFoundResponse,
 	ApiOkResponse,
 	ApiOperation,
 	ApiParam,
+	ApiQuery,
 	ApiTags,
 	ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -15,7 +17,7 @@ import { CreateDoctorDto } from '@dab/backend/modules/doctor/dtos/create-doctor.
 import { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-doctor.dto';
 import { Roles } from '@dab/backend/common/decorators/roles.decorator';
 import { CurrentUser } from '@dab/backend/common/decorators/current-user.decorator';
-import { Role } from '@dab/shared';
+import { Role, WeekDays } from '@dab/shared';
 import type { User } from '@dab/database';
 import { MessageResponseDto } from '@dab/backend/common/dtos/response/message-response.dto';
 import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
@@ -23,14 +25,15 @@ import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
 @ApiTags('doctors')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Invalid or expired token' })
+@ApiInternalServerErrorResponse({ description: 'Internal server error' })
 @Controller('doctors')
 export class DoctorController {
-	constructor(private readonly doctorService: DoctorService) {}
+	constructor(private readonly doctorService: DoctorService) { }
 
 	@Roles(Role.ADMIN)
 	@Post()
 	@ApiOperation({ summary: 'Admin: create a doctor account' })
-	@ApiCreatedResponse({ 
+	@ApiCreatedResponse({
 		description: 'Doctor account created successfully',
 		type: MessageResponseDto
 	})
@@ -41,6 +44,14 @@ export class DoctorController {
 
 	@Get()
 	@ApiOperation({ summary: 'Get all doctors with filters and pagination' })
+	@ApiQuery({ name: 'page', required: true, type: Number })
+	@ApiQuery({ name: 'limit', required: true, type: Number })
+	@ApiQuery({ name: 'specialization', required: false, type: String })
+	@ApiQuery({ name: 'search', required: false, type: String })
+	@ApiQuery({ name: 'experience', required: false, type: Number, isArray: true })
+	@ApiQuery({ name: 'fees', required: false, type: Number, isArray: true })
+	@ApiQuery({ name: 'weekDays', required: false, enum: WeekDays, isArray: true })
+	@ApiQuery({ name: 'isActive', required: false, type: Boolean })
 	@ApiOkResponse({ description: 'Paginated list of doctors with ratings' })
 	getAllDoctors(@Query() query: GetDoctorsDto) {
 		return this.doctorService.getAllDoctors(query);

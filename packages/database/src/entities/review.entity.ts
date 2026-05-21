@@ -1,20 +1,15 @@
 import {
 	Column,
-	CreateDateColumn,
 	Entity,
 	Index,
 	JoinColumn,
-	ManyToOne,
-	PrimaryGeneratedColumn,
+	ManyToOne
 } from 'typeorm';
-import type { Relation } from 'typeorm';
 import { User } from './user.entity';
+import { BaseGeneratedUUIDEntity } from './base-uuid.entity';
 
 @Entity('Review')
-export class Review {
-	@PrimaryGeneratedColumn('uuid')
-	id: string;
-
+export class Review extends BaseGeneratedUUIDEntity {
 	@Index('idx_review__patientId')
 	@Column({ type: 'uuid', name: 'patientId' })
 	patientId: string;
@@ -29,14 +24,11 @@ export class Review {
 	@Column({ type: 'int', name: 'rating' })
 	rating: number;
 
-	@CreateDateColumn({ name: 'createdAt' })
-	createdAt: Date;
-
 	@ManyToOne(() => User, (user: User) => user.patientReviews)
 	@JoinColumn({ name: 'patientId', foreignKeyConstraintName: 'FK_review__patientId' })
-	patient: Relation<User>;
+	patient: User;
 
 	@ManyToOne(() => User, (user: User) => user.doctorReviews)
 	@JoinColumn({ name: 'doctorId', foreignKeyConstraintName: 'FK_review__doctorId' })
-	doctor: Relation<User>;
+	doctor: User;
 }

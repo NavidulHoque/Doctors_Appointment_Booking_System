@@ -82,21 +82,21 @@ export class AppointmentService {
 			qb.andWhere('appt.doctorId = :uid', { uid: user.id });
 		}
 
-		if (query.status) qb.andWhere('appt.status = :status', { status: query.status });
+		if (query.status !== undefined) qb.andWhere('appt.status = :status', { status: query.status });
 
-		if (query.isToday) {
+		if (query.isToday !== undefined) {
 			const today = DateTime.now().setZone(TZ);
 			qb.andWhere('appt.date >= :start AND appt.date <= :end', {
 				start: today.startOf('day').toJSDate(),
 				end: today.endOf('day').toJSDate(),
 			});
-		} else if (query.isPast) {
+		} else if (query.isPast !== undefined) {
 			qb.andWhere('appt.date < :now', { now: DateTime.now().setZone(TZ).toJSDate() });
-		} else if (query.isFuture) {
+		} else if (query.isFuture !== undefined) {
 			qb.andWhere('appt.date > :now', { now: DateTime.now().setZone(TZ).toJSDate() });
 		}
 
-		if (query.search) {
+		if (query.search !== undefined) {
 			qb.andWhere(
 				new Brackets((b) =>
 					b

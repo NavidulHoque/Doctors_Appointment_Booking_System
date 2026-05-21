@@ -1,27 +1,19 @@
 import {
 	Column,
-	CreateDateColumn,
 	Entity,
 	Index,
 	JoinColumn,
 	ManyToOne,
-	OneToOne,
-	PrimaryGeneratedColumn,
-	Unique,
-	UpdateDateColumn,
+	Unique
 } from 'typeorm';
-import type { Relation } from 'typeorm';
 import { AppointmentStatus } from '@dab/shared';
 import { User } from './user.entity';
-import { Payment } from './payment.entity';
+import { BaseGeneratedUUIDEntity } from './base-uuid.entity';
 
 @Entity('Appointment')
 @Unique('UQ_appointment__patientId_date', ['patientId', 'date'])
 @Unique('UQ_appointment__doctorId_date', ['doctorId', 'date'])
-export class Appointment {
-	@PrimaryGeneratedColumn('uuid')
-	id: string;
-
+export class Appointment extends BaseGeneratedUUIDEntity {
 	@Index('idx_appointment__patientId')
 	@Column({ type: 'uuid', name: 'patientId' })
 	patientId: string;
@@ -45,20 +37,11 @@ export class Appointment {
 	@Column({ type: 'varchar', name: 'paymentMethod', nullable: true })
 	paymentMethod: string | null;
 
-	@CreateDateColumn({ name: 'createdAt' })
-	createdAt: Date;
-
-	@UpdateDateColumn({ name: 'updatedAt' })
-	updatedAt: Date;
-
 	@ManyToOne(() => User)
 	@JoinColumn({ name: 'patientId', foreignKeyConstraintName: 'FK_appointment__patientId' })
-	patient: Relation<User>;
+	patient: User;
 
 	@ManyToOne(() => User)
 	@JoinColumn({ name: 'doctorId', foreignKeyConstraintName: 'FK_appointment__doctorId' })
-	doctor: Relation<User>;
-
-	@OneToOne(() => Payment, (payment: Payment) => payment.appointment)
-	onlinePayment: Relation<Payment>;
+	doctor: User;
 }

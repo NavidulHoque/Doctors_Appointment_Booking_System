@@ -3,7 +3,9 @@ import { DataSource } from 'typeorm';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MigrationInterface } from 'typeorm';
-import { User, Session, Doctor, Appointment, Payment, Message, Notification, Review } from '../src/entities';
+import { User, Doctor, Appointment, Payment, Message, Notification, Review } from '../src/entities';
+import { DoctorBreakTime } from '../src/entities/doctor-break-time.entity';
+import { DoctorWorkingDay } from '../src/entities/doctor-working-day.entity';
 
 const migrationsDir = join(import.meta.dir, '../src/migrations');
 
@@ -26,7 +28,7 @@ export async function createDevDataSource(url: string): Promise<DataSource> {
 		type: 'postgres',
 		url,
 		synchronize: false,
-		entities: [User, Session, Doctor, Appointment, Payment, Message, Notification, Review],
+		entities: [User, Doctor, Appointment, Payment, Message, Notification, Review, DoctorWorkingDay, DoctorBreakTime],
 		migrations,
 	});
 }

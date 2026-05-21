@@ -23,6 +23,11 @@ import type { User } from '@dab/database';
 import { CreateAppointmentResponseDto } from '@dab/backend/modules/appointment/dtos/response/create-appointment-response.dto';
 import { Roles } from '@dab/backend/common/decorators/roles.decorator';
 import { AppointmentStatus, Role } from '@dab/shared';
+import { AppointmentCountResponseDto } from '@dab/backend/modules/appointment/dtos/response/appointment-count-response.dto';
+import { AppointmentGraphResponseDto } from '@dab/backend/modules/appointment/dtos/response/appointment-graph-response.dto';
+import { MessageResponseDto } from '@dab/backend/common/dtos/response/message-response.dto';
+import { AppointmentResponseDto } from './dtos/response/appointment-response.dto';
+import { SwaggerPaginatedDto } from '@dab/backend/common/dtos/response/swagger-paginated.dto';
 
 @ApiTags('appointments')
 @ApiBearerAuth()
@@ -57,15 +62,21 @@ export class AppointmentController {
 	@ApiQuery({ name: 'isToday', required: false, type: Boolean })
 	@ApiQuery({ name: 'isPast', required: false, type: Boolean })
 	@ApiQuery({ name: 'isFuture', required: false, type: Boolean })
-	@ApiOkResponse({ description: 'Paginated list of appointments' })
+	@ApiOkResponse({ 
+		type:  SwaggerPaginatedDto(AppointmentResponseDto),
+		description: 'Paginated list of appointments' 
+	})
 	getAllAppointments(@Query() query: GetAppointmentsDto, @CurrentUser() user: User) {
 		return this.appointmentService.getAllAppointments(query, user);
 	}
 
 	@Roles(Role.PATIENT, Role.ADMIN, Role.DOCTOR)
 	@Get('counts')
-	@ApiOperation({ summary: 'Get appointment status counts (scoped by role)' })
-	@ApiOkResponse({ description: 'Counts by status returned' })
+	@ApiOperation({ summary: 'Get appointment counts' })
+	@ApiOkResponse({ 
+		type: AppointmentCountResponseDto,
+		description: 'Appointments count fetched successfully' 
+	})
 	getAllAppointmentCount(@CurrentUser() user: User) {
 		return this.appointmentService.getAllAppointmentCount(user);
 	}
@@ -73,7 +84,10 @@ export class AppointmentController {
 	@Roles(Role.PATIENT, Role.ADMIN, Role.DOCTOR)
 	@Get('graph')
 	@ApiOperation({ summary: 'Get monthly appointment graph data' })
-	@ApiOkResponse({ description: 'Monthly appointment totals returned' })
+	@ApiOkResponse({ 
+		type: AppointmentGraphResponseDto,
+		description: 'Appointments graph fetched successfully' 
+	})
 	getGraph(@CurrentUser() user: User) {
 		return this.appointmentService.getTotalAppointmentsGraph(user);
 	}
@@ -83,7 +97,11 @@ export class AppointmentController {
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: 'Update appointment status or cancellation reason' })
 	@ApiParam({ name: 'id', description: 'Appointment UUID' })
-	@ApiOkResponse({ description: 'Appointment updated successfully' })
+	@ApiOkResponse({ 
+		type: MessageResponseDto,
+		description: 'Appointment updated successfully' 
+	})
+	@ApiBadRequestResponse({ description: 'Cancellation reason is required when cancelling' })
 	@ApiNotFoundResponse({ description: 'Appointment not found' })
 	@ApiForbiddenResponse({ description: 'Not authorised to update this appointment' })
 	updateAppointment(

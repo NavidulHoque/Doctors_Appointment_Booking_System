@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AppointmentStatus, Gender, PaymentMethod, PaymentStatus, WeekDays } from '@dab/shared';
+import { AppointmentStatus, Gender, MessageStatus, PaymentMethod, PaymentStatus, WeekDays } from '@dab/shared';
 
 export const appointmentStatusSchema = z.enum([
 	AppointmentStatus.PENDING,
@@ -26,3 +26,5 @@ export const weekDaysSchema = z.enum([
 	WeekDays.SATURDAY,
 	WeekDays.SUNDAY,
 ]);
+
+export const messageStatusSchema = z.enum([MessageStatus.SENT, MessageStatus.DELIVERED, MessageStatus.READ]);
