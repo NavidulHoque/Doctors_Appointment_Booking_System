@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Stripe from 'stripe';
 import { User, Doctor, Review, Appointment } from '@dab/database';
-import { Role, AppointmentStatus } from '@dab/shared';
+import { Role, AppointmentStatus, WeekDays } from '@dab/shared';
 import { EnvService } from '@dab/backend/modules/config/env.service';
 import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
 import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
@@ -57,6 +57,15 @@ export class DoctorService {
 
 		await this.userRepo.save(user);
 
+		const workingDays = Object.values(WeekDays).map((day) => {
+			return {
+				day,
+				startTime: '00:00',
+				endTime: '00:00',
+				doctorId: userId
+			};
+		});
+
 		// 3. Create doctor profile
 		const doctor = this.doctorRepo.create({
 			userId: userId,
@@ -65,7 +74,7 @@ export class DoctorService {
 			experience: dto.experience,
 			aboutMe: dto.aboutMe,
 			fees: dto.fees,
-			availableTimes: dto.availableTimes,
+			workingDays
 		});
 
 		await this.doctorRepo.save(doctor);
@@ -87,9 +96,6 @@ export class DoctorService {
 		let doctors = await qb.getMany();
 
 		if (!doctors.length) throw new NotFoundException('Doctors not found');
-
-		// In-memory filter for search and weekDays
-		doctors = this.filterDoctors(doctors, { weekDays });
 
 		const sortedDoctors = await this.sortDoctors(doctors);
 
@@ -222,21 +228,6 @@ export class DoctorService {
 				? b.averageRating - a.averageRating
 				: b.experience - a.experience,
 		);
-	}
-
-	private filterDoctors(
-		doctors: Doctor[],
-		{ weekDays }: { weekDays?: WeekDayType[] },
-	): Doctor[] {
-		return doctors.filter((doc) => {
-			const times = doc.availableTimes?.map((t) => t.toLowerCase()) ?? [];
-
-			const matchDays = weekDays?.length
-				? times.some((t) => weekDays.some((day) => t.includes(day)))
-				: true;
-
-			return matchDays;
-		});
 	}
 
 	private applyDoctorFilters(qb: SelectQueryBuilder<Doctor>, queryParams: GetDoctorsDto) {

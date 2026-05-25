@@ -3,6 +3,7 @@ import { WeekDays } from '@dab/shared';
 import type { WeekDaysType } from '@dab/shared';
 import { Doctor } from "./doctor.entity";
 import { BaseGeneratedUUIDEntity } from "./base-uuid.entity";
+import { DoctorBreakTime } from "./doctor-break-time.entity";
 
 @Entity('DoctorWorkingDay')
 @Unique("UQ_doctor_working_day_doctorId_day", ['doctorId', 'day'])
@@ -24,4 +25,9 @@ export class DoctorWorkingDay extends BaseGeneratedUUIDEntity {
 	})
 	@JoinColumn({ name: 'doctorId', foreignKeyConstraintName: 'FK_doctor_working_day_doctorId' })
 	doctor: Doctor;
+
+	@OneToOne(() => DoctorBreakTime, (bt) => bt.workingDay, {
+		cascade: ['insert', 'update'],
+	})
+	breakTime: DoctorBreakTime;
 }
