@@ -80,11 +80,16 @@ export const appointmentGraphOutputSchema = z.object({
 // ─── Doctors ───────────────────────────────────────────────────────────────────
 
 export const doctorOutputSchema = z.object({
-	id: z.string(),
-	fullName: z.string(),
-	email: z.string(),
+	userId: z.string(),
 	specialization: z.string(),
 	education: z.string(),
+	experience: z.number(),
+	aboutMe: z.string(),
+	fees: z.number(),
+	revenue: z.number(),
+	stripeAccountId: z.string().nullable(),
+	isStripeAccountActive: z.boolean(),
+	user: userOutputSchema,
 });
 
 export type MessageOutput = z.infer<typeof messageOutputSchema>;
@@ -95,3 +100,4 @@ export type AppointmentOutput = z.infer<typeof appointmentOutputSchema>;
 export type DoctorOutput = z.infer<typeof doctorOutputSchema>;
 export type AppointmentCountOutput = z.infer<typeof appointmentCountOutputSchema>;
 export type AppointmentGraphOutput = z.infer<typeof appointmentGraphOutputSchema>;
+export type DoctorOutputResponse = z.infer<typeof doctorOutputSchema>;

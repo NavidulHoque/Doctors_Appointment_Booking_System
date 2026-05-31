@@ -10,6 +10,7 @@ import {
 import { User } from './user.entity';
 import { DoctorWorkingDay } from './doctor-working-day.entity';
 import { BaseTimestampEntity } from './base-timestamp.entity';
+import { StripeAccountStatus } from '@dab/shared/src/enums';
 
 @Entity('Doctor')
 export class Doctor extends BaseTimestampEntity {
@@ -40,8 +41,8 @@ export class Doctor extends BaseTimestampEntity {
 	@Column({ type: 'varchar', name: 'stripeAccountId', nullable: true, unique: true })
 	stripeAccountId: string | null;
 
-	@Column({ type: 'boolean', name: 'isStripeAccountActive', default: false })
-	isStripeAccountActive: boolean;
+	@Column({ type: 'enum', enum: StripeAccountStatus, default: StripeAccountStatus.NOT_CREATED })
+	stripeAccountStatus: StripeAccountStatus;
 
 	@OneToOne(() => User, (user: User) => user.doctor, {
 		onDelete: 'CASCADE',

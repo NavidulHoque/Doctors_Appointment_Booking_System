@@ -3,12 +3,14 @@ import {
 	Entity,
 	Index,
 	JoinColumn,
-	ManyToOne
+	ManyToOne,
+	Unique
 } from 'typeorm';
 import { User } from './user.entity';
 import { BaseGeneratedUUIDEntity } from './base-uuid.entity';
 
 @Entity('Review')
+@Unique("UQ_review__patientId__doctorId", ['patientId', 'doctorId'])
 export class Review extends BaseGeneratedUUIDEntity {
 	@Index('idx_review__patientId')
 	@Column({ type: 'uuid', name: 'patientId' })

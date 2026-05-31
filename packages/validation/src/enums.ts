@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AppointmentStatus, Gender, MessageStatus, PaymentMethod, PaymentStatus, WeekDays } from '@dab/shared';
+import { AppointmentStatus, Gender, MessageStatus, PaymentMethod, PaymentStatus, StripeAccountStatus, WeekDays } from '@dab/shared';
 
 export const appointmentStatusSchema = z.enum([
 	AppointmentStatus.PENDING,
@@ -28,3 +28,11 @@ export const weekDaysSchema = z.enum([
 ]);
 
 export const messageStatusSchema = z.enum([MessageStatus.SENT, MessageStatus.DELIVERED, MessageStatus.READ]);
+
+export const stripeAccountStatusSchema = z.enum([
+	StripeAccountStatus.NOT_CREATED,
+	StripeAccountStatus.ONBOARDING,
+	StripeAccountStatus.PENDING,
+	StripeAccountStatus.ACTIVE,
+	StripeAccountStatus.RESTRICTED
+]);

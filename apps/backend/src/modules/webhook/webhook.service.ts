@@ -2,10 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Stripe from 'stripe';
-import { Payment, Appointment } from '@dab/database';
-import { PaymentStatus } from '@dab/shared';
+import { Payment, Appointment, Doctor } from '@dab/database';
+import { PaymentStatus, StripeAccountStatus } from '@dab/shared';
 import { EnvService } from '@dab/backend/modules/config/env.service';
 import { NotificationService } from '@dab/backend/modules/notification/notification.service';
+import { StripeStatusMapper } from '@dab/backend/common/mappers/stripe-status.mapper';
 
 @Injectable()
 export class WebhookService {
@@ -19,6 +20,8 @@ export class WebhookService {
 		@InjectRepository(Appointment)
 		private readonly appointmentRepo: Repository<Appointment>,
 		private readonly notificationService: NotificationService,
+		@InjectRepository(Doctor)
+		private readonly doctorRepo: Repository<Doctor>,
 	) {
 		this.stripe = new Stripe(env.stripe.secretKey, { apiVersion: '2025-04-30.basil' });
 	}
@@ -36,6 +39,9 @@ export class WebhookService {
 				break;
 			case 'checkout.session.expired':
 				await this.handleExpiredSession(event.data.object as Stripe.Checkout.Session);
+				break;
+			case 'account.updated':
+				await this.handleStripeAccountUpdated(event.data.object as Stripe.Account);
 				break;
 			default:
 				this.logger.log(`Unhandled Stripe event: ${event.type}`);
@@ -76,5 +82,27 @@ export class WebhookService {
 				`Payment session expired for appointment with ${doctorName}`,
 			)
 			.catch((err) => this.logger.error('Failed to send expiry notification:', err));
+	}
+
+	private async handleStripeAccountUpdated(account: Stripe.Account) {
+		const doctor = await this.doctorRepo.findOne({
+			where: { stripeAccountId: account.id },
+		});
+
+		if (!doctor) {
+			this.logger.warn(`No doctor found for Stripe account ${account.id}`);
+			return;
+		}
+
+		const status = StripeStatusMapper.map(account);
+
+		await this.doctorRepo.update(
+			{ userId: doctor.userId },
+			{ stripeAccountStatus: status },
+		);
+
+		this.logger.log(
+			`Stripe status updated for doctor ${doctor.userId}: ${status}`,
+		);
 	}
 }

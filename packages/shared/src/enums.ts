@@ -57,3 +57,11 @@ export enum MessageStatus {
 }
 
 export type MessageStatusType = (typeof MessageStatus)[keyof typeof MessageStatus];
+
+export enum StripeAccountStatus {
+  NOT_CREATED = 'NOT_CREATED',
+  ONBOARDING = 'ONBOARDING',
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  RESTRICTED = 'RESTRICTED',
+}

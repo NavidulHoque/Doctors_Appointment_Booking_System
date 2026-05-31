@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, MoreThan, Not, Repository } from 'typeorm';
 import Stripe from 'stripe';
 import { User, Doctor, Review, Appointment } from '@dab/database';
-import { Role, AppointmentStatus, WeekDays } from '@dab/shared';
+import { Role, AppointmentStatus, WeekDays, StripeAccountStatus } from '@dab/shared';
 import { EnvService } from '@dab/backend/modules/config/env.service';
 import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
 import { SupabaseService } from '@dab/backend/modules/supabase/supabase.service';
@@ -12,14 +12,14 @@ import type { GetDoctorsDto } from '@dab/backend/modules/doctor/dtos/query-docto
 import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
 import { PaginatedOutputDto } from '@dab/backend/common/dtos/response/paginated-output.dto';
 import { SelectQueryBuilder } from 'typeorm/browser';
+import { WebhookService } from '../webhook/webhook.service';
+import { StripeStatusMapper } from '../../common/mappers/stripe-status.mapper';
 
 @Injectable()
 export class DoctorService {
 	private readonly stripe: Stripe;
 
 	constructor(
-		@InjectRepository(User)
-		private readonly userRepo: Repository<User>,
 		@InjectRepository(Doctor)
 		private readonly doctorRepo: Repository<Doctor>,
 		@InjectRepository(Review)
@@ -27,14 +27,14 @@ export class DoctorService {
 		@InjectRepository(Appointment)
 		private readonly appointmentRepo: Repository<Appointment>,
 		private readonly env: EnvService,
-		private readonly realtime: RealtimeService,
 		private readonly supabase: SupabaseService,
+		private readonly dataSource: DataSource
 	) {
 		this.stripe = new Stripe(this.env.stripe.secretKey, { apiVersion: '2025-04-30.basil' });
 	}
 
 	async createDoctor(dto: CreateDoctorDto) {
-		// 1. Create Supabase Auth user FIRST (source of truth for ID)
+		// Create Supabase user first
 		const { data, error } =
 			await this.supabase.admin.auth.admin.createUser({
 				email: dto.email,
@@ -48,52 +48,60 @@ export class DoctorService {
 
 		const userId = data.user.id;
 
-		// 2. Save in your DB using manual primary key
-		const user = this.userRepo.create({
-			id: userId,
-			fullName: dto.fullName,
-			role: Role.DOCTOR,
-		});
+		try {
+			await this.dataSource.transaction(async (manager) => {
+				const user = manager.create(User, {
+					id: userId,
+					fullName: dto.fullName,
+					role: Role.DOCTOR,
+				});
 
-		await this.userRepo.save(user);
+				await manager.save(User, user);
 
-		const workingDays = Object.values(WeekDays).map((day) => {
+				const workingDays = Object.values(WeekDays).map((day) => ({
+					day,
+					startTime: '00:00',
+					endTime: '00:00',
+					doctorId: userId,
+				}));
+
+				const doctor = manager.create(Doctor, {
+					userId,
+					specialization: dto.specialization,
+					education: dto.education,
+					experience: dto.experience,
+					aboutMe: dto.aboutMe,
+					fees: dto.fees,
+					workingDays,
+				});
+
+				await manager.save(Doctor, doctor);
+			});
+
 			return {
-				day,
-				startTime: '00:00',
-				endTime: '00:00',
-				doctorId: userId
+				message: 'Doctor created successfully',
 			};
-		});
+		} catch (err) {
+			// Compensating action:
+			// remove Supabase user because DB transaction failed
 
-		// 3. Create doctor profile
-		const doctor = this.doctorRepo.create({
-			userId: userId,
-			specialization: dto.specialization,
-			education: dto.education,
-			experience: dto.experience,
-			aboutMe: dto.aboutMe,
-			fees: dto.fees,
-			workingDays
-		});
+			await this.supabase.admin.auth.admin.deleteUser(userId);
 
-		await this.doctorRepo.save(doctor);
-
-		return {
-			message: 'Doctor created successfully',
-		};
+			throw err;
+		}
 	}
 
 	async getAllDoctors(queryParams: GetDoctorsDto) {
-		const { page, limit, weekDays } = queryParams;
+		const { page, limit } = queryParams;
 
 		const qb = this.doctorRepo
 			.createQueryBuilder('doctor')
-			.leftJoinAndSelect('doctor.user', 'user');
+			.leftJoinAndSelect('doctor.user', 'user')
+			.innerJoinAndSelect('doctor.workingDays', 'workingDays');
 
 		this.applyDoctorFilters(qb, queryParams);
 
-		let doctors = await qb.getMany();
+		const doctors = await qb.getMany();
 
 		if (!doctors.length) throw new NotFoundException('Doctors not found');
 
@@ -124,87 +132,112 @@ export class DoctorService {
 				take: limit,
 				relations: ['patient'],
 			}),
-			this.reviewRepo.count({ where: { doctorId: doctorUserId } }),
-			this.reviewRepo
-				.createQueryBuilder('r')
-				.select('AVG(r.rating)', 'avg')
-				.where('r.doctorId = :id', { id: doctorUserId })
-				.getRawOne<{ avg: string | null }>(),
+			this.calculateReviewCount(doctorUserId),
+			this.calculateAverageRating(doctorUserId),
 			this.doctorRepo.find({
-				where: { specialization: doctor.specialization },
+				where: {
+					specialization: doctor.specialization,
+					userId: Not(doctorUserId),
+				},
 				relations: ['user'],
 				take: 5,
 			}),
 			this.appointmentRepo.find({
 				where: [
-					{ doctorId: doctorUserId, status: AppointmentStatus.PENDING },
-					{ doctorId: doctorUserId, status: AppointmentStatus.CONFIRMED },
+					{ doctorId: doctorUserId, status: AppointmentStatus.PENDING, date: MoreThan(new Date()) },
+					{ doctorId: doctorUserId, status: AppointmentStatus.CONFIRMED, date: MoreThan(new Date()) },
 				],
 				select: ['date'],
 			}),
 		]);
 
-		const sortedRelated = await this.sortDoctors(
-			relatedDoctors.filter((d) => d.userId !== doctorUserId),
-		);
+		const sortedRelatedDoctors = await this.sortDoctors(relatedDoctors);
 
 		return {
 			doctor: {
 				...doctor,
 				averageRating: ratingAgg?.avg ? parseFloat(ratingAgg.avg) : 0,
 				totalReviews,
-				reviews,
+				reviews: new PaginatedOutputDto<Review>(reviews, totalReviews, page, limit)
 			},
-			relatedDoctors: sortedRelated,
-			bookedAppointmentDates: bookedDates.map((a) => a?.date || new Date().toISOString()),
-			pagination: new PaginatedOutputDto([], totalReviews, page, limit),
-			message: 'Doctor fetched successfully',
+			relatedDoctors: sortedRelatedDoctors,
+			bookedAppointmentDates: bookedDates,
+			message: 'Doctor fetched successfully'
 		};
 	}
 
 	async createStripeAccount(doctorUserId: string) {
 		const doctor = await this.doctorRepo.findOne({
 			where: { userId: doctorUserId },
-			relations: ['user'],
 		});
-		if (!doctor) throw new NotFoundException('Doctor not found');
-		if (doctor.stripeAccountId) throw new BadRequestException('Stripe account already exists');
 
+		if (!doctor) {
+			throw new NotFoundException('Doctor not found');
+		}
+
+		if (doctor.stripeAccountId) {
+			throw new BadRequestException('Stripe account already exists');
+		}
+
+		// 1. Create Stripe account (external system)
 		const account = await this.stripe.accounts.create({
 			type: 'express',
 		});
 
-		await this.doctorRepo.update({ userId: doctorUserId }, { stripeAccountId: account.id });
+		let link: Stripe.AccountLink;
 
-		const link = await this.stripe.accountLinks.create({
-			account: account.id,
-			refresh_url: `${this.env.frontendUrl}/stripe/onboarding/refresh`,
-			return_url: `${this.env.frontendUrl}/stripe/onboarding/return?accountId=${account.id}`,
-			type: 'account_onboarding',
-		});
+		try {
+			// 2. Create onboarding link (still external system)
+			link = await this.stripe.accountLinks.create({
+				account: account.id,
+				refresh_url: `${this.env.frontendUrl}/stripe/onboarding/refresh`,
+				return_url: `${this.env.frontendUrl}/stripe/onboarding/return?accountId=${account.id}`,
+				type: 'account_onboarding',
+			});
 
-		return { url: link.url, message: 'Stripe account created successfully' };
+			// 3. DB update ONLY after all Stripe steps succeed
+			await this.doctorRepo.update(
+				{ userId: doctorUserId },
+				{ stripeAccountId: account.id },
+			);
+
+			return {
+				url: link.url,
+				message: 'Stripe account created successfully',
+			};
+		} catch (error) {
+			// If link creation fails or DB update fails → cleanup Stripe account
+			try {
+				await this.stripe.accounts.del(account.id);
+			} catch (cleanupError) {
+				console.error('Failed to rollback Stripe account:', cleanupError);
+			}
+
+			throw error;
+		}
 	}
 
-	async activateStripeAccount(doctorUserId: string) {
-		const doctor = await this.doctorRepo.findOne({ where: { userId: doctorUserId } });
-		if (!doctor?.stripeAccountId) throw new NotFoundException('Stripe account not found');
-
-		const account = await this.stripe.accounts.retrieve(doctor.stripeAccountId);
-		const { charges_enabled, payouts_enabled, details_submitted } = account;
-
-		if (!charges_enabled || !payouts_enabled || !details_submitted) {
-			throw new BadRequestException('Stripe account not fully activated yet');
-		}
-
-		await this.doctorRepo.update({ userId: doctorUserId }, { isStripeAccountActive: true });
-
-		await this.realtime.broadcastEvent('doctor_stripe_activated', {
-			doctorId: doctorUserId,
-			message: 'Stripe account activated successfully',
+	async syncStripeAccountStatus(doctorUserId: string) {
+		const doctor = await this.doctorRepo.findOne({
+			where: { userId: doctorUserId },
 		});
 
-		return { message: 'Stripe account activated successfully' };
+		if (!doctor?.stripeAccountId) {
+			throw new NotFoundException('Stripe account not found');
+		}
+
+		const account = await this.stripe.accounts.retrieve(doctor.stripeAccountId);
+
+		const status = StripeStatusMapper.map(account);
+
+		await this.doctorRepo.update(
+			{ userId: doctorUserId },
+			{ stripeAccountStatus: status },
+		);
+
+		return {
+			message: 'Stripe status synced successfully'
+		};
 	}
 
 	// ----------------------- PRIVATE METHODS ----------------------
@@ -212,12 +245,8 @@ export class DoctorService {
 		const withRatings = await Promise.all(
 			doctors.map(async (doc) => {
 				const [count, agg] = await Promise.all([
-					this.reviewRepo.count({ where: { doctorId: doc.userId } }),
-					this.reviewRepo
-						.createQueryBuilder('r')
-						.select('AVG(r.rating)', 'avg')
-						.where('r.doctorId = :id', { id: doc.userId })
-						.getRawOne<{ avg: string | null }>(),
+					this.calculateReviewCount(doc.userId),
+					this.calculateAverageRating(doc.userId)
 				]);
 				return { ...doc, totalReviews: count, averageRating: agg?.avg ? parseFloat(agg.avg) : 0 };
 			}),
@@ -231,7 +260,7 @@ export class DoctorService {
 	}
 
 	private applyDoctorFilters(qb: SelectQueryBuilder<Doctor>, queryParams: GetDoctorsDto) {
-		const { specialization, experience, fees, search } = queryParams;
+		const { specialization, experience, fees, search, weekDays } = queryParams;
 
 		if (specialization?.length) {
 			qb.andWhere('doctor.specialization IN (:...specs)', {
@@ -276,5 +305,23 @@ export class DoctorService {
 				{ search: `%${search.toLowerCase()}%` },
 			);
 		}
+
+		if (weekDays?.length) {
+			qb.andWhere('workingDays.day IN (:...weekDays)', {
+				weekDays,
+			});
+		}
+	}
+
+	private calculateAverageRating(doctorId: string) {
+		return this.reviewRepo
+			.createQueryBuilder('review')
+			.select('AVG(review.rating)', 'avg')
+			.where('review.doctorId = :id', { id: doctorId })
+			.getRawOne<{ avg: string | null }>()
+	}
+
+	private calculateReviewCount(doctorId: string) {
+		return this.reviewRepo.count({ where: { doctorId } });
 	}
 }

@@ -1,5 +1,6 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import {
+	ApiBadRequestResponse,
 	ApiBearerAuth,
 	ApiCreatedResponse,
 	ApiForbiddenResponse,
@@ -21,6 +22,8 @@ import { Role, WeekDays } from '@dab/shared';
 import type { User } from '@dab/database';
 import { MessageResponseDto } from '@dab/backend/common/dtos/response/message-response.dto';
 import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
+import { SwaggerPaginatedDto } from '@dab/backend/common/dtos/response/swagger-paginated.dto';
+import { DoctorResponseDto } from './dtos/response/doctor-response.dto';
 
 @ApiTags('doctors')
 @ApiBearerAuth()
@@ -42,6 +45,7 @@ export class DoctorController {
 		return this.doctorService.createDoctor(dto);
 	}
 
+	@Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
 	@Get()
 	@ApiOperation({ summary: 'Get all doctors with filters and pagination' })
 	@ApiQuery({ name: 'page', required: true, type: Number })
@@ -52,14 +56,20 @@ export class DoctorController {
 	@ApiQuery({ name: 'fees', required: false, type: Number, isArray: true })
 	@ApiQuery({ name: 'weekDays', required: false, enum: WeekDays, isArray: true })
 	@ApiQuery({ name: 'isActive', required: false, type: Boolean })
-	@ApiOkResponse({ description: 'Paginated list of doctors with ratings' })
+	@ApiOkResponse({
+		description: 'Paginated list of doctors with ratings',
+		type: SwaggerPaginatedDto(DoctorResponseDto)
+	})
 	getAllDoctors(@Query() query: GetDoctorsDto) {
 		return this.doctorService.getAllDoctors(query);
 	}
 
+	@Roles(Role.ADMIN, Role.PATIENT, Role.DOCTOR)
 	@Get(':id')
 	@ApiOperation({ summary: 'Get a single doctor with reviews and related doctors' })
 	@ApiParam({ name: 'id', description: 'Doctor user UUID' })
+	@ApiQuery({ name: 'page', required: true, type: Number })
+	@ApiQuery({ name: 'limit', required: true, type: Number })
 	@ApiOkResponse({ description: 'Doctor profile, reviews, and related doctors returned' })
 	@ApiNotFoundResponse({ description: 'Doctor not found' })
 	getADoctor(@Param('id') id: string, @Query() query: PaginationDto) {
@@ -67,21 +77,26 @@ export class DoctorController {
 	}
 
 	@Roles(Role.DOCTOR)
-	@Post('stripe/account')
+	@Patch('stripe/account')
 	@ApiOperation({ summary: 'Doctor: create Stripe Connect account' })
 	@ApiCreatedResponse({ description: 'Stripe account created, onboarding URL returned' })
+	@ApiNotFoundResponse({ description: 'Doctor not found' })
+	@ApiBadRequestResponse({ description: 'Stripe account already exists' })
 	@ApiForbiddenResponse({ description: 'Doctor role required' })
 	createStripeAccount(@CurrentUser() user: User) {
 		return this.doctorService.createStripeAccount(user.id);
 	}
 
 	@Roles(Role.DOCTOR)
-	@Post('stripe/activate')
-	@HttpCode(HttpStatus.OK)
-	@ApiOperation({ summary: 'Doctor: activate Stripe Connect account after onboarding' })
-	@ApiOkResponse({ description: 'Stripe account activated' })
+	@Patch('stripe/sync')
+	@ApiOperation({ summary: 'Doctor: sync Stripe account status' })
+	@ApiOkResponse({
+		type: MessageResponseDto,
+		description: 'Stripe account status synced successfully' 
+	})
+	@ApiNotFoundResponse({ description: 'Stripe account not found' })
 	@ApiForbiddenResponse({ description: 'Doctor role required' })
-	activateStripeAccount(@CurrentUser() user: User) {
-		return this.doctorService.activateStripeAccount(user.id);
+	syncStripe(@CurrentUser() user: User) {
+		return this.doctorService.syncStripeAccountStatus(user.id);
 	}
 }
