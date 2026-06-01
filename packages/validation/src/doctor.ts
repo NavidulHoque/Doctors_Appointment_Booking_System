@@ -30,10 +30,10 @@ export const UpdateDoctorSchema = z.object({
 });
 
 const toArray = <T>(schema: z.ZodType<T>) =>
-  z.preprocess((v) => {
-    if (v === null || v === undefined) return undefined; 
-    return Array.isArray(v) ? v : [v];
-  }, z.array(schema).optional());
+	z.preprocess((v) => {
+		if (v === null || v === undefined) return undefined;
+		return Array.isArray(v) ? v : [v];
+	}, z.array(schema).optional());
 
 export const QueryDoctorSchema = PaginationSchema.extend({
 	search: z.string().optional(),
@@ -43,6 +43,24 @@ export const QueryDoctorSchema = PaginationSchema.extend({
 	weekDays: toArray(weekDaysSchema)
 });
 
+const BreakTimeSchema = z.object({
+	startTime: z.string(),
+	endTime: z.string(),
+});
+
+const WorkingDayUpdateSchema = z.object({
+	day: weekDaysSchema,
+	startTime: z.string(),
+	endTime: z.string(),
+	isActive: z.boolean(),
+	breakTime: BreakTimeSchema.nullable().optional(),
+});
+
+export const BulkUpdateWorkingDaysSchema = z.object({
+	workingDays: z.array(WorkingDayUpdateSchema),
+});
+
 export type TCreateDoctor = z.infer<typeof CreateDoctorSchema>;
 export type TUpdateDoctor = z.infer<typeof UpdateDoctorSchema>;
 export type TQueryDoctor = z.infer<typeof QueryDoctorSchema>;
+export type TBulkUpdateWorkingDays = z.infer<typeof BulkUpdateWorkingDaysSchema>;

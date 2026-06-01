@@ -24,6 +24,7 @@ import { MessageResponseDto } from '@dab/backend/common/dtos/response/message-re
 import { PaginationDto } from '@dab/backend/common/dtos/pagination.dto';
 import { SwaggerPaginatedDto } from '@dab/backend/common/dtos/response/swagger-paginated.dto';
 import { DoctorResponseDto } from './dtos/response/doctor-response.dto';
+import { BulkUpdateWorkingDaysDto } from './dtos/bulk-update-working-days.dto';
 
 @ApiTags('doctors')
 @ApiBearerAuth()
@@ -92,11 +93,23 @@ export class DoctorController {
 	@ApiOperation({ summary: 'Doctor: sync Stripe account status' })
 	@ApiOkResponse({
 		type: MessageResponseDto,
-		description: 'Stripe account status synced successfully' 
+		description: 'Stripe account status synced successfully'
 	})
 	@ApiNotFoundResponse({ description: 'Stripe account not found' })
 	@ApiForbiddenResponse({ description: 'Doctor role required' })
 	syncStripe(@CurrentUser() user: User) {
 		return this.doctorService.syncStripeAccountStatus(user.id);
+	}
+
+	@Roles(Role.DOCTOR)
+	@Patch('working-days/bulk-update')
+	@ApiOperation({ summary: 'Doctor: bulk update working days + break times' })
+	@ApiOkResponse({ type: MessageResponseDto })
+	@ApiForbiddenResponse({ description: 'Doctor role required' })
+	async bulkUpdateWorkingDays(
+		@CurrentUser() user: User,
+		@Body() dto: BulkUpdateWorkingDaysDto,
+	) {
+		return this.doctorService.bulkUpdateWorkingDays(user.id, dto);
 	}
 }

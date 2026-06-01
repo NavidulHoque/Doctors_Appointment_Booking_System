@@ -20,6 +20,9 @@ export class DoctorWorkingDay extends BaseGeneratedUUIDEntity {
 	@Column({ type: 'varchar', name: 'endTime' })
 	endTime: string;
 
+	@Column({ type: 'boolean', name: 'isActive', default: false })
+	isActive: boolean;
+
 	@ManyToOne(() => Doctor, (doctor) => doctor.workingDays, {
 		onDelete: 'CASCADE',
 	})
@@ -29,5 +32,5 @@ export class DoctorWorkingDay extends BaseGeneratedUUIDEntity {
 	@OneToOne(() => DoctorBreakTime, (bt) => bt.workingDay, {
 		cascade: ['insert', 'update'],
 	})
-	breakTime: DoctorBreakTime;
+	breakTime: DoctorBreakTime | null;
 }

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, MoreThan, Not, Repository } from 'typeorm';
 import Stripe from 'stripe';
-import { User, Doctor, Review, Appointment } from '@dab/database';
+import { User, Doctor, Review, Appointment, DoctorBreakTime, DoctorWorkingDay } from '@dab/database';
 import { Role, AppointmentStatus, WeekDays, StripeAccountStatus } from '@dab/shared';
 import { EnvService } from '@dab/backend/modules/config/env.service';
 import { RealtimeService } from '@dab/backend/modules/realtime/realtime.service';
@@ -14,6 +14,7 @@ import { PaginatedOutputDto } from '@dab/backend/common/dtos/response/paginated-
 import { SelectQueryBuilder } from 'typeorm/browser';
 import { WebhookService } from '../webhook/webhook.service';
 import { StripeStatusMapper } from '../../common/mappers/stripe-status.mapper';
+import { BulkUpdateWorkingDaysDto } from './dtos/bulk-update-working-days.dto';
 
 @Injectable()
 export class DoctorService {
@@ -198,7 +199,10 @@ export class DoctorService {
 			// 3. DB update ONLY after all Stripe steps succeed
 			await this.doctorRepo.update(
 				{ userId: doctorUserId },
-				{ stripeAccountId: account.id },
+				{
+					stripeAccountId: account.id,
+					stripeAccountStatus: StripeAccountStatus.ONBOARDING,
+				},
 			);
 
 			return {
@@ -237,6 +241,76 @@ export class DoctorService {
 
 		return {
 			message: 'Stripe status synced successfully'
+		};
+	}
+
+	async bulkUpdateWorkingDays(
+		doctorUserId: string,
+		dto: BulkUpdateWorkingDaysDto,
+	) {
+		const doctor = await this.doctorRepo.findOne({
+			where: { userId: doctorUserId },
+			relations: ['workingDays', 'workingDays.breakTime'],
+		});
+
+		if (!doctor) {
+			throw new NotFoundException('Doctor not found');
+		}
+
+		// Map existing working days for O(1) access
+		const workingDayMap = new Map(
+			doctor.workingDays.map((wd) => [wd.day, wd]),
+		);
+
+		await this.dataSource.transaction(async (manager) => {
+			const workingDayRepo = manager.getRepository(DoctorWorkingDay);
+			const breakTimeRepo = manager.getRepository(DoctorBreakTime);
+
+			for (const input of dto.workingDays) {
+				const existing = workingDayMap.get(input.day);
+
+				if (!existing) continue;
+
+				// Update working day
+				existing.startTime = input.startTime;
+				existing.endTime = input.endTime;
+				existing.isActive = input.isActive;
+
+				await workingDayRepo.save(existing);
+
+				// -------------------------
+				// BREAK TIME LOGIC
+				// -------------------------
+
+				if (!input.breakTime) {
+					if (existing.breakTime) {
+						await breakTimeRepo.delete({
+							workingDayId: existing.id,
+						});
+
+						existing.breakTime = null;
+					}
+				} else {
+					if (existing.breakTime) {
+						existing.breakTime.startTime = input.breakTime.startTime;
+						existing.breakTime.endTime = input.breakTime.endTime;
+
+						await breakTimeRepo.save(existing.breakTime);
+					} else {
+						const newBreak = breakTimeRepo.create({
+							workingDayId: existing.id,
+							startTime: input.breakTime.startTime,
+							endTime: input.breakTime.endTime,
+						});
+
+						await breakTimeRepo.save(newBreak);
+					}
+				}
+			}
+		});
+
+		return {
+			message: 'Working days updated successfully',
 		};
 	}
 
