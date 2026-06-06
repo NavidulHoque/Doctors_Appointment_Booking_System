@@ -104,7 +104,11 @@ export class DoctorController {
 	@Roles(Role.DOCTOR)
 	@Patch('working-days/bulk-update')
 	@ApiOperation({ summary: 'Doctor: bulk update working days + break times' })
-	@ApiOkResponse({ type: MessageResponseDto })
+	@ApiOkResponse({ 
+		type: MessageResponseDto,
+		description: 'Working days and break times updated successfully'
+	})
+	@ApiNotFoundResponse({ description: 'Doctor not found' })
 	@ApiForbiddenResponse({ description: 'Doctor role required' })
 	async bulkUpdateWorkingDays(
 		@CurrentUser() user: User,

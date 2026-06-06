@@ -258,10 +258,11 @@ export class DoctorService {
 		}
 
 		// Map existing working days for O(1) access
-		const workingDayMap = new Map(
+		const workingDayMap = new Map<string, DoctorWorkingDay>(
 			doctor.workingDays.map((wd) => [wd.day, wd]),
 		);
 
+		// Transaction ensures all-or-nothing for the bulk update
 		await this.dataSource.transaction(async (manager) => {
 			const workingDayRepo = manager.getRepository(DoctorWorkingDay);
 			const breakTimeRepo = manager.getRepository(DoctorBreakTime);
